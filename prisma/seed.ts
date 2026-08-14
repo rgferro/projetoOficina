@@ -3,15 +3,26 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Iniciando o povoamento do banco de dados (Seed)...");
+  console.log("🌱 Iniciando o povoamento completo do ERP Automotivo v2.0...");
 
-  // Limpeza prévia
-  await prisma.financialTransaction.deleteMany();
+  // Limpeza prévia segura
+  await prisma.saleItem.deleteMany();
+  await prisma.sale.deleteMany();
+  await prisma.serviceOrderPayment.deleteMany();
+  await prisma.serviceOrderPhoto.deleteMany();
   await prisma.serviceOrderItem.deleteMany();
+  await prisma.accountReceivable.deleteMany();
   await prisma.serviceOrder.deleteMany();
   await prisma.washTicket.deleteMany();
+  await prisma.stockMovement.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.standardService.deleteMany();
+  await prisma.accountPayable.deleteMany();
+  await prisma.supplier.deleteMany();
   await prisma.vehicle.deleteMany();
   await prisma.customer.deleteMany();
+  await prisma.cashShift.deleteMany();
+  await prisma.financialTransaction.deleteMany();
   await prisma.employee.deleteMany();
   await prisma.workshopSetting.deleteMany();
 
@@ -31,14 +42,193 @@ async function main() {
         "Olá {nome}! Notamos que faz 6 meses da última revisão/troca de óleo do seu {veiculo} ({placa}). Agende sua revisão preventiva com a gente no {oficina}! 🛠️",
       whatsappWashReminderTemplate:
         "Olá {nome}! Faz {dias} dias que seu {veiculo} ({placa}) não toma aquele banho especial no {oficina}. Que tal agendar uma lavagem hoje? 🧼✨",
+      whatsappBirthdayTemplate:
+        "🎉 Parabéns {nome}! A equipe do {oficina} deseja a você um feliz aniversário com muita saúde e sucesso! Venha comemorar conosco e ganhe 15% de desconto em qualquer serviço neste mês! 🎁🚗",
     },
   });
 
-  // 2. Funcionários
+  // 2. Fornecedores
+  const supDistr = await prisma.supplier.create({
+    data: {
+      name: "Distribuidora de Peças Brasil S/A",
+      document: "11.222.333/0001-44",
+      contactName: "Rodrigo Vendas",
+      phone: "(11) 97777-1111",
+      email: "pedidos@pecasbrasil.com.br",
+      city: "São Paulo",
+      state: "SP",
+      pixKey: "11222333000144",
+    },
+  });
+
+  const supLub = await prisma.supplier.create({
+    data: {
+      name: "Lubrificantes & Filtros Express",
+      document: "55.666.777/0001-88",
+      contactName: "Fernanda",
+      phone: "(11) 98888-2222",
+      email: "contato@lubexpress.com.br",
+      city: "Guarulhos",
+      state: "SP",
+    },
+  });
+
+  // 3. Produtos em Estoque
+  const pOleo5w30 = await prisma.product.create({
+    data: {
+      sku: "OLEO-5W30-MOT",
+      barcode: "7891234560011",
+      name: "Óleo 5W30 100% Sintético Mobil Super (1L)",
+      brand: "Mobil",
+      category: "Lubrificantes",
+      unit: "L",
+      costPrice: 28.5,
+      profitMargin: 57.89,
+      salePrice: 45.0,
+      currentStock: 36,
+      minStock: 10,
+      shelfLocation: "Prateleira A1",
+      supplierId: supLub.id,
+    },
+  });
+
+  const pOleo0w20 = await prisma.product.create({
+    data: {
+      sku: "OLEO-0W20-HON",
+      barcode: "7891234560028",
+      name: "Óleo 0W20 Sintético Original Honda (1L)",
+      brand: "Honda Genuine",
+      category: "Lubrificantes",
+      unit: "L",
+      costPrice: 38.0,
+      profitMargin: 57.89,
+      salePrice: 60.0,
+      currentStock: 18,
+      minStock: 8,
+      shelfLocation: "Prateleira A2",
+      supplierId: supLub.id,
+    },
+  });
+
+  const pPastilhaGol = await prisma.product.create({
+    data: {
+      sku: "PST-FRAS-042",
+      barcode: "7891234560035",
+      name: "Jogo de Pastilhas de Freio Dianteira Gol G5/G6/G7",
+      brand: "Fras-le",
+      category: "Freios",
+      unit: "JG",
+      costPrice: 95.0,
+      profitMargin: 68.42,
+      salePrice: 160.0,
+      currentStock: 8,
+      minStock: 3,
+      shelfLocation: "Prateleira F2",
+      supplierId: supDistr.id,
+    },
+  });
+
+  const pDiscoFremax = await prisma.product.create({
+    data: {
+      sku: "DSC-FMX-109",
+      barcode: "7891234560042",
+      name: "Par de Discos de Freio Ventilados Dianteiros",
+      brand: "Fremax",
+      category: "Freios",
+      unit: "PAR",
+      costPrice: 110.0,
+      profitMargin: 63.64,
+      salePrice: 180.0,
+      currentStock: 4,
+      minStock: 2,
+      shelfLocation: "Prateleira F4",
+      supplierId: supDistr.id,
+    },
+  });
+
+  const pFiltroOleo = await prisma.product.create({
+    data: {
+      sku: "FLT-MANN-712",
+      barcode: "7891234560059",
+      name: "Filtro de Óleo Blindado W712",
+      brand: "Mann Filter",
+      category: "Filtros",
+      unit: "UN",
+      costPrice: 18.0,
+      profitMargin: 94.44,
+      salePrice: 35.0,
+      currentStock: 15,
+      minStock: 5,
+      shelfLocation: "Prateleira B1",
+      supplierId: supLub.id,
+    },
+  });
+
+  const pPalhetaBosh = await prisma.product.create({
+    data: {
+      sku: "PALH-AERO-24",
+      barcode: "7891234560066",
+      name: "Par de Palhetas Aerotwin 24/16 Silicone",
+      brand: "Bosch",
+      category: "Acessórios",
+      unit: "PAR",
+      costPrice: 42.0,
+      profitMargin: 90.48,
+      salePrice: 80.0,
+      currentStock: 1, // ALERTA: abaixo do estoque mínimo!
+      minStock: 4,
+      shelfLocation: "Balcão Frente",
+      supplierId: supDistr.id,
+    },
+  });
+
+  // 4. Serviços Padronizados
+  await prisma.standardService.createMany({
+    data: [
+      {
+        name: "Alinhamento 3D + Balanceamento 4 Rodas",
+        category: "Geometria",
+        defaultPrice: 120.0,
+        estimatedMinutes: 45,
+        description: "Alinhamento a laser computadorizado e balanceamento dinâmico das 4 rodas.",
+      },
+      {
+        name: "Mão de Obra: Troca de Óleo + Filtros",
+        category: "Revisão Preventiva",
+        defaultPrice: 60.0,
+        estimatedMinutes: 30,
+        description: "Drenagem do óleo usado, substituição do filtro e inspeção de 15 pontos de segurança.",
+      },
+      {
+        name: "Troca de Discos e Pastilhas de Freio + Sangria",
+        category: "Freios",
+        defaultPrice: 150.0,
+        estimatedMinutes: 60,
+        description: "Substituição completa das pastilhas e discos, limpeza das pinças e sangria com fluido novo.",
+      },
+      {
+        name: "Higienização de Ar Condicionado + Filtro de Cabine",
+        category: "Arrefecimento & Conforto",
+        defaultPrice: 90.0,
+        estimatedMinutes: 30,
+        description: "Aplicação de ozônio e substituição do elemento filtrante de pólen.",
+      },
+      {
+        name: "Diagnóstico com Scanner Eletrônico de Injeção",
+        category: "Diagnóstico",
+        defaultPrice: 80.0,
+        estimatedMinutes: 30,
+        description: "Leitura de códigos de falha (DTC), teste de atuadores e reset de parâmetros.",
+      },
+    ],
+  });
+
+  // 5. Funcionários com Níveis de Acesso
   const funcCarlos = await prisma.employee.create({
     data: {
-      name: "Carlos Mecânico Silva",
+      name: "Carlos Silva (Mecânico Líder)",
       role: "Mecânico Líder",
+      accessLevel: "MECANICO",
       phone: "(11) 99111-2222",
       commissionRate: 15.0,
       active: true,
@@ -49,6 +239,7 @@ async function main() {
     data: {
       name: "Marcos Vinicius",
       role: "Mecânico",
+      accessLevel: "MECANICO",
       phone: "(11) 99333-4444",
       commissionRate: 10.0,
       active: true,
@@ -57,31 +248,37 @@ async function main() {
 
   const funcPedro = await prisma.employee.create({
     data: {
-      name: "Pedro Lavador Santos",
+      name: "Pedro Santos",
       role: "Lavador Especialista",
+      accessLevel: "LAVADOR",
       phone: "(11) 99555-6666",
       commissionRate: 8.0,
       active: true,
     },
   });
 
-  const funcJoao = await prisma.employee.create({
+  const funcAna = await prisma.employee.create({
     data: {
-      name: "João Batista",
-      role: "Lavador",
-      phone: "(11) 99777-8888",
-      commissionRate: 8.0,
+      name: "Ana Beatriz (Gerente/Balcão)",
+      role: "Gerente / Atendente",
+      accessLevel: "GERENTE",
+      phone: "(11) 99888-0000",
+      commissionRate: 3.0,
       active: true,
     },
   });
 
-  // 3. Clientes e Veículos
+  // 6. Clientes com aniversários
+  const currentMonth = new Date().getMonth(); // Mês atual para teste do CRM de aniversariantes
+
   const cliRoberto = await prisma.customer.create({
     data: {
       name: "Roberto Albuquerque",
+      type: "PF",
       phone: "(11) 98123-4567",
       email: "roberto.albuquerque@gmail.com",
       document: "123.456.789-00",
+      birthDate: new Date(1985, currentMonth, 18), // Aniversariante deste mês!
       address: "Rua das Flores, 120 - Jd. Paulista",
       vehicles: {
         create: [
@@ -112,9 +309,11 @@ async function main() {
   const cliMariana = await prisma.customer.create({
     data: {
       name: "Mariana Souza Lima",
+      type: "PF",
       phone: "(11) 97654-3210",
       email: "mariana.lima@outlook.com",
       document: "321.654.987-11",
+      birthDate: new Date(1992, (currentMonth + 3) % 12, 10),
       address: "Alameda Santos, 850 - Cerqueira César",
       vehicles: {
         create: [
@@ -135,11 +334,13 @@ async function main() {
 
   const cliFernando = await prisma.customer.create({
     data: {
-      name: "Fernando Dias Costa",
+      name: "Transportadora Costa Express Ltda",
+      type: "PJ",
       phone: "(11) 99876-5432",
-      email: "fernando.costa@empresa.com.br",
-      document: "987.123.456-22",
-      address: "Av. Paulista, 1000 - Bela Vista",
+      email: "financeiro@costaexpress.com.br",
+      document: "12.345.678/0001-99",
+      stateRegistration: "112.334.556.778",
+      address: "Av. do Cursino, 3000 - Saúde",
       vehicles: {
         create: [
           {
@@ -157,307 +358,233 @@ async function main() {
     include: { vehicles: true },
   });
 
-  const cliBeatriz = await prisma.customer.create({
-    data: {
-      name: "Beatriz Oliveira Mendes",
-      phone: "(11) 98456-7890",
-      email: "beatriz.mendes@gmail.com",
-      document: "456.789.123-33",
-      address: "Rua Augusta, 400 - Consolação",
-      vehicles: {
-        create: [
-          {
-            plate: "MNO5X67",
-            brand: "Hyundai",
-            model: "Creta Prestige",
-            year: 2020,
-            color: "Cinza",
-            category: "SUV",
-            currentKm: 65000,
-          },
-        ],
-      },
-    },
-    include: { vehicles: true },
-  });
-
-  // 4. Lava-Jato: Tickets Ativos e Históricos
+  // 7. Lava-Jato
   const corolla = cliRoberto.vehicles[0];
   const compass = cliRoberto.vehicles[1];
   const hrv = cliMariana.vehicles[0];
   const gol = cliFernando.vehicles[0];
-  const creta = cliBeatriz.vehicles[0];
 
-  // Ticket 1: AGUARDANDO
   await prisma.washTicket.create({
     data: {
+      ticketNumber: 1001,
       serviceType: "Lavagem Completa + Cera",
-      price: 80.0,
+      price: 90.0,
       status: "AGUARDANDO",
-      notes: "Cuidado extra com tapetes internos de veludo",
+      notes: "Cuidado extra com tapetes",
       vehicleId: corolla.id,
       employeeId: funcPedro.id,
-      enteredAt: new Date(Date.now() - 30 * 60 * 1000), // 30 min atrás
     },
   });
 
-  // Ticket 2: EM_LAVAGEM
   await prisma.washTicket.create({
     data: {
-      serviceType: "Lavagem Simples (Ducha + Aspiração)",
+      ticketNumber: 1002,
+      serviceType: "Lavagem Simples",
       price: 50.0,
       status: "EM_LAVAGEM",
-      notes: "Cliente aguardando na sala de espera",
       vehicleId: hrv.id,
-      employeeId: funcJoao.id,
-      enteredAt: new Date(Date.now() - 60 * 60 * 1000), // 1h atrás
-    },
-  });
-
-  // Ticket 3: FINALIZADO (Pronto para aviso no WhatsApp!)
-  const washFinalizado = await prisma.washTicket.create({
-    data: {
-      serviceType: "Higienização Interna + Lavagem Geral",
-      price: 180.0,
-      status: "FINALIZADO",
-      notes: "Cheirinho novo aplicado. Pronto para retirada.",
-      vehicleId: compass.id,
       employeeId: funcPedro.id,
-      enteredAt: new Date(Date.now() - 120 * 60 * 1000), // 2h atrás
-      finishedAt: new Date(Date.now() - 10 * 60 * 1000), // 10 min atrás
-      notifiedWhatsapp: false,
     },
   });
 
-  // Ticket 4: ENTREGUE (com pagamento registrado no caixa de hoje)
-  const washEntregue = await prisma.washTicket.create({
-    data: {
-      serviceType: "Lavagem Completa",
-      price: 70.0,
-      status: "ENTREGUE",
-      paymentMethod: "PIX",
-      paymentStatus: "PAGO",
-      vehicleId: creta.id,
-      employeeId: funcPedro.id,
-      enteredAt: new Date(Date.now() - 240 * 60 * 1000),
-      finishedAt: new Date(Date.now() - 120 * 60 * 1000),
-      deliveredAt: new Date(Date.now() - 60 * 60 * 1000),
-      notifiedWhatsapp: true,
-    },
-  });
-
-  await prisma.financialTransaction.create({
-    data: {
-      description: `Lavagem Ticket #${washEntregue.ticketNumber} - Hyundai Creta (${creta.plate})`,
-      type: "RECEITA",
-      category: "LAVA_JATO",
-      amount: 70.0,
-      paymentMethod: "PIX",
-      washTicketId: washEntregue.id,
-      date: new Date(),
-    },
-  });
-
-  // Ticket 5: Lavagem Antiga (25 dias atrás) para simular alerta de CRM
   await prisma.washTicket.create({
     data: {
-      serviceType: "Lavagem Completa",
-      price: 60.0,
-      status: "ENTREGUE",
-      paymentMethod: "DINHEIRO",
-      paymentStatus: "PAGO",
-      vehicleId: gol.id,
-      employeeId: funcJoao.id,
-      enteredAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000), // 25 dias atrás
-      finishedAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
-      deliveredAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
-      createdAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
+      ticketNumber: 1003,
+      serviceType: "Higienização Interna + Cera",
+      price: 180.0,
+      status: "FINALIZADO",
+      vehicleId: compass.id,
+      employeeId: funcPedro.id,
     },
   });
 
-  // 5. Ordens de Serviço (OS)
-
-  // OS 1: EM_EXECUCAO
+  // 8. Ordem de Serviço com Defeito Reclamado vs Constatado e Fotos
   const os1 = await prisma.serviceOrder.create({
     data: {
+      osNumber: 1001,
       customerId: cliFernando.id,
       vehicleId: gol.id,
       employeeId: funcCarlos.id,
       status: "EM_EXECUCAO",
       entryKm: 89000,
-      problemDescription: "Barulho metálico na roda dianteira direita ao frear e pedal duro.",
-      technicalReport: "Pastilhas e discos de freio dianteiros desgastados no limite. Fluido de freio contaminado.",
+      defectClaimed: "Barulho metálico áspero ao frear e pedal de freio com vibração excessiva.",
+      defectFound: "Discos de freio dianteiros abaixo da espessura mínima (empenados). Pastilhas no ferro.",
       discount: 20.0,
       totalParts: 340.0,
       totalServices: 220.0,
       grandTotal: 540.0,
-      estimatedDelivery: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      paidAmount: 200.0, // Pagamento de sinal parcial de R$ 200
+      remainingBalance: 340.0,
+      paymentStatus: "PARCIAL",
       items: {
         create: [
           {
             type: "PECA",
-            name: "Jogo de Pastilhas de Freio Dianteiras Fras-le",
+            name: "Jogo de Pastilhas de Freio Fras-le Gol",
             quantity: 1,
             unitPrice: 160.0,
             totalPrice: 160.0,
+            productId: pPastilhaGol.id,
+            employeeId: funcCarlos.id,
           },
           {
             type: "PECA",
-            name: "Par de Discos de Freio Ventilados Fremax",
+            name: "Par de Discos de Freio Fremax Ventilados",
             quantity: 1,
             unitPrice: 180.0,
             totalPrice: 180.0,
+            productId: pDiscoFremax.id,
+            employeeId: funcCarlos.id,
           },
           {
             type: "SERVICO",
-            name: "Mão de Obra: Troca de Discos e Pastilhas + Sangria",
+            name: "Mão de Obra: Troca de Discos, Pastilhas e Sangria",
             quantity: 1,
             unitPrice: 150.0,
             totalPrice: 150.0,
+            employeeId: funcCarlos.id,
           },
           {
             type: "SERVICO",
-            name: "Fluido de Freio DOT 4 + Limpeza do Sistema",
+            name: "Fluido de Freio DOT4 + Desengraxante",
             quantity: 1,
             unitPrice: 70.0,
             totalPrice: 70.0,
+            employeeId: funcCarlos.id,
           },
         ],
       },
-    },
-  });
-
-  // OS 2: ORCAMENTO
-  await prisma.serviceOrder.create({
-    data: {
-      customerId: cliMariana.id,
-      vehicleId: hrv.id,
-      employeeId: funcMarcos.id,
-      status: "ORCAMENTO",
-      entryKm: 18500,
-      problemDescription: "Revisão periódica de 20.000 KM e alinhamento da direção.",
-      technicalReport: "Necessário troca de óleo do motor, filtro de óleo, filtro de ar e higienização do ar condicionado.",
-      discount: 0.0,
-      totalParts: 280.0,
-      totalServices: 150.0,
-      grandTotal: 430.0,
-      items: {
+      photos: {
         create: [
           {
-            type: "PECA",
-            name: "Óleo 0W20 Sintético Honda Original (4L)",
-            quantity: 4,
-            unitPrice: 55.0,
-            totalPrice: 220.0,
+            type: "AVARIA",
+            imageUrl: "https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=400&q=80",
+            caption: "Pastilha antiga completamente gasta no limite do metal",
           },
           {
-            type: "PECA",
-            name: "Filtro de Óleo Fram",
-            quantity: 1,
-            unitPrice: 60.0,
-            totalPrice: 60.0,
+            type: "ANTES",
+            imageUrl: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=400&q=80",
+            caption: "Veículo na rampa do Box 1",
           },
+        ],
+      },
+      payments: {
+        create: [
           {
-            type: "SERVICO",
-            name: "Mão de Obra: Troca de Óleo + Filtros",
-            quantity: 1,
-            unitPrice: 80.0,
-            totalPrice: 80.0,
-          },
-          {
-            type: "SERVICO",
-            name: "Alinhamento 3D e Balanceamento das 4 rodas",
-            quantity: 1,
-            unitPrice: 70.0,
-            totalPrice: 70.0,
+            amount: 200.0,
+            paymentMethod: "PIX",
+            notes: "Sinal de 200 pago via PIX na aprovação do orçamento",
+            date: new Date(),
           },
         ],
       },
     },
   });
 
-  // OS 3: CONCLUÍDA Antiga (7 meses atrás) -> Ótimo para disparar alerta de troca de óleo no CRM!
-  const osAntiga = await prisma.serviceOrder.create({
+  // 9. Venda Rápida de Balcão (PDV)
+  const sale1 = await prisma.sale.create({
     data: {
+      saleNumber: 1001,
+      totalAmount: 125.0,
+      discount: 5.0,
+      grandTotal: 120.0,
+      paymentMethod: "PIX",
+      paidAmount: 120.0,
+      changeAmount: 0.0,
+      status: "CONCLUIDA",
+      employeeId: funcAna.id,
       customerId: cliRoberto.id,
-      vehicleId: corolla.id,
-      employeeId: funcCarlos.id,
-      status: "CONCLUIDO",
-      entryKm: 32000,
-      problemDescription: "Revisão dos 30.000 KM com troca de óleo.",
-      technicalReport: "Troca completa de óleo sintético, filtro de óleo e filtro de ar de motor realizada com sucesso.",
-      discount: 0.0,
-      totalParts: 260.0,
-      totalServices: 120.0,
-      grandTotal: 380.0,
-      paymentMethod: "CARTAO_CREDITO",
-      paymentStatus: "PAGO",
-      createdAt: new Date(Date.now() - 210 * 24 * 60 * 60 * 1000), // ~7 meses atrás
-      completedAt: new Date(Date.now() - 210 * 24 * 60 * 60 * 1000),
       items: {
         create: [
           {
-            type: "PECA",
-            name: "Óleo 5W30 Sintético 100% (4,5L)",
-            quantity: 1,
-            unitPrice: 200.0,
-            totalPrice: 200.0,
+            name: "Óleo 5W30 Mobil Super (1L)",
+            quantity: 2,
+            unitPrice: 45.0,
+            totalPrice: 90.0,
+            productId: pOleo5w30.id,
           },
           {
-            type: "PECA",
-            name: "Filtro de Óleo Mann Filter",
+            name: "Filtro de Óleo Blindado W712",
             quantity: 1,
-            unitPrice: 60.0,
-            totalPrice: 60.0,
-          },
-          {
-            type: "SERVICO",
-            name: "Serviço de Troca de Óleo e Inspeção de 30 Itens",
-            quantity: 1,
-            unitPrice: 120.0,
-            totalPrice: 120.0,
+            unitPrice: 35.0,
+            totalPrice: 35.0,
+            productId: pFiltroOleo.id,
           },
         ],
       },
     },
   });
 
-  // 6. Transações Financeiras extras de hoje (Caixa Diário)
+  // 10. Turno de Caixa Aberto
+  await prisma.cashShift.create({
+    data: {
+      openedAt: new Date(new Date().setHours(8, 0, 0, 0)),
+      initialBalance: 200.0, // Fundo de troco de R$ 200
+      status: "ABERTO",
+      employeeId: funcAna.id,
+      notes: "Turno aberto normalmente com fundo de R$ 200 em notas e moedas.",
+    },
+  });
+
+  // 11. Contas a Pagar & Receber
+  await prisma.accountPayable.createMany({
+    data: [
+      {
+        description: "Boleto Distribuidora Peças Brasil (NF 8921)",
+        category: "PEÇAS",
+        amount: 850.0,
+        dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // Vence em 5 dias
+        status: "PENDENTE",
+        supplierId: supDistr.id,
+      },
+      {
+        description: "Conta de Energia Elétrica - Enel",
+        category: "ENERGIA",
+        amount: 420.0,
+        dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        status: "PENDENTE",
+      },
+    ],
+  });
+
+  await prisma.accountReceivable.create({
+    data: {
+      description: "Faturamento OS #1001 (Saldo Restante) - Transportadora Costa",
+      amount: 340.0,
+      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      status: "PENDENTE",
+      customerId: cliFernando.id,
+      serviceOrderId: os1.id,
+    },
+  });
+
+  // 12. Transações de Caixa de Hoje
   await prisma.financialTransaction.create({
     data: {
-      description: "Recebimento OS #1002 - Sinal de Serviço (Troca de Amortecedores)",
+      description: "Venda PDV #1001 - Lubrificantes e Filtro",
+      type: "RECEITA",
+      category: "PDV_BALCAO",
+      amount: 120.0,
+      paymentMethod: "PIX",
+      saleId: sale1.id,
+      date: new Date(),
+    },
+  });
+
+  await prisma.financialTransaction.create({
+    data: {
+      description: "Sinal OS #1001 - Pastilhas e Discos de Freio",
       type: "RECEITA",
       category: "ORDEM_SERVICO",
-      amount: 450.0,
-      paymentMethod: "CARTAO_CREDITO",
-      date: new Date(),
-    },
-  });
-
-  await prisma.financialTransaction.create({
-    data: {
-      description: "Lavagem Rápida Avulsa - Fiat Uno (Dinheiro)",
-      type: "RECEITA",
-      category: "LAVA_JATO",
-      amount: 40.0,
-      paymentMethod: "DINHEIRO",
-      date: new Date(),
-    },
-  });
-
-  await prisma.financialTransaction.create({
-    data: {
-      description: "Compra de Shampoo Automotivo Neutro e Pretinho (Galão 20L)",
-      type: "DESPESA",
-      category: "COMPRA_PECA",
-      amount: 145.0,
+      amount: 200.0,
       paymentMethod: "PIX",
+      serviceOrderId: os1.id,
       date: new Date(),
     },
   });
 
-  console.log("✅ Seed executado com sucesso!");
-  console.log("📊 Dados populados: 4 funcionários, 4 clientes, 5 veículos, 5 lavagens, 3 ordens de serviço e transações financeiras.");
+  console.log("✅ Seed v2.0 executado com sucesso!");
+  console.log("📦 Dados populados: Produtos em estoque, Tabela de Serviços, Fornecedores, PDV, Contas a Pagar/Receber, Turno de Caixa e Aniversariantes.");
 }
 
 main()

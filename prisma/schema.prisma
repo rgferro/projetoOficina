@@ -8,18 +8,23 @@ datasource db {
 }
 
 model Customer {
-  id            String         @id @default(cuid())
-  name          String
-  phone         String         // WhatsApp principal
-  email         String?
-  document      String?        // CPF ou CNPJ
-  address       String?
-  notes         String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id                 String              @id @default(cuid())
+  name               String              // Nome Completo ou Razão Social
+  type               String              @default("PF") // "PF" ou "PJ"
+  phone              String              // WhatsApp principal
+  email              String?
+  document           String?             // CPF ou CNPJ
+  stateRegistration  String?             // Inscrição Estadual (PJ)
+  birthDate          DateTime?           // Data de Nascimento (para CRM de aniversariantes)
+  address            String?
+  notes              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
-  vehicles      Vehicle[]
-  serviceOrders ServiceOrder[]
+  vehicles           Vehicle[]
+  serviceOrders      ServiceOrder[]
+  sales              Sale[]
+  accountsReceivable AccountReceivable[]
 }
 
 model Vehicle {
@@ -43,17 +48,89 @@ model Vehicle {
 }
 
 model Employee {
-  id             String         @id @default(cuid())
+  id             String              @id @default(cuid())
   name           String
-  role           String         // "Mecânico", "Lavador", "Atendente", "Gerente"
+  role           String              // "Mecânico", "Lavador", "Atendente", "Gerente", "Vendedor"
+  accessLevel    String              @default("MECANICO") // ADMIN, GERENTE, MECANICO, ATENDENTE, LAVADOR
   phone          String?
-  commissionRate Float          @default(0.0) // % de comissão (ex: 10.0 para 10%)
-  active         Boolean        @default(true)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  commissionRate Float               @default(0.0) // % de comissão padrão
+  active         Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   washTickets    WashTicket[]
   serviceOrders  ServiceOrder[]
+  orderItems     ServiceOrderItem[]
+  sales          Sale[]
+  cashShifts     CashShift[]
+}
+
+model Supplier {
+  id                 String              @id @default(cuid())
+  name               String              // Razão Social / Nome Fantasia
+  document           String?             // CNPJ / CPF
+  contactName        String?
+  phone              String?             // WhatsApp do vendedor
+  email              String?
+  city               String?
+  state              String?
+  pixKey             String?
+  notes              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  products           Product[]
+  accountsPayable    AccountPayable[]
+}
+
+model Product {
+  id             String              @id @default(cuid())
+  sku            String?             @unique // Código interno ou de referência
+  barcode        String?             @unique // Código de barras EAN
+  name           String              // Nome da Peça (ex: Pastilha de Freio Dianteira)
+  brand          String?             // Fabricante (ex: Bosch, Fras-le, Castrol)
+  category       String              @default("Peças Gerais") // Óleos, Filtros, Suspensão, Freios, Acessórios, Pneus, etc.
+  unit           String              @default("UN") // UN, L, KG, PAR, JG, METRO
+  costPrice      Float               @default(0.0) // Preço de Custo
+  profitMargin   Float               @default(50.0) // Margem de Lucro (%)
+  salePrice      Float               @default(0.0) // Preço de Venda
+  currentStock   Float               @default(0.0) // Estoque Atual
+  minStock       Float               @default(2.0) // Estoque Mínimo (alerta de reposição)
+  shelfLocation  String?             // Localização na Oficina (ex: Prateleira B3)
+  imageUrl       String?
+  notes          String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  supplierId     String?
+  supplier       Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  orderItems     ServiceOrderItem[]
+  saleItems      SaleItem[]
+  stockMovements StockMovement[]
+}
+
+model StockMovement {
+  id          String   @id @default(cuid())
+  type        String   // "ENTRADA", "SAIDA", "AJUSTE", "VENDA_PDV", "ORDEM_SERVICO"
+  quantity    Float
+  unitCost    Float?
+  description String?
+  date        DateTime @default(now())
+
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model StandardService {
+  id               String   @id @default(cuid())
+  name             String   // Nome do Serviço (ex: Alinhamento 3D + Balanceamento)
+  category         String   @default("Mecânica Geral") // Suspensão, Freios, Injeção, Elétrica, Troca de Óleo, etc.
+  defaultPrice     Float    @default(0.0)
+  estimatedMinutes Int      @default(60) // Tempo estimado de execução
+  description      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model WashTicket {
@@ -84,38 +161,46 @@ model WashTicket {
 }
 
 model ServiceOrder {
-  id                 String              @id @default(cuid())
-  osNumber           Int                 @default(1001)
-  status             String              @default("ORCAMENTO") // ORCAMENTO, APROVADO, EM_EXECUCAO, AGUARDANDO_PECA, CONCLUIDO, CANCELADO
+  id                 String                 @id @default(cuid())
+  osNumber           Int                    @default(1001)
+  status             String                 @default("ORCAMENTO") // ORCAMENTO, EM_ANALISE, APROVADO, EM_EXECUCAO, AGUARDANDO_PECA, CONCLUIDO, CANCELADO
   entryKm            Int?
-  problemDescription String?             // Reclamação do cliente
-  technicalReport    String?             // Diagnóstico do mecânico
-  internalNotes      String?
   
-  discount           Float               @default(0.0)
-  totalServices      Float               @default(0.0)
-  totalParts         Float               @default(0.0)
-  grandTotal         Float               @default(0.0)
+  defectClaimed      String?                // Defeito Reclamado (Relato do cliente)
+  defectFound        String?                // Defeito Constatado (Laudo / Diagnóstico do mecânico)
+  problemDescription String?                // Descrição geral
+  technicalReport    String?                // Parecer técnico
+  internalNotes      String?                // Observações internas (não saem na impressão do cliente)
+  
+  discount           Float                  @default(0.0)
+  totalServices      Float                  @default(0.0)
+  totalParts         Float                  @default(0.0)
+  grandTotal         Float                  @default(0.0)
+  paidAmount         Float                  @default(0.0) // Valor total já pago
+  remainingBalance   Float                  @default(0.0) // Saldo devedor
 
-  paymentMethod      String?             // DINHEIRO, PIX, CARTAO_CREDITO, CARTAO_DEBITO, BOLETO, FATURADO
-  paymentStatus      String              @default("PENDENTE") // PENDENTE, PAGO, PARCIAL
+  paymentMethod      String?                // DINHEIRO, PIX, CARTAO_CREDITO, CARTAO_DEBITO, BOLETO, FATURADO, MULTIPLO
+  paymentStatus      String                 @default("PENDENTE") // PENDENTE, PAGO, PARCIAL
 
   estimatedDelivery  DateTime?
   completedAt        DateTime?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
 
   customerId         String
-  customer           Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer           Customer               @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   vehicleId          String
-  vehicle            Vehicle             @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicle            Vehicle                @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 
-  employeeId         String?             // Mecânico responsável
-  employee           Employee?           @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  employeeId         String?                // Mecânico responsável principal
+  employee           Employee?              @relation(fields: [employeeId], references: [id], onDelete: SetNull)
 
   items              ServiceOrderItem[]
+  photos             ServiceOrderPhoto[]
+  payments           ServiceOrderPayment[]
   transactions       FinancialTransaction[]
+  accountsReceivable AccountReceivable[]
 }
 
 model ServiceOrderItem {
@@ -125,17 +210,138 @@ model ServiceOrderItem {
   quantity       Float         @default(1.0)
   unitPrice      Float         @default(0.0)
   totalPrice     Float         @default(0.0)
+  commissionRate Float         @default(0.0) // % de comissão individual para este item
+  createdAt      DateTime      @default(now())
+
+  serviceOrderId String
+  serviceOrder   ServiceOrder  @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+
+  productId      String?       // Se vinculado a um produto do estoque (para baixa automática)
+  product        Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  employeeId     String?       // Mecânico específico executor deste item
+  employee       Employee?     @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+}
+
+model ServiceOrderPhoto {
+  id             String        @id @default(cuid())
+  type           String        @default("AVARIA") // ANTES, DEPOIS, AVARIA, PECA_TROCADAS
+  imageUrl       String        // URL ou DataURL Base64
+  caption        String?       // Legenda
   createdAt      DateTime      @default(now())
 
   serviceOrderId String
   serviceOrder   ServiceOrder  @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
 }
 
+model ServiceOrderPayment {
+  id             String        @id @default(cuid())
+  amount         Float
+  paymentMethod  String        // DINHEIRO, PIX, CARTAO_CREDITO, CARTAO_DEBITO, BOLETO
+  notes          String?
+  date           DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+
+  serviceOrderId String
+  serviceOrder   ServiceOrder  @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+}
+
+model Sale {
+  id             String                 @id @default(cuid())
+  saleNumber     Int                    @default(1001)
+  totalAmount    Float
+  discount       Float                  @default(0.0)
+  grandTotal     Float
+  paymentMethod  String                 // DINHEIRO, PIX, CARTAO_CREDITO, CARTAO_DEBITO, BOLETO
+  paidAmount     Float                  @default(0.0)
+  changeAmount   Float                  @default(0.0) // Troco
+  status         String                 @default("CONCLUIDA") // CONCLUIDA, CANCELADA
+  date           DateTime               @default(now())
+  createdAt      DateTime               @default(now())
+
+  customerId     String?
+  customer       Customer?              @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  employeeId     String?                // Vendedor responsável
+  employee       Employee?              @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+
+  items          SaleItem[]
+  transactions   FinancialTransaction[]
+}
+
+model SaleItem {
+  id             String   @id @default(cuid())
+  name           String
+  quantity       Float
+  unitPrice      Float
+  totalPrice     Float
+  createdAt      DateTime @default(now())
+
+  saleId         String
+  sale           Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  productId      String?
+  product        Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+}
+
+model CashShift {
+  id             String    @id @default(cuid())
+  openedAt       DateTime  @default(now())
+  closedAt       DateTime?
+  initialBalance Float     @default(0.0) // Fundo de troco inicial
+  finalBalance   Float?    // Saldo informado no fechamento
+  expectedBalance Float?   // Saldo calculado pelo sistema
+  difference     Float?    // Diferença (sobra/falta)
+  totalSangrias  Float     @default(0.0) // Total de retiradas
+  totalSuprimentos Float   @default(0.0) // Total de aportes
+  status         String    @default("ABERTO") // ABERTO, FECHADO
+  notes          String?
+
+  employeeId     String?
+  employee       Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+}
+
+model AccountPayable {
+  id             String    @id @default(cuid())
+  description    String    // Ex: Compra de Peças NF 1234, Aluguel do Mês, Energia Elétrica
+  category       String    @default("PEÇAS") // PEÇAS, ALUGUEL, ENERGIA, SALARIOS, FERRAMENTAS, IMPOSTOS, OUTROS
+  amount         Float
+  dueDate        DateTime  // Vencimento
+  paymentDate    DateTime? // Data de Quitação
+  paymentMethod  String?   // PIX, BOLETO, DINHEIRO, CARTAO
+  status         String    @default("PENDENTE") // PENDENTE, PAGO, ATRASADO, CANCELADO
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  supplierId     String?
+  supplier       Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+}
+
+model AccountReceivable {
+  id             String        @id @default(cuid())
+  description    String
+  amount         Float
+  dueDate        DateTime
+  receivedDate   DateTime?
+  paymentMethod  String?
+  status         String        @default("PENDENTE") // PENDENTE, PAGO, ATRASADO, CANCELADO
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  customerId     String?
+  customer       Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  serviceOrderId String?
+  serviceOrder   ServiceOrder? @relation(fields: [serviceOrderId], references: [id], onDelete: SetNull)
+}
+
 model FinancialTransaction {
   id             String        @id @default(cuid())
   description    String
   type           String        // "RECEITA" ou "DESPESA"
-  category       String        // "LAVA_JATO", "ORDEM_SERVICO", "COMPRA_PECA", "SALARIOS", "DESPESA_FIXA", "OUTROS"
+  category       String        // "LAVA_JATO", "ORDEM_SERVICO", "PDV_BALCAO", "COMPRA_PECA", "SANGRIA", "SUPRIMENTO", "DESPESA_FIXA", "OUTROS"
   amount         Float
   paymentMethod  String        // "DINHEIRO", "PIX", "CARTAO_CREDITO", "CARTAO_DEBITO", "BOLETO"
   date           DateTime      @default(now())
@@ -146,6 +352,9 @@ model FinancialTransaction {
 
   serviceOrderId String?
   serviceOrder   ServiceOrder? @relation(fields: [serviceOrderId], references: [id], onDelete: SetNull)
+
+  saleId         String?
+  sale           Sale?         @relation(fields: [saleId], references: [id], onDelete: SetNull)
 }
 
 model WorkshopSetting {
@@ -162,6 +371,7 @@ model WorkshopSetting {
   whatsappWashReadyTemplate   String   @default("Olá {nome}! Seu {veiculo} ({placa}) já está limpo e pronto para retirada aqui no {oficina}. 🚗✨ Valor: {valor}. Aguardamos sua visita!")
   whatsappOilReminderTemplate String   @default("Olá {nome}! Notamos que faz 6 meses da última troca de óleo/revisão do seu {veiculo} ({placa}). Agende uma checagem preventiva aqui no {oficina}! 🛠️")
   whatsappWashReminderTemplate String  @default("Olá {nome}! Faz alguns dias que não vemos seu {veiculo} ({placa}) por aqui. Que tal deixá-lo brilhando hoje? Temos horários disponíveis! 🧼✨")
+  whatsappBirthdayTemplate    String   @default("🎉 Parabéns {nome}! A equipe {oficina} deseja a você um feliz aniversário com muita saúde e sucesso! Como presente especial, ganhe 15% de desconto em qualquer serviço neste mês! 🎁🚗")
   
   updatedAt                   DateTime @updatedAt
 }

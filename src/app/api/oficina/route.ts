@@ -25,7 +25,11 @@ export async function GET(request: Request) {
         customer: true,
         vehicle: true,
         employee: true,
-        items: true,
+        items: {
+          include: { product: true, employee: true },
+        },
+        photos: true,
+        payments: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -46,12 +50,15 @@ export async function POST(request: Request) {
       employeeId,
       status,
       entryKm,
+      defectClaimed,
+      defectFound,
       problemDescription,
       technicalReport,
       internalNotes,
       discount,
       estimatedDelivery,
       items,
+      photos,
     } = body;
 
     if (!customerId || !vehicleId) {
@@ -81,6 +88,9 @@ export async function POST(request: Request) {
         quantity: qty,
         unitPrice: unit,
         totalPrice: total,
+        productId: item.productId || null,
+        employeeId: item.employeeId || null,
+        commissionRate: Number(item.commissionRate) || 0,
       };
     });
 
@@ -99,6 +109,12 @@ export async function POST(request: Request) {
     });
     const osNumber = lastOrder ? lastOrder.osNumber + 1 : 1001;
 
+    const formattedPhotos = (photos || []).map((p: any) => ({
+      imageUrl: p.imageUrl,
+      type: p.type || "AVARIA",
+      caption: p.caption || null,
+    }));
+
     const order = await prisma.serviceOrder.create({
       data: {
         osNumber,
@@ -107,25 +123,63 @@ export async function POST(request: Request) {
         employeeId: employeeId || null,
         status: status || "ORCAMENTO",
         entryKm: entryKm ? Number(entryKm) : null,
-        problemDescription: problemDescription || null,
-        technicalReport: technicalReport || null,
+        defectClaimed: defectClaimed || null,
+        defectFound: defectFound || null,
+        problemDescription: problemDescription || defectClaimed || null,
+        technicalReport: technicalReport || defectFound || null,
         internalNotes: internalNotes || null,
         discount: parsedDiscount,
         totalParts,
         totalServices,
         grandTotal,
+        paidAmount: 0.0,
+        remainingBalance: grandTotal,
+        paymentStatus: "PENDENTE",
         estimatedDelivery: estimatedDelivery ? new Date(estimatedDelivery) : null,
         items: {
           create: formattedItems,
         },
+        photos: formattedPhotos.length > 0
+          ? {
+              create: formattedPhotos,
+            }
+          : undefined,
       },
       include: {
         customer: true,
         vehicle: true,
         employee: true,
         items: true,
+        photos: true,
       },
     });
+
+    // Se o status for de execução ou aprovação, baixa o estoque das peças vinculadas
+    if (status === "EM_EXECUCAO" || status === "APROVADO") {
+      for (const item of formattedItems) {
+        if (item.productId) {
+          const product = await prisma.product.findUnique({
+            where: { id: item.productId },
+          });
+          if (product) {
+            const newStock = Math.max(0, product.currentStock - item.quantity);
+            await prisma.product.update({
+              where: { id: item.productId },
+              data: { currentStock: newStock },
+            });
+            await prisma.stockMovement.create({
+              data: {
+                productId: item.productId,
+                type: "ORDEM_SERVICO",
+                quantity: item.quantity,
+                unitCost: product.costPrice,
+                description: `Aplicação na OS #${order.osNumber}`,
+              },
+            });
+          }
+        }
+      }
+    }
 
     return NextResponse.json(order, { status: 201 });
   } catch (error: any) {

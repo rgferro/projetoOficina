@@ -4,11 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  ShoppingCart,
   Droplets,
   Wrench,
+  Package,
+  ListOrdered,
+  Truck,
   Users,
   UserCheck,
   CircleDollarSign,
+  BarChart3,
   MessageSquare,
   Settings,
   X,
@@ -25,18 +30,22 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const navigation = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
+    { name: "PDV Balcão", href: "/pdv", icon: ShoppingCart, badge: "Vendas" },
     { name: "Lava-Jato", href: "/lavajato", icon: Droplets, badge: "Pátio" },
     { name: "Oficina & OS", href: "/oficina", icon: Wrench },
+    { name: "Estoque de Peças", href: "/estoque", icon: Package },
+    { name: "Tabela de Serviços", href: "/servicos", icon: ListOrdered },
+    { name: "Fornecedores", href: "/fornecedores", icon: Truck },
     { name: "Clientes & Veículos", href: "/clientes", icon: Users },
     { name: "Equipe & Produtividade", href: "/equipe", icon: UserCheck },
     { name: "Caixa & Financeiro", href: "/financeiro", icon: CircleDollarSign },
+    { name: "Relatórios & BI", href: "/relatorios", icon: BarChart3 },
     { name: "CRM WhatsApp", href: "/crm", icon: MessageSquare, badge: "Alertas" },
     { name: "Backup & Ajustes", href: "/configuracoes", icon: Settings },
   ];
 
   return (
     <>
-      {/* Backdrop para mobile */}
       {isOpen && (
         <div
           onClick={onClose}
@@ -59,7 +68,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               <span className="text-white">Auto</span>
               <span className="text-blue-400">Gestão</span>
               <span className="block text-[10px] text-slate-400 font-normal uppercase tracking-wider">
-                Oficina & Lava-Jato
+                ERP Automotivo Pro
               </span>
             </div>
           </Link>
@@ -72,9 +81,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
 
         {/* Navigation Items */}
-        <div className="flex-1 px-4 py-6 overflow-y-auto space-y-1.5">
-          <div className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-            Menu Principal
+        <div className="flex-1 px-4 py-4 overflow-y-auto space-y-1">
+          <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            Menu Operacional
           </div>
           {navigation.map((item) => {
             const isActive =
@@ -88,7 +97,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 key={item.name}
                 href={item.href}
                 onClick={onClose}
-                className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-sm font-medium transition-all ${
+                className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                   isActive
                     ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
                     : "text-slate-300 hover:bg-slate-800 hover:text-white"
@@ -96,7 +105,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               >
                 <div className="flex items-center gap-3">
                   <Icon
-                    className={`w-5 h-5 ${
+                    className={`w-4 h-4 ${
                       isActive ? "text-white" : "text-slate-400 group-hover:text-white"
                     }`}
                   />
@@ -104,7 +113,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </div>
                 {item.badge && (
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
                       isActive
                         ? "bg-white text-blue-700"
                         : "bg-slate-800 text-slate-300 border border-slate-700"
@@ -119,17 +128,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
 
         {/* Local Server Status Badge */}
-        <div className="p-4 border-t border-slate-800 bg-slate-950/60">
-          <div className="bg-slate-850/90 rounded-xl p-3 border border-slate-800">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-semibold text-slate-300">Servidor Local</span>
-              <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                Online
+        <div className="p-3 border-t border-slate-800 bg-slate-950/60">
+          <div className="bg-slate-850/90 rounded-xl p-2.5 border border-slate-800 text-[11px]">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-semibold text-slate-300">Servidor Web Local</span>
+              <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Ativo
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 truncate">
-              SQLite: <code className="text-slate-300 font-mono">prisma/dev.db</code>
+            <p className="text-[10px] text-slate-400 font-mono truncate">
+              SQLite: dev.db
             </p>
           </div>
         </div>

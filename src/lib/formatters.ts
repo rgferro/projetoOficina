@@ -10,7 +10,6 @@ export function formatPlate(plate: string | null | undefined): string {
   if (!plate) return "";
   const clean = plate.toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (clean.length === 7) {
-    // Mercosul (ABC1D23) ou Antiga (ABC-1234)
     if (/^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(clean)) {
       return `${clean.slice(0, 3)}-${clean.slice(3)}`;
     }
@@ -43,7 +42,7 @@ export function formatDateTime(date: Date | string | null | undefined): string {
   }).format(d);
 }
 
-export function formatDateOnly(date: Date | string | null | undefined): string {
+export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "-";
   const d = typeof date === "string" ? new Date(date) : date;
   return new Intl.DateTimeFormat("pt-BR", {
@@ -51,6 +50,10 @@ export function formatDateOnly(date: Date | string | null | undefined): string {
     month: "2-digit",
     year: "numeric",
   }).format(d);
+}
+
+export function formatDateOnly(date: Date | string | null | undefined): string {
+  return formatDate(date);
 }
 
 export function formatDocument(doc: string | null | undefined): string {

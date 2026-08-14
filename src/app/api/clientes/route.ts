@@ -41,7 +41,18 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, phone, email, document, address, notes, vehicle } = body;
+    const {
+      name,
+      type,
+      phone,
+      email,
+      document,
+      stateRegistration,
+      birthDate,
+      address,
+      notes,
+      vehicle,
+    } = body;
 
     if (!name || !phone) {
       return NextResponse.json(
@@ -53,9 +64,12 @@ export async function POST(request: Request) {
     const customer = await prisma.customer.create({
       data: {
         name,
+        type: type || "PF",
         phone,
         email: email || null,
         document: document || null,
+        stateRegistration: stateRegistration || null,
+        birthDate: birthDate ? new Date(birthDate) : null,
         address: address || null,
         notes: notes || null,
         vehicles: vehicle && vehicle.plate

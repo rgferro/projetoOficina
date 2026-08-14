@@ -24,6 +24,8 @@ export default async function ImprimirOSPage({
       vehicle: true,
       employee: true,
       items: true,
+      photos: true,
+      payments: true,
     },
   });
 
@@ -35,8 +37,7 @@ export default async function ImprimirOSPage({
     where: { id: "default" },
   });
 
-  const parts = order.items.filter((i) => i.type === "PECA");
-  const services = order.items.filter((i) => i.type === "SERVICO");
+  const remainingBalance = Math.max(0, order.grandTotal - (order.paidAmount || 0));
 
   return (
     <div className="min-h-screen bg-slate-100 py-6 px-4 print:bg-white print:p-0">
@@ -46,12 +47,10 @@ export default async function ImprimirOSPage({
           href={`/oficina/${order.id}`}
           className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900"
         >
-          <ArrowLeft className="w-4 h-4" /> Voltar para Edição
+          <ArrowLeft className="w-4 h-4" /> Voltar para Edição da OS
         </Link>
 
-        {/* Script para acionar print window */}
         <button
-          onClick={() => {}}
           className="print-btn inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20"
         >
           <Printer className="w-4 h-4" />
@@ -59,7 +58,6 @@ export default async function ImprimirOSPage({
         </button>
       </div>
 
-      {/* Script cliente inline para disparar impressão automática ou com clique */}
       <script
         dangerouslySetInnerHTML={{
           __html: `
@@ -86,7 +84,7 @@ export default async function ImprimirOSPage({
 
           <div className="text-right">
             <div className="inline-block bg-slate-900 text-white font-mono font-black text-base px-3 py-1 rounded">
-              OS Nº {order.osNumber}
+              ORDEM DE SERVIÇO Nº {order.osNumber}
             </div>
             <p className="text-[11px] text-slate-500 mt-1.5">
               Data: {formatDateTime(order.createdAt)}
@@ -123,30 +121,30 @@ export default async function ImprimirOSPage({
               {order.vehicle.brand} {order.vehicle.model} {order.vehicle.year ? `(${order.vehicle.year})` : ""}
             </p>
             <p className="text-slate-700">
-              Placa: <strong className="font-mono">{formatPlate(order.vehicle.plate)}</strong>
+              Placa: <strong className="font-mono font-black">{formatPlate(order.vehicle.plate)}</strong>
               {order.entryKm ? ` • KM Entrada: ${order.entryKm.toLocaleString()} km` : ""}
             </p>
             <p className="text-slate-600">
-              Mecânico Responsável: {order.employee?.name || "Oficina Central"}
+              Mecânico Responsável: {order.employee?.name || "Equipe Oficina"}
             </p>
           </div>
         </div>
 
-        {/* Descrição e Diagnóstico */}
-        {(order.problemDescription || order.technicalReport) && (
-          <div className="py-3 border-b border-slate-200 text-xs space-y-2">
-            {order.problemDescription && (
-              <div>
-                <strong className="text-slate-600 uppercase text-[10px] block">Problema Relatado:</strong>
-                <p className="text-slate-800 italic mt-0.5">{order.problemDescription}</p>
-              </div>
-            )}
-            {order.technicalReport && (
-              <div>
-                <strong className="text-slate-600 uppercase text-[10px] block">Diagnóstico Técnico:</strong>
-                <p className="text-slate-800 mt-0.5">{order.technicalReport}</p>
-              </div>
-            )}
+        {/* Defeito Reclamado x Constatado */}
+        {(order.defectClaimed || order.defectFound || order.problemDescription || order.technicalReport) && (
+          <div className="py-3 border-b border-slate-200 text-xs grid grid-cols-2 gap-4">
+            <div>
+              <strong className="text-slate-600 uppercase text-[10px] block">Defeito Reclamado pelo Cliente:</strong>
+              <p className="text-slate-800 italic mt-0.5">
+                {order.defectClaimed || order.problemDescription || "Não informado"}
+              </p>
+            </div>
+            <div>
+              <strong className="text-slate-600 uppercase text-[10px] block">Defeito Constatado / Laudo Técnico:</strong>
+              <p className="text-slate-800 mt-0.5 font-medium">
+                {order.defectFound || order.technicalReport || "Em diagnóstico"}
+              </p>
+            </div>
           </div>
         )}
 
@@ -156,7 +154,7 @@ export default async function ImprimirOSPage({
             <thead>
               <tr className="border-b-2 border-slate-800 text-slate-700 font-bold uppercase text-[10px]">
                 <th className="py-1.5 w-16">Tipo</th>
-                <th className="py-1.5">Descrição do Item / Mão de Obra</th>
+                <th className="py-1.5">Descrição do Item / Peça / Mão de Obra</th>
                 <th className="py-1.5 text-center w-16">Qtd.</th>
                 <th className="py-1.5 text-right w-24">Unit. (R$)</th>
                 <th className="py-1.5 text-right w-24">Total (R$)</th>
@@ -179,15 +177,31 @@ export default async function ImprimirOSPage({
             </tbody>
           </table>
 
-          {/* Quadro de Totais */}
-          <div className="flex justify-end pt-2">
+          {/* Quadro de Totais e Pagamentos */}
+          <div className="flex justify-between items-start pt-2">
+            {/* Pagamentos Parciais se houver */}
+            <div className="text-xs space-y-1">
+              {order.payments.length > 0 && (
+                <div>
+                  <span className="font-bold text-slate-600 text-[10px] uppercase block">
+                    Pagamentos Efetuados:
+                  </span>
+                  {order.payments.map((p) => (
+                    <div key={p.id} className="text-[11px] text-slate-600">
+                      ✓ {formatCurrency(p.amount)} ({p.paymentMethod}) em {formatDateTime(p.date)}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="w-64 space-y-1.5 text-xs">
               <div className="flex justify-between text-slate-600">
                 <span>Subtotal Peças:</span>
                 <span className="font-mono font-semibold">{formatCurrency(order.totalParts)}</span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>Subtotal Mão de Obra:</span>
+                <span>Subtotal Serviços:</span>
                 <span className="font-mono font-semibold">{formatCurrency(order.totalServices)}</span>
               </div>
               {order.discount > 0 && (
@@ -200,18 +214,41 @@ export default async function ImprimirOSPage({
                 <span>VALOR TOTAL:</span>
                 <span className="font-mono">{formatCurrency(order.grandTotal)}</span>
               </div>
+              {remainingBalance > 0 && (
+                <div className="flex justify-between font-bold text-red-700 text-xs">
+                  <span>SALDO RESTANTE:</span>
+                  <span className="font-mono">{formatCurrency(remainingBalance)}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
+        {/* Fotos Anexadas (Thumbnails na impressão) */}
+        {order.photos.length > 0 && (
+          <div className="py-3 border-t border-slate-200">
+            <span className="font-bold text-slate-600 text-[10px] uppercase block mb-2">
+              Registro Fotográfico das Avarias / Peças:
+            </span>
+            <div className="grid grid-cols-4 gap-2">
+              {order.photos.slice(0, 4).map((p) => (
+                <div key={p.id} className="border border-slate-300 rounded p-1 text-center">
+                  <img src={p.imageUrl} alt={p.caption || "Foto"} className="w-full h-16 object-cover rounded" />
+                  <span className="text-[9px] text-slate-600 block mt-0.5 truncate">{p.caption || p.type}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Termos de Garantia e Assinaturas */}
-        <div className="pt-8 mt-4 border-t border-slate-200 text-[10px] text-slate-500 space-y-6">
+        <div className="pt-6 mt-4 border-t border-slate-200 text-[10px] text-slate-500 space-y-6">
           <div>
             <p className="font-bold text-slate-700 uppercase tracking-wider mb-1">
               Termo de Garantia & Condições:
             </p>
             <p>
-              Serviços e peças aplicadas possuem garantia legal de {settings?.warrantyDays || 90} dias contra defeitos de fabricação ou montagem, conforme Código de Defesa do Consumidor (Lei 8.078/90). A garantia não cobre mau uso, sobrecarga, acidentes ou intervenção de terceiros.
+              Serviços executados e peças aplicadas possuem garantia legal de {settings?.warrantyDays || 90} dias contra defeitos de fabricação ou montagem (Lei 8.078/90). Veículo testado e entregue em perfeitas condições de uso.
             </p>
           </div>
 

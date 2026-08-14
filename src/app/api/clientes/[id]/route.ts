@@ -48,15 +48,28 @@ export async function PUT(
 ) {
   try {
     const body = await request.json();
-    const { name, phone, email, document, address, notes } = body;
+    const {
+      name,
+      type,
+      phone,
+      email,
+      document,
+      stateRegistration,
+      birthDate,
+      address,
+      notes,
+    } = body;
 
     const updated = await prisma.customer.update({
       where: { id: params.id },
       data: {
         name,
+        type: type || "PF",
         phone,
         email: email || null,
         document: document || null,
+        stateRegistration: stateRegistration || null,
+        birthDate: birthDate ? new Date(birthDate) : null,
         address: address || null,
         notes: notes || null,
       },

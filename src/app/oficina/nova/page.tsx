@@ -14,6 +14,10 @@ import {
   DollarSign,
   AlertCircle,
   Save,
+  Package,
+  ListOrdered,
+  Camera,
+  Image as ImageIcon,
 } from "lucide-react";
 import { formatCurrency, formatPlate } from "@/lib/formatters";
 
@@ -24,6 +28,15 @@ interface OSItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  productId?: string;
+  employeeId?: string;
+  commissionRate?: number;
+}
+
+interface OSPhoto {
+  imageUrl: string;
+  type: string;
+  caption: string;
 }
 
 export default function NovaOrdemServicoPage() {
@@ -31,6 +44,8 @@ export default function NovaOrdemServicoPage() {
 
   const [customers, setCustomers] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [standardServices, setStandardServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Form states
@@ -39,9 +54,12 @@ export default function NovaOrdemServicoPage() {
   const [employeeId, setEmployeeId] = useState("");
   const [status, setStatus] = useState("ORCAMENTO");
   const [entryKm, setEntryKm] = useState("");
-  const [problemDescription, setProblemDescription] = useState("");
-  const [technicalReport, setTechnicalReport] = useState("");
+  
+  // Defeito Reclamado vs Defeito Constatado
+  const [defectClaimed, setDefectClaimed] = useState("");
+  const [defectFound, setDefectFound] = useState("");
   const [internalNotes, setInternalNotes] = useState("");
+  
   const [discount, setDiscount] = useState("0");
   const [estimatedDelivery, setEstimatedDelivery] = useState("");
 
@@ -57,22 +75,33 @@ export default function NovaOrdemServicoPage() {
     },
   ]);
 
+  // Photos
+  const [photos, setPhotos] = useState<OSPhoto[]>([]);
+  const [photoCaption, setPhotoCaption] = useState("");
+  const [photoType, setPhotoType] = useState("AVARIA");
+
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     async function loadInitialData() {
       try {
-        const [custRes, empRes] = await Promise.all([
+        const [custRes, empRes, prodRes, servRes] = await Promise.all([
           fetch("/api/clientes"),
           fetch("/api/equipe"),
+          fetch("/api/produtos"),
+          fetch("/api/servicos-padrao"),
         ]);
-        const [custData, empData] = await Promise.all([
+        const [custData, empData, prodData, servData] = await Promise.all([
           custRes.json(),
           empRes.json(),
+          prodRes.json(),
+          servRes.json(),
         ]);
         setCustomers(custData);
         setEmployees(empData.filter((e: any) => e.active));
+        setProducts(prodData);
+        setStandardServices(servData);
       } catch (err) {
         console.error(err);
       } finally {
@@ -85,7 +114,7 @@ export default function NovaOrdemServicoPage() {
   const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
   const availableVehicles = selectedCustomer?.vehicles || [];
 
-  // Adicionar linha de item
+  // Adicionar linha manual
   const handleAddItem = (type: "PECA" | "SERVICO") => {
     const newItem: OSItem = {
       id: Math.random().toString(),
@@ -94,16 +123,79 @@ export default function NovaOrdemServicoPage() {
       quantity: 1,
       unitPrice: 0,
       totalPrice: 0,
+      employeeId: employeeId || undefined,
     };
     setItems([...items, newItem]);
   };
 
+  // Adicionar produto direto do Estoque
+  const handleAddProductFromCatalog = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const prodId = e.target.value;
+    if (!prodId) return;
+
+    const prod = products.find((p) => p.id === prodId);
+    if (!prod) return;
+
+    const newItem: OSItem = {
+      id: Math.random().toString(),
+      type: "PECA",
+      name: `${prod.name} (${prod.brand || "Geral"})`,
+      quantity: 1,
+      unitPrice: prod.salePrice,
+      totalPrice: prod.salePrice,
+      productId: prod.id,
+      employeeId: employeeId || undefined,
+    };
+
+    setItems([...items, newItem]);
+    e.target.value = "";
+  };
+
+  // Adicionar serviço da Tabela Padronizada
+  const handleAddStandardService = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const servId = e.target.value;
+    if (!servId) return;
+
+    const serv = standardServices.find((s) => s.id === servId);
+    if (!serv) return;
+
+    const newItem: OSItem = {
+      id: Math.random().toString(),
+      type: "SERVICO",
+      name: serv.name,
+      quantity: 1,
+      unitPrice: serv.defaultPrice,
+      totalPrice: serv.defaultPrice,
+      employeeId: employeeId || undefined,
+    };
+
+    setItems([...items, newItem]);
+    e.target.value = "";
+  };
+
+  // Upload de Foto local (convertida para Base64)
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setPhotos([
+        ...photos,
+        {
+          imageUrl: base64,
+          type: photoType,
+          caption: photoCaption || `Foto do veículo (${photoType})`,
+        },
+      ]);
+      setPhotoCaption("");
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Atualizar item
-  const handleUpdateItem = (
-    id: string,
-    field: keyof OSItem,
-    value: any
-  ) => {
+  const handleUpdateItem = (id: string, field: keyof OSItem, value: any) => {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item;
@@ -155,8 +247,10 @@ export default function NovaOrdemServicoPage() {
         employeeId: employeeId || null,
         status,
         entryKm: entryKm ? Number(entryKm) : null,
-        problemDescription,
-        technicalReport,
+        defectClaimed,
+        defectFound,
+        problemDescription: defectClaimed,
+        technicalReport: defectFound,
         internalNotes,
         discount: discountNum,
         estimatedDelivery: estimatedDelivery ? new Date(estimatedDelivery) : null,
@@ -165,7 +259,10 @@ export default function NovaOrdemServicoPage() {
           name: i.name,
           quantity: Number(i.quantity),
           unitPrice: Number(i.unitPrice),
+          productId: i.productId || null,
+          employeeId: i.employeeId || null,
         })),
+        photos,
       };
 
       const res = await fetch("/api/oficina", {
@@ -201,10 +298,10 @@ export default function NovaOrdemServicoPage() {
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
               <Wrench className="w-6 h-6 text-blue-600" />
-              Nova Ordem de Serviço (OS)
+              Nova Ordem de Serviço (OS 2.0)
             </h1>
             <p className="text-xs text-slate-500">
-              Preencha os dados do cliente, veículo, orçamento de peças e serviços.
+              Defeito reclamado x constatado, baixa de estoque automática, fotos do veículo e tabela de serviços.
             </p>
           </div>
         </div>
@@ -226,7 +323,6 @@ export default function NovaOrdemServicoPage() {
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Selecionar Cliente */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Cliente *
@@ -238,7 +334,7 @@ export default function NovaOrdemServicoPage() {
                   setSelectedCustomerId(e.target.value);
                   setSelectedVehicleId("");
                 }}
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs sm:text-sm"
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium"
               >
                 <option value="">Selecione o cliente...</option>
                 {customers.map((c) => (
@@ -249,7 +345,6 @@ export default function NovaOrdemServicoPage() {
               </select>
             </div>
 
-            {/* Selecionar Veículo */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Veículo do Cliente *
@@ -263,7 +358,7 @@ export default function NovaOrdemServicoPage() {
                   const v = availableVehicles.find((veh: any) => veh.id === e.target.value);
                   if (v?.currentKm) setEntryKm(String(v.currentKm));
                 }}
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs sm:text-sm disabled:bg-slate-50 disabled:text-slate-400"
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium disabled:bg-slate-50 disabled:text-slate-400"
               >
                 <option value="">Selecione o veículo...</option>
                 {availableVehicles.map((v: any) => (
@@ -274,10 +369,9 @@ export default function NovaOrdemServicoPage() {
               </select>
             </div>
 
-            {/* KM de Entrada */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Quilometragem (KM) Entrada
+                KM de Entrada
               </label>
               <input
                 type="number"
@@ -288,15 +382,14 @@ export default function NovaOrdemServicoPage() {
               />
             </div>
 
-            {/* Mecânico Responsável */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Mecânico Responsável
+                Mecânico Líder Responsável
               </label>
               <select
                 value={employeeId}
                 onChange={(e) => setEmployeeId(e.target.value)}
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs sm:text-sm"
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium"
               >
                 <option value="">Selecionar mecânico...</option>
                 {employees.map((emp) => (
@@ -309,64 +402,104 @@ export default function NovaOrdemServicoPage() {
           </div>
         </div>
 
-        {/* Card 2: Diagnóstico & Relato */}
+        {/* Card 2: Defeito Reclamado x Defeito Constatado */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
           <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
             <Wrench className="w-4 h-4 text-blue-600" />
-            2. Descrição do Problema & Diagnóstico
+            2. Defeito Reclamado (Cliente) x Defeito Constatado (Laudo Técnico)
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Reclamação do Cliente / Problema Relatado
+            <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-1">
+              <label className="block text-xs font-bold text-blue-900 mb-1">
+                ⚠️ Defeito Reclamado (Relato do Cliente)
               </label>
               <textarea
                 rows={3}
-                placeholder="Ex: Barulho na suspensão dianteira ao passar por buracos, luz da injeção acesa..."
-                value={problemDescription}
-                onChange={(e) => setProblemDescription(e.target.value)}
-                className="w-full p-3 border border-slate-200 rounded-xl text-xs sm:text-sm"
+                placeholder="Ex: Barulho na suspensão ao frear, pedal de freio vibrando em alta velocidade..."
+                value={defectClaimed}
+                onChange={(e) => setDefectClaimed(e.target.value)}
+                className="w-full p-2.5 border border-blue-200 rounded-xl text-xs sm:text-sm bg-white"
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Diagnóstico Técnico / Parecer do Mecânico
+            <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 space-y-1">
+              <label className="block text-xs font-bold text-emerald-900 mb-1">
+                🔍 Defeito Constatado (Diagnóstico & Laudo Técnico do Mecânico)
               </label>
               <textarea
                 rows={3}
-                placeholder="Ex: Bieletas e buchas da barra estabilizadora com folga acentuada. Necessário substituição..."
-                value={technicalReport}
-                onChange={(e) => setTechnicalReport(e.target.value)}
-                className="w-full p-3 border border-slate-200 rounded-xl text-xs sm:text-sm"
+                placeholder="Ex: Discos de freio dianteiros empenados e abaixo da espessura mínima de segurança. Pastilhas no limite."
+                value={defectFound}
+                onChange={(e) => setDefectFound(e.target.value)}
+                className="w-full p-2.5 border border-emerald-200 rounded-xl text-xs sm:text-sm bg-white"
               />
             </div>
           </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">
+              Observações Internas da Oficina (Apenas para equipe interna)
+            </label>
+            <input
+              type="text"
+              placeholder="Ex: Cliente tem pressa, carro para entregar até as 17h"
+              value={internalNotes}
+              onChange={(e) => setInternalNotes(e.target.value)}
+              className="w-full p-2.5 border border-slate-200 rounded-xl text-xs"
+            />
+          </div>
         </div>
 
-        {/* Card 3: Itens da OS (Peças & Serviços) */}
+        {/* Card 3: Peças & Serviços com Atalhos de Estoque */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-emerald-600" />
-              3. Itens, Peças e Mão de Obra
-            </h2>
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-emerald-600" />
+                3. Peças & Mão de Obra (Com Baixa Automática no Estoque)
+              </h2>
+            </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap text-xs">
+              {/* Puxar do Estoque */}
+              <select
+                onChange={handleAddProductFromCatalog}
+                defaultValue=""
+                className="p-2 bg-amber-50 text-amber-900 border border-amber-200 rounded-lg font-bold"
+              >
+                <option value="" disabled>
+                  📦 + Inserir Peça do Estoque...
+                </option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} - {formatCurrency(p.salePrice)} (Disp: {p.currentStock})
+                  </option>
+                ))}
+              </select>
+
+              {/* Puxar da Tabela de Serviços */}
+              <select
+                onChange={handleAddStandardService}
+                defaultValue=""
+                className="p-2 bg-blue-50 text-blue-900 border border-blue-200 rounded-lg font-bold"
+              >
+                <option value="" disabled>
+                  📋 + Inserir Serviço Padrão...
+                </option>
+                {standardServices.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} - {formatCurrency(s.defaultPrice)}
+                  </option>
+                ))}
+              </select>
+
               <button
                 type="button"
                 onClick={() => handleAddItem("SERVICO")}
-                className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-xs flex items-center gap-1 border border-blue-200"
+                className="px-2.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold"
               >
-                <Plus className="w-3.5 h-3.5" /> + Adicionar Serviço
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddItem("PECA")}
-                className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 font-bold text-xs flex items-center gap-1 border border-amber-200"
-              >
-                <Plus className="w-3.5 h-3.5" /> + Adicionar Peça
+                + Linha Manual
               </button>
             </div>
           </div>
@@ -377,41 +510,40 @@ export default function NovaOrdemServicoPage() {
               <thead className="bg-slate-50 text-slate-600 font-bold uppercase border-b border-slate-200">
                 <tr>
                   <th className="py-2.5 px-3 w-28">Tipo</th>
-                  <th className="py-2.5 px-3">Descrição do Item</th>
-                  <th className="py-2.5 px-3 w-24">Qtd.</th>
-                  <th className="py-2.5 px-3 w-32">Valor Unit. (R$)</th>
-                  <th className="py-2.5 px-3 w-32">Total (R$)</th>
-                  <th className="py-2.5 px-3 w-12 text-center"></th>
+                  <th className="py-2.5 px-3">Descrição do Item / Peça</th>
+                  <th className="py-2.5 px-3 w-20 text-center">Qtd.</th>
+                  <th className="py-2.5 px-3 w-28 text-right">Unit. (R$)</th>
+                  <th className="py-2.5 px-3 w-28 text-right">Total (R$)</th>
+                  <th className="py-2.5 px-3 w-36">Executor / Mecânico</th>
+                  <th className="py-2.5 px-3 w-10"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {items.map((item) => (
                   <tr key={item.id}>
-                    <td className="py-2.5 px-3">
-                      <select
-                        value={item.type}
-                        onChange={(e) =>
-                          handleUpdateItem(item.id, "type", e.target.value as any)
-                        }
-                        className="w-full p-1.5 border border-slate-200 rounded-lg text-xs font-bold"
+                    <td className="py-2 px-3">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          item.type === "PECA"
+                            ? "bg-amber-100 text-amber-800"
+                            : "bg-blue-100 text-blue-800"
+                        }`}
                       >
-                        <option value="SERVICO">Mão de Obra</option>
-                        <option value="PECA">Peça / Produto</option>
-                      </select>
+                        {item.type === "PECA" ? "Peça" : "Serviço"}
+                      </span>
                     </td>
 
-                    <td className="py-2.5 px-3">
+                    <td className="py-2 px-3">
                       <input
                         type="text"
                         required
-                        placeholder="Ex: Jogo de Pastilhas dianteiras"
                         value={item.name}
                         onChange={(e) => handleUpdateItem(item.id, "name", e.target.value)}
-                        className="w-full p-2 border border-slate-200 rounded-lg text-xs"
+                        className="w-full p-1.5 border border-slate-200 rounded-lg text-xs"
                       />
                     </td>
 
-                    <td className="py-2.5 px-3">
+                    <td className="py-2 px-3">
                       <input
                         type="number"
                         min="1"
@@ -420,11 +552,11 @@ export default function NovaOrdemServicoPage() {
                         onChange={(e) =>
                           handleUpdateItem(item.id, "quantity", Number(e.target.value))
                         }
-                        className="w-full p-2 border border-slate-200 rounded-lg text-xs text-center font-bold"
+                        className="w-full p-1.5 border border-slate-200 rounded-lg text-xs text-center font-bold"
                       />
                     </td>
 
-                    <td className="py-2.5 px-3">
+                    <td className="py-2 px-3">
                       <input
                         type="number"
                         step="0.01"
@@ -432,21 +564,36 @@ export default function NovaOrdemServicoPage() {
                         onChange={(e) =>
                           handleUpdateItem(item.id, "unitPrice", Number(e.target.value))
                         }
-                        className="w-full p-2 border border-slate-200 rounded-lg text-xs font-bold text-right"
+                        className="w-full p-1.5 border border-slate-200 rounded-lg text-xs font-bold text-right"
                       />
                     </td>
 
-                    <td className="py-2.5 px-3 font-extrabold text-slate-900 text-right">
+                    <td className="py-2 px-3 font-black text-slate-900 text-right">
                       {formatCurrency(item.totalPrice)}
                     </td>
 
-                    <td className="py-2.5 px-3 text-center">
+                    <td className="py-2 px-3">
+                      <select
+                        value={item.employeeId || ""}
+                        onChange={(e) => handleUpdateItem(item.id, "employeeId", e.target.value)}
+                        className="w-full p-1.5 border border-slate-200 rounded-lg text-[11px]"
+                      >
+                        <option value="">Mecânico Líder</option>
+                        {employees.map((emp) => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.name}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+
+                    <td className="py-2 px-3 text-center">
                       <button
                         type="button"
                         onClick={() => handleRemoveItem(item.id)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"
+                        className="p-1 rounded text-slate-400 hover:text-red-600"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </td>
                   </tr>
@@ -455,34 +602,34 @@ export default function NovaOrdemServicoPage() {
             </table>
           </div>
 
-          {/* Resumo Financeiro da OS */}
-          <div className="pt-4 border-t border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-slate-50 p-4 rounded-xl">
-            <div className="flex flex-wrap gap-4 text-xs">
+          {/* Totais */}
+          <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50 p-4 rounded-xl text-xs">
+            <div className="flex gap-4">
               <div>
                 <span className="text-slate-500 block">Subtotal Peças:</span>
-                <strong className="text-slate-800 text-sm">{formatCurrency(totalParts)}</strong>
+                <strong className="text-slate-800 text-sm font-mono">{formatCurrency(totalParts)}</strong>
               </div>
               <div>
                 <span className="text-slate-500 block">Subtotal Serviços:</span>
-                <strong className="text-slate-800 text-sm">{formatCurrency(totalServices)}</strong>
+                <strong className="text-slate-800 text-sm font-mono">{formatCurrency(totalServices)}</strong>
               </div>
             </div>
 
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <label className="text-xs font-bold text-slate-700">Desconto (R$):</label>
+                <label className="font-bold text-slate-700">Desconto (R$):</label>
                 <input
                   type="number"
                   step="0.01"
                   value={discount}
                   onChange={(e) => setDiscount(e.target.value)}
-                  className="w-24 p-2 border border-slate-200 rounded-lg text-xs font-bold text-right bg-white"
+                  className="w-24 p-1.5 border border-slate-200 rounded-lg text-xs font-bold text-right bg-white"
                 />
               </div>
 
               <div className="text-right">
-                <span className="text-xs text-slate-500 block">Total Geral:</span>
-                <span className="text-2xl font-black text-blue-600">
+                <span className="text-slate-500 block text-[11px]">Total da OS:</span>
+                <span className="text-2xl font-black text-blue-600 font-mono">
                   {formatCurrency(grandTotal)}
                 </span>
               </div>
@@ -490,11 +637,80 @@ export default function NovaOrdemServicoPage() {
           </div>
         </div>
 
-        {/* Card 4: Status e Previsão */}
+        {/* Card 4: Fotos do Veículo (Antes / Depois / Avarias) */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+            <Camera className="w-4 h-4 text-purple-600" />
+            4. Fotos do Veículo & Avarias (Antes / Depois)
+          </h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Tipo da Foto</label>
+              <select
+                value={photoType}
+                onChange={(e) => setPhotoType(e.target.value)}
+                className="w-full p-2 border border-slate-200 rounded-xl text-xs font-semibold"
+              >
+                <option value="AVARIA">Avaria Prévia no Veículo</option>
+                <option value="ANTES">Veículo Antes do Serviço</option>
+                <option value="PECA_TROCADAS">Peças Velhas Removidas</option>
+                <option value="DEPOIS">Veículo Pronto (Depois)</option>
+              </select>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Legenda da Imagem</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Ex: Risco na porta direita, pastilha gasta"
+                  value={photoCaption}
+                  onChange={(e) => setPhotoCaption(e.target.value)}
+                  className="w-full p-2 border border-slate-200 rounded-xl text-xs"
+                />
+                <label className="cursor-pointer px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 whitespace-nowrap shadow-sm">
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>Carregar Foto</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Galeria de Fotos Anexadas */}
+          {photos.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+              {photos.map((p, idx) => (
+                <div key={idx} className="relative rounded-xl border border-slate-200 overflow-hidden bg-slate-50 group">
+                  <img src={p.imageUrl} alt={p.caption} className="w-full h-28 object-cover" />
+                  <div className="p-2 text-[11px] bg-white">
+                    <span className="font-bold text-purple-700 text-[10px] block">{p.type}</span>
+                    <p className="text-slate-600 truncate">{p.caption}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPhotos(photos.filter((_, i) => i !== idx))}
+                    className="absolute top-1 right-1 p-1 rounded-full bg-red-600 text-white opacity-90 hover:opacity-100"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Card 5: Status e Previsão */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
           <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
             <Calendar className="w-4 h-4 text-blue-600" />
-            4. Status Inicial & Previsão de Entrega
+            5. Status & Previsão de Entrega
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -508,6 +724,7 @@ export default function NovaOrdemServicoPage() {
                 className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold"
               >
                 <option value="ORCAMENTO">Orçamento (Aguardando Aprovação)</option>
+                <option value="EM_ANALISE">Em Análise / Desmontagem</option>
                 <option value="APROVADO">Aprovado pelo Cliente</option>
                 <option value="EM_EXECUCAO">Em Execução no Box</option>
                 <option value="AGUARDANDO_PECA">Aguardando Peça Externa</option>
@@ -516,7 +733,7 @@ export default function NovaOrdemServicoPage() {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Previsão de Conclusão / Entrega
+                Previsão de Conclusão
               </label>
               <input
                 type="date"
