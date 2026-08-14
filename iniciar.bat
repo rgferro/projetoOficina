@@ -1,5 +1,6 @@
 @echo off
-chcp 65001 > nul
+setlocal
+cd /d "%~dp0"
 title AutoGestao ERP - Servidor Local
 
 echo ========================================================
@@ -13,12 +14,13 @@ echo Mantenha esta janela aberta enquanto estiver usando o sistema.
 echo.
 
 start "" "http://localhost:3000"
-call npm run start
+call npm run dev
 
 if %errorlevel% neq 0 (
-    echo.
-    echo Servidor de producao nao encontrado. Iniciando modo desenvolvimento...
-    call npm run dev
+    call npm run start
 )
 
+echo.
+echo Servidor finalizado.
 pause
+cmd /k
