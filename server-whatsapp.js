@@ -11,7 +11,7 @@ const {
 } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 
-const PORT = 3001;
+const PORT = 3005; // Porta dedicada 3005 exclusiva para WhatsApp
 const AUTH_DIR = path.join(__dirname, 'whatsapp_auth');
 
 let sock = null;
@@ -62,7 +62,7 @@ async function startWhatsAppService() {
             qrCodeUrl: qrDataUrl,
             lastConnectedAt: null,
           };
-          console.log('⚡ [WhatsApp Daemon] QR Code oficial gerado com sucesso!');
+          console.log('⚡ [WhatsApp Daemon] QR Code oficial gerado com sucesso na porta 3005!');
         } catch (err) {
           console.error('Erro ao gerar QR Code:', err);
         }
@@ -110,7 +110,7 @@ async function startWhatsAppService() {
   }
 }
 
-// Inicia o microserviço HTTP para Next.js
+// Inicia o microserviço HTTP para Next.js na porta 3005
 const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -123,7 +123,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // GET /status
-  if (req.method === 'GET' && req.url === '/status') {
+  if (req.method === 'GET' && (req.url === '/status' || req.url === '/')) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(sessionState));
     return;
@@ -153,7 +153,6 @@ const server = http.createServer(async (req, res) => {
             })
           );
         } else {
-          // Fallback se não pareado ainda
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(
             JSON.stringify({
@@ -198,7 +197,7 @@ const server = http.createServer(async (req, res) => {
   res.end();
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '127.0.0.1', () => {
   console.log(`🚀 [WhatsApp Daemon] Rodando na porta ${PORT}`);
   startWhatsAppService();
 });

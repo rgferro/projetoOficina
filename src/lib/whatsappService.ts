@@ -5,7 +5,7 @@ export interface WhatsAppSession {
   lastConnectedAt: string | null;
 }
 
-const DAEMON_URL = "http://127.0.0.1:3001";
+const DAEMON_URL = "http://127.0.0.1:3005";
 
 export function sanitizeWhatsAppNumber(phone: string): string {
   let clean = phone.replace(/\D/g, "");
@@ -17,7 +17,7 @@ export function sanitizeWhatsAppNumber(phone: string): string {
   return clean;
 }
 
-// Obtém status em tempo real do microserviço Baileys na porta 3001
+// Obtém status em tempo real do microserviço Baileys na porta 3005
 export async function getWhatsAppSession(): Promise<WhatsAppSession> {
   try {
     const res = await fetch(`${DAEMON_URL}/status`, { cache: "no-store" });
