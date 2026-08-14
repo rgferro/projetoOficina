@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id            String         @id @default(cuid())
+  name          String
+  phone         String         // WhatsApp principal
+  email         String?
+  document      String?        // CPF ou CNPJ
+  address       String?
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  vehicles      Vehicle[]
+  serviceOrders ServiceOrder[]
+}
+
+model Vehicle {
+  id            String         @id @default(cuid())
+  plate         String         @unique // Placa (ex: ABC1D23)
+  brand         String         // Marca (ex: Volkswagen, Fiat, Toyota)
+  model         String         // Modelo (ex: Gol, Civic, Hilux)
+  year          Int?
+  color         String?
+  currentKm     Int?           @default(0)
+  category      String         @default("Hatch / Sedan") // Hatch, Sedan, SUV, Caminhonete, Moto, Van
+  notes         String?
+  
+  customerId    String
+  customer      Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  washTickets   WashTicket[]
+  serviceOrders ServiceOrder[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Employee {
+  id             String         @id @default(cuid())
+  name           String
+  role           String         // "Mecânico", "Lavador", "Atendente", "Gerente"
+  phone          String?
+  commissionRate Float          @default(0.0) // % de comissão (ex: 10.0 para 10%)
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  washTickets    WashTicket[]
+  serviceOrders  ServiceOrder[]
+}
+
+model WashTicket {
+  id               String          @id @default(cuid())
+  ticketNumber     Int             @default(1001)
+  serviceType      String          // Simples, Completa com Cera, Higienização, Motor + Chassi, etc.
+  price            Float
+  status           String          @default("AGUARDANDO") // AGUARDANDO, EM_LAVAGEM, FINALIZADO, ENTREGUE, CANCELADO
+  notes            String?
+  notifiedWhatsapp Boolean         @default(false)
+  
+  paymentMethod    String?         // DINHEIRO, PIX, CARTAO_CREDITO, CARTAO_DEBITO
+  paymentStatus    String          @default("PENDENTE") // PENDENTE, PAGO
+  
+  enteredAt        DateTime        @default(now())
+  finishedAt       DateTime?
+  deliveredAt      DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  vehicleId        String
+  vehicle          Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  employeeId       String?
+  employee         Employee?       @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+
+  transactions     FinancialTransaction[]
+}
+
+model ServiceOrder {
+  id                 String              @id @default(cuid())
+  osNumber           Int                 @default(1001)
+  status             String              @default("ORCAMENTO") // ORCAMENTO, APROVADO, EM_EXECUCAO, AGUARDANDO_PECA, CONCLUIDO, CANCELADO
+  entryKm            Int?
+  problemDescription String?             // Reclamação do cliente
+  technicalReport    String?             // Diagnóstico do mecânico
+  internalNotes      String?
+  
+  discount           Float               @default(0.0)
+  totalServices      Float               @default(0.0)
+  totalParts         Float               @default(0.0)
+  grandTotal         Float               @default(0.0)
+
+  paymentMethod      String?             // DINHEIRO, PIX, CARTAO_CREDITO, CARTAO_DEBITO, BOLETO, FATURADO
+  paymentStatus      String              @default("PENDENTE") // PENDENTE, PAGO, PARCIAL
+
+  estimatedDelivery  DateTime?
+  completedAt        DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  customerId         String
+  customer           Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  vehicleId          String
+  vehicle            Vehicle             @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  employeeId         String?             // Mecânico responsável
+  employee           Employee?           @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+
+  items              ServiceOrderItem[]
+  transactions       FinancialTransaction[]
+}
+
+model ServiceOrderItem {
+  id             String        @id @default(cuid())
+  type           String        // "PECA" ou "SERVICO"
+  name           String        // Nome do item (ex: Óleo 5W30, Troca de Pastilhas)
+  quantity       Float         @default(1.0)
+  unitPrice      Float         @default(0.0)
+  totalPrice     Float         @default(0.0)
+  createdAt      DateTime      @default(now())
+
+  serviceOrderId String
+  serviceOrder   ServiceOrder  @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+}
+
+model FinancialTransaction {
+  id             String        @id @default(cuid())
+  description    String
+  type           String        // "RECEITA" ou "DESPESA"
+  category       String        // "LAVA_JATO", "ORDEM_SERVICO", "COMPRA_PECA", "SALARIOS", "DESPESA_FIXA", "OUTROS"
+  amount         Float
+  paymentMethod  String        // "DINHEIRO", "PIX", "CARTAO_CREDITO", "CARTAO_DEBITO", "BOLETO"
+  date           DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+
+  washTicketId   String?
+  washTicket     WashTicket?   @relation(fields: [washTicketId], references: [id], onDelete: SetNull)
+
+  serviceOrderId String?
+  serviceOrder   ServiceOrder? @relation(fields: [serviceOrderId], references: [id], onDelete: SetNull)
+}
+
+model WorkshopSetting {
+  id                          String   @id @default("default")
+  workshopName                String   @default("Oficina & Lava-Jato Central")
+  cnpj                        String?  @default("12.345.678/0001-90")
+  phone                       String?  @default("(11) 98765-4321")
+  address                     String?  @default("Av. Principal dos Motores, 1500 - Centro")
+  email                       String?  @default("contato@oficinacentral.com.br")
+  logoUrl                     String?
+  warrantyDays                Int      @default(90)
+  
+  // Modelos de Mensagem WhatsApp
+  whatsappWashReadyTemplate   String   @default("Olá {nome}! Seu {veiculo} ({placa}) já está limpo e pronto para retirada aqui no {oficina}. 🚗✨ Valor: {valor}. Aguardamos sua visita!")
+  whatsappOilReminderTemplate String   @default("Olá {nome}! Notamos que faz 6 meses da última troca de óleo/revisão do seu {veiculo} ({placa}). Agende uma checagem preventiva aqui no {oficina}! 🛠️")
+  whatsappWashReminderTemplate String  @default("Olá {nome}! Faz alguns dias que não vemos seu {veiculo} ({placa}) por aqui. Que tal deixá-lo brilhando hoje? Temos horários disponíveis! 🧼✨")
+  
+  updatedAt                   DateTime @updatedAt
+}
