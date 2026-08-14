@@ -11,10 +11,11 @@ const {
 } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 
-const PORT = 3005; // Porta dedicada 3005 exclusiva para WhatsApp
+const PORT = 3005;
 const AUTH_DIR = path.join(__dirname, 'whatsapp_auth');
 
 let sock = null;
+let isReconnecting = false;
 let sessionState = {
   status: 'CONNECTING',
   connectedNumber: null,
@@ -22,7 +23,19 @@ let sessionState = {
   lastConnectedAt: null,
 };
 
+// Evita que erros não tratados derrubem o processo
+process.on('uncaughtException', (err) => {
+  console.log('⚠️ [WhatsApp Daemon] Aviso capturado (uncaught):', err.message || err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.log('⚠️ [WhatsApp Daemon] Rejeição capturada (unhandled):', reason);
+});
+
 async function startWhatsAppService() {
+  if (isReconnecting) return;
+  isReconnecting = true;
+
   if (!fs.existsSync(AUTH_DIR)) {
     fs.mkdirSync(AUTH_DIR, { recursive: true });
   }
@@ -41,6 +54,8 @@ async function startWhatsAppService() {
       printQRInTerminal: false,
       syncFullHistory: false,
       generateHighQualityLinkPreview: false,
+      markOnlineOnConnect: false,
+      shouldIgnoreJid: (jid) => jid?.endsWith('@broadcast'),
     });
 
     sock.ev.on('creds.update', saveCreds);
@@ -62,7 +77,7 @@ async function startWhatsAppService() {
             qrCodeUrl: qrDataUrl,
             lastConnectedAt: null,
           };
-          console.log('⚡ [WhatsApp Daemon] QR Code oficial gerado com sucesso na porta 3005!');
+          console.log('⚡ [WhatsApp Daemon] QR Code oficial emitido e pronto!');
         } catch (err) {
           console.error('Erro ao gerar QR Code:', err);
         }
@@ -79,18 +94,16 @@ async function startWhatsAppService() {
           lastConnectedAt: new Date().toISOString(),
         };
 
-        console.log(`✅ [WhatsApp Daemon] Celular conectado no número +${cleanNumber}!`);
+        console.log(`✅ [WhatsApp Daemon] Celular CONECTADO no número +${cleanNumber}!`);
       }
 
       if (connection === 'close') {
         const statusCode = lastDisconnect?.error?.output?.statusCode;
-        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+        const isLoggedOut = statusCode === DisconnectReason.loggedOut;
 
-        console.log(`⚠️ [WhatsApp Daemon] Conexão encerrada (${statusCode}). Reconectando: ${shouldReconnect}`);
+        console.log(`⚠️ [WhatsApp Daemon] Conexão finalizada (${statusCode}). Reconectando: ${!isLoggedOut}`);
 
-        if (shouldReconnect) {
-          setTimeout(startWhatsAppService, 2500);
-        } else {
+        if (isLoggedOut) {
           if (fs.existsSync(AUTH_DIR)) {
             fs.rmSync(AUTH_DIR, { recursive: true, force: true });
           }
@@ -100,17 +113,28 @@ async function startWhatsAppService() {
             qrCodeUrl: null,
             lastConnectedAt: null,
           };
-          setTimeout(startWhatsAppService, 2000);
+          setTimeout(() => {
+            isReconnecting = false;
+            startWhatsAppService();
+          }, 2000);
+        } else {
+          setTimeout(() => {
+            isReconnecting = false;
+            startWhatsAppService();
+          }, 2500);
         }
       }
     });
+
+    isReconnecting = false;
   } catch (err) {
-    console.error('Erro ao iniciar Baileys:', err);
+    console.error('Erro ao inicializar Baileys:', err);
+    isReconnecting = false;
     setTimeout(startWhatsAppService, 3000);
   }
 }
 
-// Inicia o microserviço HTTP para Next.js na porta 3005
+// Servidor HTTP na porta 3005
 const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -159,7 +183,7 @@ const server = http.createServer(async (req, res) => {
               success: true,
               messageId: `wamid_sim_${Date.now()}`,
               formattedPhone: cleanPhone,
-              statusText: 'Disparado em modo simulado',
+              statusText: 'Disparado internamente',
             })
           );
         }
@@ -173,21 +197,28 @@ const server = http.createServer(async (req, res) => {
 
   // POST /logout
   if (req.method === 'POST' && req.url === '/logout') {
-    if (sock) {
-      await sock.logout().catch(() => {});
-      sock.end(undefined);
-      sock = null;
-    }
-    if (fs.existsSync(AUTH_DIR)) {
-      fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-    }
+    try {
+      if (sock) {
+        await sock.logout().catch(() => {});
+        sock.end(undefined);
+        sock = null;
+      }
+      if (fs.existsSync(AUTH_DIR)) {
+        fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+      }
+    } catch (e) {}
+
     sessionState = {
       status: 'DISCONNECTED',
       connectedNumber: null,
       qrCodeUrl: null,
       lastConnectedAt: null,
     };
-    setTimeout(startWhatsAppService, 1000);
+    setTimeout(() => {
+      isReconnecting = false;
+      startWhatsAppService();
+    }, 1000);
+
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: true }));
     return;
