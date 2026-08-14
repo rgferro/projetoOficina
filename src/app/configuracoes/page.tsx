@@ -398,14 +398,24 @@ export default function ConfiguracoesPage() {
             </div>
 
             <div className="flex flex-col items-center justify-center space-y-4 py-2">
-              {waStatus?.qrCodeUrl && (
+              {waStatus?.qrCodeUrl ? (
                 <div className="p-4 bg-white rounded-2xl border-2 border-slate-200 shadow-md">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={waStatus.qrCodeUrl}
                     alt="QR Code WhatsApp"
-                    className="w-56 h-56 rounded-lg"
+                    className="w-56 h-56 rounded-lg shadow-inner"
                   />
+                </div>
+              ) : (
+                <div className="w-56 h-56 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center p-4 text-center space-y-3">
+                  <RefreshCw className="w-8 h-8 text-emerald-600 animate-spin" />
+                  <p className="text-xs font-bold text-slate-700">
+                    Gerando QR Code Oficial...
+                  </p>
+                  <p className="text-[10px] text-slate-500 leading-tight">
+                    Conectando aos servidores do WhatsApp em tempo real.
+                  </p>
                 </div>
               )}
 
