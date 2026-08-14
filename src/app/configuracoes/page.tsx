@@ -420,7 +420,19 @@ export default function ConfiguracoesPage() {
               )}
 
               <div className="text-xs text-slate-600 space-y-1.5 text-left w-full bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <p className="font-bold text-slate-800">Passos no seu celular:</p>
+                <div className="flex items-center justify-between">
+                  <p className="font-bold text-slate-800">Passos no seu celular:</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      fetch("/api/whatsapp/disconnect", { method: "POST" });
+                    }}
+                    className="text-[10px] text-emerald-700 font-bold hover:underline flex items-center gap-1"
+                  >
+                    <RefreshCw className="w-2.5 h-2.5" />
+                    Gerar Novo QR Code
+                  </button>
+                </div>
                 <p>1. Abra o WhatsApp &gt; Menu (3 pontinhos ou Ajustes)</p>
                 <p>2. Toque em <strong>Aparelhos Conectados</strong> &gt; <strong>Conectar um aparelho</strong></p>
                 <p>3. Aponte a câmera para o QR Code acima</p>
