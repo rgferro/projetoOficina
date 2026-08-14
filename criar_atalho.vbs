@@ -7,7 +7,7 @@ oShortcut.TargetPath = strCurrentDir & "\INICIAR_SISTEMA.bat"
 oShortcut.WorkingDirectory = strCurrentDir
 oShortcut.WindowStyle = 1
 oShortcut.Description = "Sistema AutoGestao ERP Oficina e Lava-Jato"
-oShortcut.IconLocation = "%SystemRoot%\system32\SHELL32.dll,41"
+oShortcut.IconLocation = strCurrentDir & "\icon.ico,0"
 oShortcut.Save
 
-WScript.Echo "Atalho criado na Area de Trabalho: " & strDesktop & "\AutoGestao Oficina.lnk"
+WScript.Echo "Atalho atualizado com icone automotivo na Area de Trabalho: " & strDesktop & "\AutoGestao Oficina.lnk"
