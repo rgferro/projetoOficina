@@ -13,28 +13,42 @@ export async function GET(request: Request) {
     if (format === "json") {
       const customers = await prisma.customer.findMany({ include: { vehicles: true } });
       const employees = await prisma.employee.findMany();
+      const suppliers = await prisma.supplier.findMany();
+      const products = await prisma.product.findMany();
+      const standardServices = await prisma.standardService.findMany();
       const washTickets = await prisma.washTicket.findMany();
-      const serviceOrders = await prisma.serviceOrder.findMany({ include: { items: true } });
+      const serviceOrders = await prisma.serviceOrder.findMany({
+        include: { items: true, payments: true, photos: true },
+      });
+      const sales = await prisma.sale.findMany({ include: { items: true } });
       const transactions = await prisma.financialTransaction.findMany();
+      const accountsPayable = await prisma.accountPayable.findMany();
+      const accountsReceivable = await prisma.accountReceivable.findMany();
       const settings = await prisma.workshopSetting.findMany();
 
       const dump = {
         exportedAt: new Date().toISOString(),
-        version: "1.0",
+        version: "2.0",
         data: {
           settings,
           employees,
           customers,
+          suppliers,
+          products,
+          standardServices,
           washTickets,
           serviceOrders,
+          sales,
           transactions,
+          accountsPayable,
+          accountsReceivable,
         },
       };
 
       return new NextResponse(JSON.stringify(dump, null, 2), {
         headers: {
           "Content-Type": "application/json",
-          "Content-Disposition": `attachment; filename="backup_oficina_${dateStr}.json"`,
+          "Content-Disposition": `attachment; filename="backup_autogestao_${dateStr}.json"`,
         },
       });
     }
@@ -70,18 +84,22 @@ export async function POST(request: Request) {
     }
 
     const dbPath = path.join(process.cwd(), "prisma", "dev.db");
+    if (!fs.existsSync(dbPath)) {
+      return NextResponse.json({ error: "Banco de dados dev.db não encontrado para cópia" }, { status: 404 });
+    }
+
     const dateStr = new Date().toISOString().replace(/:/g, "-").split(".")[0];
-    const destinationPath = path.join(targetFolder, `backup_auto_${dateStr}.db`);
+    const destinationPath = path.join(targetFolder, `autogestao_backup_${dateStr}.db`);
 
     fs.copyFileSync(dbPath, destinationPath);
 
     return NextResponse.json({
       success: true,
-      message: `Backup local copiado com sucesso!`,
+      message: `Backup realizado com sucesso!`,
       savedPath: destinationPath,
       createdAt: new Date(),
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Falha ao salvar cópia local" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Falha ao salvar cópia de backup" }, { status: 500 });
   }
 }

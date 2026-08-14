@@ -11,6 +11,9 @@ import {
   MessageSquare,
   ShieldCheck,
   Building,
+  Cloud,
+  FolderSync,
+  RefreshCw,
 } from "lucide-react";
 
 export default function ConfiguracoesPage() {
@@ -24,15 +27,17 @@ export default function ConfiguracoesPage() {
     whatsappWashReadyTemplate: "",
     whatsappOilReminderTemplate: "",
     whatsappWashReminderTemplate: "",
+    whatsappBirthdayTemplate: "",
   });
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Backup local status
+  // Backup states
   const [backupStatus, setBackupStatus] = useState("");
-  const [localFolder, setLocalFolder] = useState("");
+  const [cloudFolder, setCloudFolder] = useState("");
+  const [autoBackupEnabled, setAutoBackupEnabled] = useState(true);
 
   const loadSettings = async () => {
     try {
@@ -40,6 +45,10 @@ export default function ConfiguracoesPage() {
       const res = await fetch("/api/configuracoes");
       const data = await res.json();
       setSettings(data);
+
+      // Carrega caminho salvo do localStorage se existir
+      const savedFolder = localStorage.getItem("autogestao_cloud_backup_folder");
+      if (savedFolder) setCloudFolder(savedFolder);
     } catch (err) {
       console.error(err);
     } finally {
@@ -64,6 +73,9 @@ export default function ConfiguracoesPage() {
       });
 
       if (res.ok) {
+        if (cloudFolder) {
+          localStorage.setItem("autogestao_cloud_backup_folder", cloudFolder);
+        }
         setSuccessMessage("Configurações salvas com sucesso!");
         setTimeout(() => setSuccessMessage(""), 3500);
       } else {
@@ -76,20 +88,22 @@ export default function ConfiguracoesPage() {
     }
   };
 
-  const handleTriggerLocalCopy = async () => {
+  const handleTriggerBackup = async (folder?: string) => {
     setBackupStatus("Gerando cópia de segurança...");
     try {
+      const target = folder || cloudFolder || undefined;
       const res = await fetch("/api/backup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          targetFolder: localFolder || undefined,
+          targetFolder: target,
         }),
       });
 
       const data = await res.json();
       if (res.ok) {
-        setBackupStatus(`✓ Sucesso: Salvo em ${data.savedPath}`);
+        setBackupStatus(`✓ Sucesso: Arquivo salvo em "${data.savedPath}"`);
+        if (target) localStorage.setItem("autogestao_cloud_backup_folder", target);
       } else {
         setBackupStatus(`Erro: ${data.error}`);
       }
@@ -104,10 +118,10 @@ export default function ConfiguracoesPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2.5">
           <Settings className="w-7 h-7 text-blue-600" />
-          Configurações & Backup Local
+          Configurações & Backup (Manual e Automático)
         </h1>
         <p className="text-sm text-slate-500">
-          Personalize os dados da sua oficina, mensagens de WhatsApp e faça backup com 1 clique do banco SQLite.
+          Gerencie o backup automático na nuvem (Google Drive / OneDrive), download manual do SQLite e dados da oficina.
         </p>
       </div>
 
@@ -118,32 +132,45 @@ export default function ConfiguracoesPage() {
         </div>
       )}
 
-      {/* Seção 1: Backup do Banco de Dados */}
+      {/* Seção 1: Central de Backup (Nuvem / Google Drive / Local) */}
       <div className="bg-gradient-to-tr from-slate-900 via-slate-850 to-blue-950 rounded-2xl p-6 text-white shadow-xl space-y-5">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-xl bg-blue-600/30 text-blue-400 border border-blue-500/20">
-              <Database className="w-6 h-6" />
+              <Cloud className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">Central de Backup Local (SQLite)</h2>
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                Backup na Nuvem & Google Drive
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  Manual & Automático
+                </span>
+              </h2>
               <p className="text-xs text-slate-400">
-                Seus dados ficam armazenados localmente no arquivo <code className="text-blue-300">prisma/dev.db</code>.
+                Seus dados ficam protegidos no arquivo único <code className="text-blue-300">prisma/dev.db</code>.
               </p>
             </div>
           </div>
-          <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-            Seguro & Portátil
-          </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+        {/* Como funciona o Automático vs Manual */}
+        <div className="p-4 rounded-xl bg-slate-800/60 border border-slate-700 text-xs space-y-2">
+          <div className="flex items-start gap-2">
+            <FolderSync className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+            <p className="text-slate-300">
+              <strong className="text-white">Sincronização Automática em Tempo Real:</strong> Se a pasta do sistema estiver dentro do <strong>Google Drive para Computador</strong>, <strong>OneDrive</strong> ou <strong>Dropbox</strong>, todo novo cliente, venda ou OS salva no sistema é sincronizada na nuvem <strong>instantaneamente em tempo real</strong> pelo aplicativo de nuvem do seu Windows!
+            </p>
+          </div>
+        </div>
+
+        {/* 3 Opções de Backup */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
           {/* Opção 1: Download .db */}
           <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700/60 flex flex-col justify-between">
             <div>
-              <h3 className="font-bold text-sm text-slate-200">1. Baixar Arquivo .db</h3>
+              <h3 className="font-bold text-sm text-slate-200">1. Download Manual (.db)</h3>
               <p className="text-xs text-slate-400 mt-1">
-                Download direto do arquivo de banco de dados SQLite para guardar no pendrive ou nuvem.
+                Baixe o arquivo bruto do banco SQLite agora para salvar em pendrive ou anexar por e-mail.
               </p>
             </div>
             <a
@@ -161,7 +188,7 @@ export default function ConfiguracoesPage() {
             <div>
               <h3 className="font-bold text-sm text-slate-200">2. Exportar JSON Completo</h3>
               <p className="text-xs text-slate-400 mt-1">
-                Dump estruturado de todas as tabelas (clientes, OSs, lavagens e financeiro).
+                Dump estruturado de todas as tabelas (clientes, estoque, OSs, vendas e financeiro).
               </p>
             </div>
             <a
@@ -174,22 +201,44 @@ export default function ConfiguracoesPage() {
             </a>
           </div>
 
-          {/* Opção 3: Sincronização em Pasta Local */}
+          {/* Opção 3: Cópia Direta para Pasta do Google Drive */}
           <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700/60 flex flex-col justify-between">
             <div>
-              <h3 className="font-bold text-sm text-slate-200">3. Cópia p/ Pasta Local</h3>
+              <h3 className="font-bold text-sm text-slate-200">3. Copiar p/ Pasta do Google Drive</h3>
               <p className="text-xs text-slate-400 mt-1">
-                Gera uma cópia do banco na pasta <code className="text-blue-300">/backups</code> ou diretório do Google Drive.
+                Gera um snapshot com data e hora na pasta do Google Drive ou pasta de backups.
               </p>
             </div>
             <button
-              onClick={handleTriggerLocalCopy}
+              type="button"
+              onClick={() => handleTriggerBackup()}
               className="mt-4 w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all"
             >
               <HardDrive className="w-4 h-4" />
-              Criar Cópia Agora
+              Executar Cópia Agora
             </button>
           </div>
+        </div>
+
+        {/* Configuração de Pasta de Destino */}
+        <div className="pt-2 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 text-xs">
+          <label className="font-bold text-slate-300 whitespace-nowrap">
+            Pasta Personalizada (Google Drive / Pendrive):
+          </label>
+          <input
+            type="text"
+            placeholder="Ex: G:\Meu Drive\Backups_Oficina ou C:\Users\SeuNome\Google Drive\Backups"
+            value={cloudFolder}
+            onChange={(e) => setCloudFolder(e.target.value)}
+            className="flex-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white font-mono"
+          />
+          <button
+            type="button"
+            onClick={() => handleTriggerBackup(cloudFolder)}
+            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-white font-bold whitespace-nowrap"
+          >
+            Salvar e Fazer Cópia
+          </button>
         </div>
 
         {backupStatus && (
@@ -228,96 +277,105 @@ export default function ConfiguracoesPage() {
                   type="text"
                   value={settings.cnpj || ""}
                   onChange={(e) => setSettings({ ...settings, cnpj: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl font-mono"
                 />
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">WhatsApp / Telefone Principal</label>
+                <label className="font-bold text-slate-700 block mb-1">WhatsApp / Telefone de Contato</label>
                 <input
                   type="text"
                   value={settings.phone || ""}
                   onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl"
                 />
               </div>
 
-              <div className="sm:col-span-2">
+              <div className="lg:col-span-2">
                 <label className="font-bold text-slate-700 block mb-1">Endereço Completo</label>
                 <input
                   type="text"
                   value={settings.address || ""}
                   onChange={(e) => setSettings({ ...settings, address: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl"
                 />
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Dias de Garantia Padrão</label>
+                <label className="font-bold text-slate-700 block mb-1">Garantia Padrão dos Serviços (Dias)</label>
                 <input
                   type="number"
                   value={settings.warrantyDays}
                   onChange={(e) => setSettings({ ...settings, warrantyDays: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold"
                 />
               </div>
             </div>
           </div>
 
-          {/* Modelos de Mensagem WhatsApp */}
+          {/* Seção 3: Modelos de Mensagens do WhatsApp */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
             <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-emerald-600" />
-              Modelos de Mensagem WhatsApp
+              Modelos de Mensagem do WhatsApp (Variáveis: &#123;nome&#125;, &#123;veiculo&#125;, &#123;placa&#125;, &#123;oficina&#125;, &#123;valor&#125;)
             </h2>
-            <p className="text-xs text-slate-500">
-              Variáveis automáticas disponíveis: <code className="text-blue-600">{"{nome}"}</code>, <code className="text-blue-600">{"{veiculo}"}</code>, <code className="text-blue-600">{"{placa}"}</code>, <code className="text-blue-600">{"{valor}"}</code>, <code className="text-blue-600">{"{oficina}"}</code>, <code className="text-blue-600">{"{dias}"}</code>.
-            </p>
 
-            <div className="space-y-4 text-xs">
+            <div className="space-y-3 text-xs">
               <div>
                 <label className="font-bold text-slate-700 block mb-1">
-                  1. Mensagem de Lava-Jato Pronto para Retirada
+                  1. Lava-Jato: Aviso de Carro Limpo e Pronto para Retirada
                 </label>
                 <textarea
                   rows={2}
                   value={settings.whatsappWashReadyTemplate}
                   onChange={(e) => setSettings({ ...settings, whatsappWashReadyTemplate: e.target.value })}
-                  className="w-full p-3 border border-slate-200 rounded-xl"
+                  className="w-full p-2.5 border border-slate-200 rounded-xl font-sans"
                 />
               </div>
 
               <div>
                 <label className="font-bold text-slate-700 block mb-1">
-                  2. Lembrete de Revisão / Troca de Óleo (6 meses)
+                  2. Oficina: Lembrete de Revisão Preventiva e Troca de Óleo (6 meses)
                 </label>
                 <textarea
                   rows={2}
                   value={settings.whatsappOilReminderTemplate}
                   onChange={(e) => setSettings({ ...settings, whatsappOilReminderTemplate: e.target.value })}
-                  className="w-full p-3 border border-slate-200 rounded-xl"
+                  className="w-full p-2.5 border border-slate-200 rounded-xl font-sans"
                 />
               </div>
 
               <div>
                 <label className="font-bold text-slate-700 block mb-1">
-                  3. Lembrete de Retorno ao Lava-Jato (+15 dias)
+                  3. Lava-Jato: Lembrete de Retorno / Fidelização (&gt;15 dias)
                 </label>
                 <textarea
                   rows={2}
                   value={settings.whatsappWashReminderTemplate}
                   onChange={(e) => setSettings({ ...settings, whatsappWashReminderTemplate: e.target.value })}
-                  className="w-full p-3 border border-slate-200 rounded-xl"
+                  className="w-full p-2.5 border border-slate-200 rounded-xl font-sans"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  4. CRM: Mensagem de Aniversário do Cliente (Com Cupom de Desconto)
+                </label>
+                <textarea
+                  rows={2}
+                  value={settings.whatsappBirthdayTemplate || ""}
+                  onChange={(e) => setSettings({ ...settings, whatsappBirthdayTemplate: e.target.value })}
+                  className="w-full p-2.5 border border-slate-200 rounded-xl font-sans"
                 />
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-end">
             <button
               type="submit"
               disabled={saving}
-              className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 flex items-center gap-2"
+              className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 flex items-center gap-2 disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
               {saving ? "Salvando..." : "Salvar Todas as Configurações"}
