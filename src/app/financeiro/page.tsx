@@ -78,12 +78,18 @@ export default function FinanceiroPage() {
         empRes.json(),
       ]);
 
-      setTransactions(transData);
-      setActiveShift(shiftData.status === "ABERTO" ? shiftData : null);
-      setAccountsPayable(payData);
-      setAccountsReceivable(recData);
-      setSuppliers(supData);
-      setEmployees(empData.filter((e: any) => e.active));
+      setTransactions(
+        Array.isArray(transData)
+          ? transData
+          : Array.isArray(transData?.transactions)
+          ? transData.transactions
+          : []
+      );
+      setActiveShift(shiftData?.status === "ABERTO" ? shiftData : null);
+      setAccountsPayable(Array.isArray(payData) ? payData : []);
+      setAccountsReceivable(Array.isArray(recData) ? recData : []);
+      setSuppliers(Array.isArray(supData) ? supData : []);
+      setEmployees(Array.isArray(empData) ? empData.filter((e: any) => e.active) : []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -207,22 +213,26 @@ export default function FinanceiroPage() {
   };
 
   // Cálculos Gerais do Caixa
-  const totalReceitas = transactions
+  const safeTransactions = Array.isArray(transactions) ? transactions : [];
+  const safeAccountsPayable = Array.isArray(accountsPayable) ? accountsPayable : [];
+  const safeAccountsReceivable = Array.isArray(accountsReceivable) ? accountsReceivable : [];
+
+  const totalReceitas = safeTransactions
     .filter((t) => t.type === "RECEITA")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalDespesas = transactions
+  const totalDespesas = safeTransactions
     .filter((t) => t.type === "DESPESA")
     .reduce((sum, t) => sum + t.amount, 0);
 
   const saldoLiquido = totalReceitas - totalDespesas;
 
   // Cálculos de Contas
-  const totalContasPagarPendentes = accountsPayable
+  const totalContasPagarPendentes = safeAccountsPayable
     .filter((b) => b.status === "PENDENTE")
     .reduce((sum, b) => sum + b.amount, 0);
 
-  const totalContasReceberPendentes = accountsReceivable
+  const totalContasReceberPendentes = safeAccountsReceivable
     .filter((b) => b.status === "PENDENTE")
     .reduce((sum, b) => sum + b.amount, 0);
 
@@ -409,7 +419,7 @@ export default function FinanceiroPage() {
           }`}
         >
           <Banknote className="w-4 h-4" />
-          Livro Caixa & Movimentações ({transactions.length})
+          Livro Caixa & Movimentações ({safeTransactions.length})
         </button>
 
         <button
@@ -421,7 +431,7 @@ export default function FinanceiroPage() {
           }`}
         >
           <TrendingDown className="w-4 h-4" />
-          Contas a Pagar ({accountsPayable.length})
+          Contas a Pagar ({safeAccountsPayable.length})
         </button>
 
         <button
@@ -433,7 +443,7 @@ export default function FinanceiroPage() {
           }`}
         >
           <TrendingUp className="w-4 h-4" />
-          Contas a Receber ({accountsReceivable.length})
+          Contas a Receber ({safeAccountsReceivable.length})
         </button>
       </div>
 
@@ -457,7 +467,7 @@ export default function FinanceiroPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {transactions.map((t) => (
+                {safeTransactions.map((t) => (
                   <tr key={t.id} className="hover:bg-slate-50/80">
                     <td className="py-3 px-4 text-slate-500">{formatDateTime(t.date)}</td>
                     <td className="py-3 px-4 font-bold text-slate-900">{t.description}</td>
