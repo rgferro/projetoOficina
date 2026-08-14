@@ -30,16 +30,17 @@ describe("WhatsApp Silent & Deep-link Integration Tests", () => {
     expect(result.statusText).toContain("sucesso");
   });
 
-  it("deve gerenciar sessão de conexão de WhatsApp", () => {
+  it("deve gerenciar sessão de conexão de WhatsApp e gerar QR Code", async () => {
     connectWhatsAppSession("+55 (11) 99999-8888");
-    let session = getWhatsAppSession();
+    let session = await getWhatsAppSession();
     expect(session.status).toBe("CONNECTED");
     expect(session.connectedNumber).toBe("+55 (11) 99999-8888");
 
-    disconnectWhatsAppSession();
-    session = getWhatsAppSession();
-    expect(session.status).toBe("DISCONNECTED");
-    expect(session.connectedNumber).toBeNull();
+    await disconnectWhatsAppSession();
+    session = await getWhatsAppSession();
+    expect(session.status).toBe("QR_READY");
+    expect(session.qrCodeUrl).toBeDefined();
+    expect(session.qrCodeUrl).toContain("data:image/png;base64");
   });
 
   it("deve gerar URL de fallback wa.me com encode seguro", () => {

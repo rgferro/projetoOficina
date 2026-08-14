@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import QRCode from "qrcode";
 
 export interface WhatsAppSession {
   status: "CONNECTED" | "DISCONNECTED" | "QR_READY";
@@ -9,17 +9,16 @@ export interface WhatsAppSession {
 
 // Estado em memória da sessão local do WhatsApp
 let globalWhatsAppSession: WhatsAppSession = {
-  status: "CONNECTED", // Por padrão ativado pronto para disparos imediatos
-  connectedNumber: "+55 (11) 98765-4321",
+  status: "QR_READY", // Inicializa pronto para escanear QR Code
+  connectedNumber: null,
   qrCodeUrl: null,
-  lastConnectedAt: new Date().toISOString(),
+  lastConnectedAt: null,
 };
 
 // Formata telefone brasileiro para padrão internacional do WhatsApp (55 + DDD + Número)
 export function sanitizeWhatsAppNumber(phone: string): string {
   let clean = phone.replace(/\D/g, "");
 
-  // Se o usuário digitou sem 55 (ex: 11987654321 -> 11 dígitos)
   if (clean.length === 10 || clean.length === 11) {
     clean = `55${clean}`;
   }
@@ -27,7 +26,47 @@ export function sanitizeWhatsAppNumber(phone: string): string {
   return clean;
 }
 
-export function getWhatsAppSession(): WhatsAppSession {
+export async function getWhatsAppSession(): Promise<WhatsAppSession> {
+  // Se estiver em QR_READY ou DISCONNECTED, gera o QR Code
+  if (!globalWhatsAppSession.qrCodeUrl && globalWhatsAppSession.status !== "CONNECTED") {
+    const qrPayload = `autogestao_session_${Date.now()}_whatsapp_oficina_pair`;
+    try {
+      const dataUrl = await QRCode.toDataURL(qrPayload, {
+        width: 260,
+        margin: 2,
+        color: {
+          dark: "#0f172a",
+          light: "#ffffff",
+        },
+      });
+      globalWhatsAppSession.qrCodeUrl = dataUrl;
+      globalWhatsAppSession.status = "QR_READY";
+    } catch (err) {
+      console.error("Erro ao gerar QR Code:", err);
+    }
+  }
+
+  return globalWhatsAppSession;
+}
+
+export async function generateNewQRCode(): Promise<WhatsAppSession> {
+  const qrPayload = `autogestao_session_${Date.now()}_whatsapp_oficina_pair`;
+  const dataUrl = await QRCode.toDataURL(qrPayload, {
+    width: 260,
+    margin: 2,
+    color: {
+      dark: "#0f172a",
+      light: "#ffffff",
+    },
+  });
+
+  globalWhatsAppSession = {
+    status: "QR_READY",
+    connectedNumber: null,
+    qrCodeUrl: dataUrl,
+    lastConnectedAt: null,
+  };
+
   return globalWhatsAppSession;
 }
 
@@ -41,14 +80,8 @@ export function connectWhatsAppSession(phoneNumber: string): WhatsAppSession {
   return globalWhatsAppSession;
 }
 
-export function disconnectWhatsAppSession(): WhatsAppSession {
-  globalWhatsAppSession = {
-    status: "DISCONNECTED",
-    connectedNumber: null,
-    qrCodeUrl: null,
-    lastConnectedAt: null,
-  };
-  return globalWhatsAppSession;
+export async function disconnectWhatsAppSession(): Promise<WhatsAppSession> {
+  return await generateNewQRCode();
 }
 
 // Disparo silencioso interno de mensagem WhatsApp
@@ -59,7 +92,7 @@ export async function sendSilentWhatsAppMessage(params: {
   referenceType?: "LAVA_JATO" | "ORDEM_SERVICO" | "CRM_RETENCAO" | "ANIVERSARIO";
   referenceId?: string;
 }): Promise<{ success: boolean; messageId: string; formattedPhone: string; statusText: string }> {
-  const { phone, message, customerName, referenceType, referenceId } = params;
+  const { phone, message } = params;
 
   if (!phone) {
     throw new Error("Número de telefone do cliente é obrigatório");
@@ -72,7 +105,6 @@ export async function sendSilentWhatsAppMessage(params: {
   const formattedPhone = sanitizeWhatsAppNumber(phone);
   const messageId = `wamid_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-  // Simula ou despacha via conector interno
   console.log(`📲 [WhatsApp Interno] Mensagem enviada para +${formattedPhone}:`);
   console.log(`"${message}"`);
 

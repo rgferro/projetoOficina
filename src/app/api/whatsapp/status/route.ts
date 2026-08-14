@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const session = getWhatsAppSession();
+    const session = await getWhatsAppSession();
     return NextResponse.json(session);
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Erro ao obter status" }, { status: 500 });

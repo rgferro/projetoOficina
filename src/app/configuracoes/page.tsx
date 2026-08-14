@@ -18,6 +18,9 @@ import {
   QrCode,
   Smartphone,
   Send,
+  LogOut,
+  Check,
+  Info,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/formatters";
 
@@ -44,12 +47,12 @@ export default function ConfiguracoesPage() {
   const [syncing, setSyncing] = useState(false);
 
   // WhatsApp states
-  const [waStatus, setWaStatus] = useState<any>({
-    status: "CONNECTED",
-    connectedNumber: "+55 (11) 98765-4321",
-  });
+  const [waStatus, setWaStatus] = useState<any>(null);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [manualPhone, setManualPhone] = useState("");
   const [testPhone, setTestPhone] = useState("");
   const [sendingTest, setSendingTest] = useState(false);
+  const [connectingWa, setConnectingWa] = useState(false);
 
   const loadData = async () => {
     try {
@@ -68,7 +71,7 @@ export default function ConfiguracoesPage() {
 
       setSettings(settingsData);
       setCloudStatus(backupStatusData);
-      if (waData) setWaStatus(waData);
+      setWaStatus(waData);
     } catch (err) {
       console.error(err);
     } finally {
@@ -127,6 +130,43 @@ export default function ConfiguracoesPage() {
     }
   };
 
+  // Conectar WhatsApp (via Pareamento do QR Code ou Número)
+  const handleConnectWhatsApp = async (phoneToPair?: string) => {
+    setConnectingWa(true);
+    try {
+      const numberToUse = phoneToPair || manualPhone || settings.phone || "+55 (11) 98765-4321";
+      const res = await fetch("/api/whatsapp/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneNumber: numberToUse }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setWaStatus(data);
+        setIsQrModalOpen(false);
+        setSuccessMessage(`✓ WhatsApp pareado com sucesso no número ${numberToUse}!`);
+        setTimeout(() => setSuccessMessage(""), 4000);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setConnectingWa(false);
+    }
+  };
+
+  // Desconectar WhatsApp
+  const handleDisconnectWhatsApp = async () => {
+    if (!confirm("Deseja desconectar o WhatsApp da oficina?")) return;
+    try {
+      const res = await fetch("/api/whatsapp/disconnect", { method: "POST" });
+      const data = await res.json();
+      setWaStatus(data);
+      setIsQrModalOpen(true);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   // Testar envio silencioso de WhatsApp
   const handleSendTestMessage = async () => {
     if (!testPhone) {
@@ -160,16 +200,18 @@ export default function ConfiguracoesPage() {
     }
   };
 
+  const isConnected = waStatus?.status === "CONNECTED";
+
   return (
     <div className="space-y-6">
       {/* Top Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2.5">
           <Settings className="w-7 h-7 text-blue-600" />
-          Configurações, WhatsApp Interno & Backup
+          Configurações, Conexão WhatsApp & Backup
         </h1>
         <p className="text-sm text-slate-500">
-          Gerencie o envio silencioso de WhatsApp direto do sistema, backup em nuvem e dados da oficina.
+          Pareie o WhatsApp da oficina via QR Code para envio silencioso sem abrir abas, configure backup e dados da empresa.
         </p>
       </div>
 
@@ -180,29 +222,109 @@ export default function ConfiguracoesPage() {
         </div>
       )}
 
-      {/* Seção 0: Conexão Direta do WhatsApp (Envio 100% Interno sem Abrir Abas) */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+      {/* Seção 0: Conexão do WhatsApp com QR Code */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                isConnected
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-amber-100 text-amber-700"
+              }`}
+            >
               <Smartphone className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-slate-900">
-                  Disparo de WhatsApp Interno (Silencioso)
+                  Conexão WhatsApp da Oficina (QR Code)
                 </h2>
-                <span className="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  CONECTADO
-                </span>
+                {isConnected ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    CONECTADO
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                    AGUARDANDO QR CODE
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Número Conectado: <strong className="text-slate-800">{waStatus?.connectedNumber || "+55 (11) 98765-4321"}</strong> • Envia mensagens em 1 clique sem abrir o WhatsApp Web.
+                {isConnected ? (
+                  <>
+                    Número Pareado: <strong className="text-slate-800">{waStatus?.connectedNumber}</strong> • Envia mensagens internamente em 1 clique sem abrir abas.
+                  </>
+                ) : (
+                  "Escaneie o QR Code com o WhatsApp do seu celular para ativar o envio automático."
+                )}
               </p>
             </div>
           </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsQrModalOpen(true)}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all"
+            >
+              <QrCode className="w-4 h-4" />
+              <span>{isConnected ? "Ver / Trocar QR Code" : "Escanear QR Code"}</span>
+            </button>
+
+            {isConnected && (
+              <button
+                type="button"
+                onClick={handleDisconnectWhatsApp}
+                className="px-3 py-2 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 font-bold rounded-xl text-xs flex items-center gap-1 border border-slate-200 transition-all"
+                title="Desconectar este aparelho"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Desconectar</span>
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* QR Code Inline se não estiver conectado */}
+        {!isConnected && waStatus?.qrCodeUrl && (
+          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row items-center gap-6">
+            <div className="p-3 bg-white rounded-2xl border-2 border-slate-200 shadow-md">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={waStatus.qrCodeUrl}
+                alt="QR Code WhatsApp"
+                className="w-48 h-48 rounded-lg"
+              />
+            </div>
+
+            <div className="space-y-3 flex-1 text-xs text-slate-600">
+              <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <QrCode className="w-4 h-4 text-emerald-600" />
+                Como conectar seu celular em 3 passos:
+              </h3>
+              <ol className="list-decimal list-inside space-y-1.5 text-slate-700 font-medium">
+                <li>Abra o <strong>WhatsApp</strong> no seu celular</li>
+                <li>Toque em <strong>Mais opções</strong> (3 pontinhos) ou <strong>Ajustes</strong> &gt; <strong>Aparelhos Conectados</strong></li>
+                <li>Toque em <strong>Conectar um aparelho</strong> e aponte a câmera para o QR Code ao lado</li>
+              </ol>
+
+              <div className="pt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={connectingWa}
+                  onClick={() => handleConnectWhatsApp()}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm shadow-emerald-600/20"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{connectingWa ? "Conectando..." : "Confirmar Conexão do Celular"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Teste de Disparo Rápido */}
         <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
@@ -230,6 +352,75 @@ export default function ConfiguracoesPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal QR Code */}
+      {isQrModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-700">
+                  <QrCode className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-900 text-base">Escanear QR Code do WhatsApp</h3>
+                  <p className="text-xs text-slate-500">Conecte o número oficial da oficina</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsQrModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex flex-col items-center justify-center space-y-4 py-2">
+              {waStatus?.qrCodeUrl && (
+                <div className="p-4 bg-white rounded-2xl border-2 border-slate-200 shadow-md">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={waStatus.qrCodeUrl}
+                    alt="QR Code WhatsApp"
+                    className="w-56 h-56 rounded-lg"
+                  />
+                </div>
+              )}
+
+              <div className="text-xs text-slate-600 space-y-1.5 text-left w-full bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <p className="font-bold text-slate-800">Passos no seu celular:</p>
+                <p>1. Abra o WhatsApp &gt; Menu (3 pontinhos ou Ajustes)</p>
+                <p>2. Toque em <strong>Aparelhos Conectados</strong> &gt; <strong>Conectar um aparelho</strong></p>
+                <p>3. Aponte a câmera para o QR Code acima</p>
+              </div>
+
+              {/* Número manual opcional */}
+              <div className="w-full space-y-1.5 pt-2">
+                <label className="text-[11px] font-bold text-slate-700 block">
+                  Ou defina o WhatsApp da Oficina com DDD:
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Ex: 11987654321"
+                    value={manualPhone}
+                    onChange={(e) => setManualPhone(e.target.value)}
+                    className="flex-1 p-2 border border-slate-200 rounded-xl text-xs font-mono"
+                  />
+                  <button
+                    type="button"
+                    disabled={connectingWa}
+                    onClick={() => handleConnectWhatsApp(manualPhone)}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm"
+                  >
+                    {connectingWa ? "Pareando..." : "Conectar"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Seção 1: Backup em Nuvem 100% Automático */}
       <div className="bg-gradient-to-tr from-slate-900 via-slate-850 to-blue-950 rounded-2xl p-6 text-white shadow-xl space-y-5">
