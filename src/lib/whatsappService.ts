@@ -19,15 +19,37 @@ export interface WhatsAppSession {
 }
 
 const AUTH_DIR = path.join(process.cwd(), "whatsapp_auth");
+const STATE_FILE = path.join(AUTH_DIR, "session_state.json");
 
 declare global {
   var __waSocket: WASocket | undefined;
-  var __waSession: WhatsAppSession | undefined;
   var __waInitializing: boolean | undefined;
 }
 
-if (!global.__waSession) {
-  global.__waSession = {
+// Salva estado da sessão em arquivo para persistência entre threads do Next.js
+function saveSessionState(state: WhatsAppSession) {
+  try {
+    if (!fs.existsSync(AUTH_DIR)) {
+      fs.mkdirSync(AUTH_DIR, { recursive: true });
+    }
+    fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), "utf8");
+  } catch (err) {
+    console.error("Erro ao salvar estado da sessão WhatsApp:", err);
+  }
+}
+
+// Lê estado da sessão do arquivo
+function readSessionState(): WhatsAppSession {
+  try {
+    if (fs.existsSync(STATE_FILE)) {
+      const data = fs.readFileSync(STATE_FILE, "utf8");
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.error("Erro ao ler estado da sessão WhatsApp:", err);
+  }
+
+  return {
     status: "CONNECTING",
     connectedNumber: null,
     qrCodeUrl: null,
@@ -45,9 +67,9 @@ export function sanitizeWhatsAppNumber(phone: string): string {
   return clean;
 }
 
-// Inicializa o socket Baileys em background sem travar requisições HTTP
+// Inicializa o socket Baileys com suporte Multi-Device oficial
 export async function initWhatsAppSocket(): Promise<void> {
-  if (global.__waSocket && global.__waSession?.status === "CONNECTED") {
+  if (global.__waSocket) {
     return;
   }
 
@@ -95,12 +117,14 @@ export async function initWhatsAppSocket(): Promise<void> {
             },
           });
 
-          global.__waSession = {
+          const sessionState: WhatsAppSession = {
             status: "QR_READY",
             connectedNumber: null,
             qrCodeUrl: qrDataUrl,
             lastConnectedAt: null,
           };
+
+          saveSessionState(sessionState);
         } catch (err) {
           console.error("Erro ao converter QR Code do Baileys:", err);
         }
@@ -110,13 +134,14 @@ export async function initWhatsAppSocket(): Promise<void> {
         const userJid = sock.user?.id || "";
         const cleanNumber = userJid.split(":")[0].split("@")[0];
 
-        global.__waSession = {
+        const sessionState: WhatsAppSession = {
           status: "CONNECTED",
           connectedNumber: `+${cleanNumber}`,
           qrCodeUrl: null,
           lastConnectedAt: new Date().toISOString(),
         };
 
+        saveSessionState(sessionState);
         console.log(`✅ [WhatsApp Baileys Oficial] Conectado no número +${cleanNumber}!`);
       }
 
@@ -133,12 +158,13 @@ export async function initWhatsAppSocket(): Promise<void> {
           if (fs.existsSync(AUTH_DIR)) {
             fs.rmSync(AUTH_DIR, { recursive: true, force: true });
           }
-          global.__waSession = {
+          const sessionState: WhatsAppSession = {
             status: "DISCONNECTED",
             connectedNumber: null,
             qrCodeUrl: null,
             lastConnectedAt: null,
           };
+          saveSessionState(sessionState);
         }
       }
     });
@@ -150,30 +176,25 @@ export async function initWhatsAppSocket(): Promise<void> {
   }
 }
 
-// Obtém status atual imediatamente (resposta não-bloqueante instantânea)
+// Obtém status atual imediatamente a partir do arquivo persistido
 export async function getWhatsAppSession(): Promise<WhatsAppSession> {
   if (!global.__waSocket && !global.__waInitializing) {
     initWhatsAppSocket().catch(() => {});
   }
 
-  return (
-    global.__waSession || {
-      status: "CONNECTING",
-      connectedNumber: null,
-      qrCodeUrl: null,
-      lastConnectedAt: null,
-    }
-  );
+  const currentState = readSessionState();
+  return currentState;
 }
 
 export function connectWhatsAppSession(phoneNumber: string): WhatsAppSession {
-  global.__waSession = {
+  const sessionState: WhatsAppSession = {
     status: "CONNECTED",
     connectedNumber: phoneNumber || "+55 (11) 98765-4321",
     qrCodeUrl: null,
     lastConnectedAt: new Date().toISOString(),
   };
-  return global.__waSession;
+  saveSessionState(sessionState);
+  return sessionState;
 }
 
 // Desconectar sessão e apagar credenciais
@@ -192,16 +213,18 @@ export async function disconnectWhatsAppSession(): Promise<WhatsAppSession> {
     fs.rmSync(AUTH_DIR, { recursive: true, force: true });
   }
 
-  global.__waSession = {
+  const sessionState: WhatsAppSession = {
     status: "DISCONNECTED",
     connectedNumber: null,
     qrCodeUrl: null,
     lastConnectedAt: null,
   };
+  saveSessionState(sessionState);
 
+  // Reinicia o socket para gerar um novo QR Code oficial imediatamente
   initWhatsAppSocket().catch(() => {});
 
-  return global.__waSession;
+  return sessionState;
 }
 
 // Envio silencioso de mensagem via Socket Real
@@ -225,8 +248,7 @@ export async function sendSilentWhatsAppMessage(params: {
   const formattedPhone = sanitizeWhatsAppNumber(phone);
   const jid = `${formattedPhone}@s.whatsapp.net`;
 
-  // Se o socket estiver ativo e conectado, despacha direto nos servidores do WhatsApp
-  if (global.__waSocket && global.__waSession?.status === "CONNECTED") {
+  if (global.__waSocket) {
     try {
       const sent = await global.__waSocket.sendMessage(jid, { text: message });
       const messageId = sent?.key?.id || `wamid_${Date.now()}`;
