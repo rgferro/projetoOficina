@@ -37,6 +37,10 @@ next-env.d.ts
 # whatsapp session
 whatsapp_auth/
 
+# cloudflared
+cloudflared.exe
+
+
 
 # backups & logs
 /backups

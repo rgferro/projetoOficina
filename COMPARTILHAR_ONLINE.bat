@@ -8,22 +8,22 @@ echo =======================================================================
 echo          AUTOGESTAO ERP - COMPARTILHAMENTO ONLINE (1-CLIQUE)
 echo =======================================================================
 echo.
-echo Gerando link seguro com HTTPS para demonstracao ao cliente...
+echo Iniciando conexao segura global Cloudflare com HTTPS...
 echo.
 
-for /f %%a in ('curl -s https://loca.lt/mytunnelpassword') do set SENHA_TUNEL=%%a
+if not exist cloudflared.exe (
+    echo [Download] Baixando Cloudflare Tunnel oficial...
+    curl -L -o cloudflared.exe https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe
+)
 
-echo [OK] Servidor detectado na porta 3000!
 echo.
 echo =======================================================================
-echo   LINK PARA ENVIAR AO SEU CLIENTE:
-echo.
-echo   Caso a tela peca a Senha de Acesso (Tunnel Password), digite:
-echo   SENHA: %SENHA_TUNEL%
+echo   SISTEMA ONLINE E PRONTO PARA O SEU CLIENTE!
+echo   Copie o link que comeca com https://....trycloudflare.com abaixo:
 echo =======================================================================
 echo.
 echo Mantendo o link ativo enquanto esta janela estiver aberta...
 echo Pressione Ctrl+C para encerrar o compartilhamento quando terminar.
 echo.
 
-npx -y localtunnel --port 3000
+cloudflared.exe tunnel --url http://localhost:3000
