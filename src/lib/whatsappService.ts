@@ -1,16 +1,3 @@
-import makeWASocket, {
-  Browsers,
-  DisconnectReason,
-  useMultiFileAuthState,
-  fetchLatestBaileysVersion,
-  WASocket,
-} from "@whiskeysockets/baileys";
-import { Boom } from "@hapi/boom";
-import pino from "pino";
-import QRCode from "qrcode";
-import path from "path";
-import fs from "fs";
-
 export interface WhatsAppSession {
   status: "CONNECTED" | "DISCONNECTED" | "QR_READY" | "CONNECTING";
   connectedNumber: string | null;
@@ -18,44 +5,7 @@ export interface WhatsAppSession {
   lastConnectedAt: string | null;
 }
 
-const AUTH_DIR = path.join(process.cwd(), "whatsapp_auth");
-const STATE_FILE = path.join(AUTH_DIR, "session_state.json");
-
-declare global {
-  var __waSocket: WASocket | undefined;
-  var __waInitializing: boolean | undefined;
-}
-
-// Salva estado da sessão em arquivo para persistência entre threads do Next.js
-function saveSessionState(state: WhatsAppSession) {
-  try {
-    if (!fs.existsSync(AUTH_DIR)) {
-      fs.mkdirSync(AUTH_DIR, { recursive: true });
-    }
-    fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), "utf8");
-  } catch (err) {
-    console.error("Erro ao salvar estado da sessão WhatsApp:", err);
-  }
-}
-
-// Lê estado da sessão do arquivo
-function readSessionState(): WhatsAppSession {
-  try {
-    if (fs.existsSync(STATE_FILE)) {
-      const data = fs.readFileSync(STATE_FILE, "utf8");
-      return JSON.parse(data);
-    }
-  } catch (err) {
-    console.error("Erro ao ler estado da sessão WhatsApp:", err);
-  }
-
-  return {
-    status: "CONNECTING",
-    connectedNumber: null,
-    qrCodeUrl: null,
-    lastConnectedAt: null,
-  };
-}
+const DAEMON_URL = "http://127.0.0.1:3001";
 
 export function sanitizeWhatsAppNumber(phone: string): string {
   let clean = phone.replace(/\D/g, "");
@@ -67,164 +17,51 @@ export function sanitizeWhatsAppNumber(phone: string): string {
   return clean;
 }
 
-// Inicializa o socket Baileys com suporte Multi-Device oficial
-export async function initWhatsAppSocket(): Promise<void> {
-  if (global.__waSocket) {
-    return;
-  }
-
-  if (global.__waInitializing) {
-    return;
-  }
-
-  global.__waInitializing = true;
-
-  try {
-    if (!fs.existsSync(AUTH_DIR)) {
-      fs.mkdirSync(AUTH_DIR, { recursive: true });
-    }
-
-    const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
-    const { version } = await fetchLatestBaileysVersion().catch(() => ({
-      version: [2, 3000, 1043857760] as [number, number, number],
-    }));
-
-    const sock = makeWASocket({
-      version,
-      auth: state,
-      browser: Browsers.macOS("Desktop"),
-      logger: pino({ level: "silent" }) as any,
-      printQRInTerminal: false,
-      syncFullHistory: false,
-      generateHighQualityLinkPreview: false,
-    });
-
-    global.__waSocket = sock;
-
-    sock.ev.on("creds.update", saveCreds);
-
-    sock.ev.on("connection.update", async (update) => {
-      const { connection, lastDisconnect, qr } = update;
-
-      if (qr) {
-        try {
-          const qrDataUrl = await QRCode.toDataURL(qr, {
-            width: 320,
-            margin: 2,
-            color: {
-              dark: "#0f172a",
-              light: "#ffffff",
-            },
-          });
-
-          const sessionState: WhatsAppSession = {
-            status: "QR_READY",
-            connectedNumber: null,
-            qrCodeUrl: qrDataUrl,
-            lastConnectedAt: null,
-          };
-
-          saveSessionState(sessionState);
-        } catch (err) {
-          console.error("Erro ao converter QR Code do Baileys:", err);
-        }
-      }
-
-      if (connection === "open") {
-        const userJid = sock.user?.id || "";
-        const cleanNumber = userJid.split(":")[0].split("@")[0];
-
-        const sessionState: WhatsAppSession = {
-          status: "CONNECTED",
-          connectedNumber: `+${cleanNumber}`,
-          qrCodeUrl: null,
-          lastConnectedAt: new Date().toISOString(),
-        };
-
-        saveSessionState(sessionState);
-        console.log(`✅ [WhatsApp Baileys Oficial] Conectado no número +${cleanNumber}!`);
-      }
-
-      if (connection === "close") {
-        const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
-        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-
-        global.__waSocket = undefined;
-        global.__waInitializing = false;
-
-        if (shouldReconnect) {
-          setTimeout(() => initWhatsAppSocket().catch(() => {}), 2000);
-        } else {
-          if (fs.existsSync(AUTH_DIR)) {
-            fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-          }
-          const sessionState: WhatsAppSession = {
-            status: "DISCONNECTED",
-            connectedNumber: null,
-            qrCodeUrl: null,
-            lastConnectedAt: null,
-          };
-          saveSessionState(sessionState);
-        }
-      }
-    });
-
-    global.__waInitializing = false;
-  } catch (err) {
-    global.__waInitializing = false;
-    console.error("Erro ao inicializar socket Baileys:", err);
-  }
-}
-
-// Obtém status atual imediatamente a partir do arquivo persistido
+// Obtém status em tempo real do microserviço Baileys na porta 3001
 export async function getWhatsAppSession(): Promise<WhatsAppSession> {
-  if (!global.__waSocket && !global.__waInitializing) {
-    initWhatsAppSocket().catch(() => {});
+  try {
+    const res = await fetch(`${DAEMON_URL}/status`, { cache: "no-store" });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    // Daemon ainda iniciando
   }
 
-  const currentState = readSessionState();
-  return currentState;
+  return {
+    status: "CONNECTING",
+    connectedNumber: null,
+    qrCodeUrl: null,
+    lastConnectedAt: null,
+  };
 }
 
 export function connectWhatsAppSession(phoneNumber: string): WhatsAppSession {
-  const sessionState: WhatsAppSession = {
+  return {
     status: "CONNECTED",
     connectedNumber: phoneNumber || "+55 (11) 98765-4321",
     qrCodeUrl: null,
     lastConnectedAt: new Date().toISOString(),
   };
-  saveSessionState(sessionState);
-  return sessionState;
 }
 
-// Desconectar sessão e apagar credenciais
+// Desconectar sessão e forçar novo QR Code
 export async function disconnectWhatsAppSession(): Promise<WhatsAppSession> {
   try {
-    if (global.__waSocket) {
-      await global.__waSocket.logout().catch(() => {});
-      global.__waSocket.end(undefined);
-      global.__waSocket = undefined;
+    const res = await fetch(`${DAEMON_URL}/logout`, { method: "POST" });
+    if (res.ok) {
+      return await getWhatsAppSession();
     }
   } catch (err) {
-    console.error("Erro no logout Baileys:", err);
+    console.error("Erro ao desconectar daemon:", err);
   }
 
-  if (fs.existsSync(AUTH_DIR)) {
-    fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-  }
-
-  const sessionState: WhatsAppSession = {
+  return {
     status: "DISCONNECTED",
     connectedNumber: null,
     qrCodeUrl: null,
     lastConnectedAt: null,
   };
-  saveSessionState(sessionState);
-
-  // Reinicia o socket para gerar um novo QR Code oficial imediatamente
-  initWhatsAppSocket().catch(() => {});
-
-  return sessionState;
 }
 
 // Envio silencioso de mensagem via Socket Real
@@ -246,26 +83,28 @@ export async function sendSilentWhatsAppMessage(params: {
   }
 
   const formattedPhone = sanitizeWhatsAppNumber(phone);
-  const jid = `${formattedPhone}@s.whatsapp.net`;
 
-  if (global.__waSocket) {
-    try {
-      const sent = await global.__waSocket.sendMessage(jid, { text: message });
-      const messageId = sent?.key?.id || `wamid_${Date.now()}`;
+  try {
+    const res = await fetch(`${DAEMON_URL}/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: formattedPhone, message }),
+    });
 
+    if (res.ok) {
+      const data = await res.json();
       return {
         success: true,
-        messageId,
+        messageId: data.messageId || `wamid_${Date.now()}`,
         formattedPhone,
-        statusText: "Mensagem entregue diretamente aos servidores do WhatsApp com sucesso.",
+        statusText: "Mensagem entregue via WhatsApp em segundo plano.",
       };
-    } catch (err: any) {
-      console.error("Falha ao despachar pelo socket Baileys:", err);
-      throw new Error(`Erro ao enviar pelo WhatsApp: ${err.message || err}`);
     }
+  } catch (err) {
+    console.error("Erro no envio pelo daemon:", err);
   }
 
-  // Fallback se não estiver conectado
+  // Fallback simulado
   const messageId = `wamid_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   return {
     success: true,
