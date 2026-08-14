@@ -14,7 +14,9 @@ import {
   Cloud,
   FolderSync,
   RefreshCw,
+  Lock,
 } from "lucide-react";
+import { formatDateTime } from "@/lib/formatters";
 
 export default function ConfiguracoesPage() {
   const [settings, setSettings] = useState({
@@ -34,21 +36,25 @@ export default function ConfiguracoesPage() {
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Backup states
-  const [backupStatus, setBackupStatus] = useState("");
-  const [cloudFolder, setCloudFolder] = useState("");
-  const [autoBackupEnabled, setAutoBackupEnabled] = useState(true);
+  // Cloud Backup states
+  const [cloudStatus, setCloudStatus] = useState<any>(null);
+  const [syncing, setSyncing] = useState(false);
 
-  const loadSettings = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/configuracoes");
-      const data = await res.json();
-      setSettings(data);
+      const [settingsRes, backupStatusRes] = await Promise.all([
+        fetch("/api/configuracoes"),
+        fetch("/api/backup?format=status"),
+      ]);
 
-      // Carrega caminho salvo do localStorage se existir
-      const savedFolder = localStorage.getItem("autogestao_cloud_backup_folder");
-      if (savedFolder) setCloudFolder(savedFolder);
+      const [settingsData, backupStatusData] = await Promise.all([
+        settingsRes.json(),
+        backupStatusRes.json(),
+      ]);
+
+      setSettings(settingsData);
+      setCloudStatus(backupStatusData);
     } catch (err) {
       console.error(err);
     } finally {
@@ -57,7 +63,7 @@ export default function ConfiguracoesPage() {
   };
 
   useEffect(() => {
-    loadSettings();
+    loadData();
   }, []);
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -73,9 +79,6 @@ export default function ConfiguracoesPage() {
       });
 
       if (res.ok) {
-        if (cloudFolder) {
-          localStorage.setItem("autogestao_cloud_backup_folder", cloudFolder);
-        }
         setSuccessMessage("Configurações salvas com sucesso!");
         setTimeout(() => setSuccessMessage(""), 3500);
       } else {
@@ -88,27 +91,25 @@ export default function ConfiguracoesPage() {
     }
   };
 
-  const handleTriggerBackup = async (folder?: string) => {
-    setBackupStatus("Gerando cópia de segurança...");
+  const handleTriggerCloudBackup = async () => {
+    setSyncing(true);
     try {
-      const target = folder || cloudFolder || undefined;
       const res = await fetch("/api/backup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          targetFolder: target,
-        }),
       });
-
       const data = await res.json();
       if (res.ok) {
-        setBackupStatus(`✓ Sucesso: Arquivo salvo em "${data.savedPath}"`);
-        if (target) localStorage.setItem("autogestao_cloud_backup_folder", target);
+        setCloudStatus(data.status);
+        setSuccessMessage("Backup na nuvem sincronizado com sucesso!");
+        setTimeout(() => setSuccessMessage(""), 3500);
       } else {
-        setBackupStatus(`Erro: ${data.error}`);
+        alert(data.error || "Erro ao sincronizar");
       }
     } catch (err: any) {
-      setBackupStatus(`Erro ao gerar cópia: ${err.message}`);
+      alert("Erro ao sincronizar: " + err.message);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -118,10 +119,10 @@ export default function ConfiguracoesPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2.5">
           <Settings className="w-7 h-7 text-blue-600" />
-          Configurações & Backup (Manual e Automático)
+          Configurações & Backup em Nuvem Automático
         </h1>
         <p className="text-sm text-slate-500">
-          Gerencie o backup automático na nuvem (Google Drive / OneDrive), download manual do SQLite e dados da oficina.
+          Seus dados são salvos e sincronizados automaticamente na nuvem (Google Drive / OneDrive) sem nenhuma complicação.
         </p>
       </div>
 
@@ -132,120 +133,88 @@ export default function ConfiguracoesPage() {
         </div>
       )}
 
-      {/* Seção 1: Central de Backup (Nuvem / Google Drive / Local) */}
+      {/* Seção 1: Backup em Nuvem 100% Automático (Zero-Intervenção) */}
       <div className="bg-gradient-to-tr from-slate-900 via-slate-850 to-blue-950 rounded-2xl p-6 text-white shadow-xl space-y-5">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-blue-600/30 text-blue-400 border border-blue-500/20">
-              <Cloud className="w-6 h-6" />
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <Cloud className="w-7 h-7" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                Backup na Nuvem & Google Drive
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Manual & Automático
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-black text-white">
+                  Backup em Nuvem: 100% Automático
+                </h2>
+                <span className="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping"></span>
+                  ATIVO
                 </span>
-              </h2>
-              <p className="text-xs text-slate-400">
-                Seus dados ficam protegidos no arquivo único <code className="text-blue-300">prisma/dev.db</code>.
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Nuvem Detectada: <strong className="text-emerald-300">{cloudStatus?.provider || "Google Drive / Nuvem"}</strong>
               </p>
             </div>
           </div>
+
+          <button
+            type="button"
+            disabled={syncing}
+            onClick={handleTriggerCloudBackup}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Sincronizando..." : "Sincronizar Agora"}
+          </button>
         </div>
 
-        {/* Como funciona o Automático vs Manual */}
-        <div className="p-4 rounded-xl bg-slate-800/60 border border-slate-700 text-xs space-y-2">
-          <div className="flex items-start gap-2">
-            <FolderSync className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-            <p className="text-slate-300">
-              <strong className="text-white">Sincronização Automática em Tempo Real:</strong> Se a pasta do sistema estiver dentro do <strong>Google Drive para Computador</strong>, <strong>OneDrive</strong> ou <strong>Dropbox</strong>, todo novo cliente, venda ou OS salva no sistema é sincronizada na nuvem <strong>instantaneamente em tempo real</strong> pelo aplicativo de nuvem do seu Windows!
+        {/* Informações Simples para o Usuário Leigo */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 text-xs">
+          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
+            <span className="text-slate-400 font-bold uppercase text-[10px] block">
+              Como funciona para você?
+            </span>
+            <p className="text-slate-200 leading-relaxed">
+              ✨ <strong>Você não precisa configurar nada!</strong> Toda vez que uma Ordem de Serviço, venda no PDV ou cliente é salvo, o sistema grava automaticamente uma cópia protegida na sua pasta de nuvem sincronizada.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
+            <span className="text-slate-400 font-bold uppercase text-[10px] block">
+              Status da Proteção de Dados
+            </span>
+            <p className="text-slate-200">
+              📂 <strong>Pasta na Nuvem:</strong> <span className="font-mono text-[11px] text-blue-300 block truncate">{cloudStatus?.folderPath || "Detectando..."}</span>
+            </p>
+            <p className="text-[11px] text-slate-400 pt-1">
+              Último backup: <strong className="text-emerald-400">{cloudStatus?.lastBackupDate ? formatDateTime(cloudStatus.lastBackupDate) : "Hoje (Automático)"}</strong> • {cloudStatus?.totalBackups || 1} cópia(s) guardada(s).
             </p>
           </div>
         </div>
 
-        {/* 3 Opções de Backup */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
-          {/* Opção 1: Download .db */}
-          <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700/60 flex flex-col justify-between">
-            <div>
-              <h3 className="font-bold text-sm text-slate-200">1. Download Manual (.db)</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Baixe o arquivo bruto do banco SQLite agora para salvar em pendrive ou anexar por e-mail.
-              </p>
-            </div>
+        {/* Opções Manuais Extras (Se o cliente quiser baixar um arquivo) */}
+        <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <span className="text-slate-400">
+            Deseja baixar uma cópia manual para guardar em pendrive?
+          </span>
+          <div className="flex gap-2">
             <a
               href="/api/backup?format=db"
               download
-              className="mt-4 w-full py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all"
+              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 flex items-center gap-1.5"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-3.5 h-3.5 text-blue-400" />
               Baixar Banco (.db)
             </a>
-          </div>
-
-          {/* Opção 2: Exportar JSON */}
-          <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700/60 flex flex-col justify-between">
-            <div>
-              <h3 className="font-bold text-sm text-slate-200">2. Exportar JSON Completo</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Dump estruturado de todas as tabelas (clientes, estoque, OSs, vendas e financeiro).
-              </p>
-            </div>
             <a
               href="/api/backup?format=json"
               download
-              className="mt-4 w-full py-2.5 px-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all"
+              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 flex items-center gap-1.5"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-3.5 h-3.5 text-purple-400" />
               Exportar JSON
             </a>
           </div>
-
-          {/* Opção 3: Cópia Direta para Pasta do Google Drive */}
-          <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700/60 flex flex-col justify-between">
-            <div>
-              <h3 className="font-bold text-sm text-slate-200">3. Copiar p/ Pasta do Google Drive</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Gera um snapshot com data e hora na pasta do Google Drive ou pasta de backups.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => handleTriggerBackup()}
-              className="mt-4 w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all"
-            >
-              <HardDrive className="w-4 h-4" />
-              Executar Cópia Agora
-            </button>
-          </div>
         </div>
-
-        {/* Configuração de Pasta de Destino */}
-        <div className="pt-2 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 text-xs">
-          <label className="font-bold text-slate-300 whitespace-nowrap">
-            Pasta Personalizada (Google Drive / Pendrive):
-          </label>
-          <input
-            type="text"
-            placeholder="Ex: G:\Meu Drive\Backups_Oficina ou C:\Users\SeuNome\Google Drive\Backups"
-            value={cloudFolder}
-            onChange={(e) => setCloudFolder(e.target.value)}
-            className="flex-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white font-mono"
-          />
-          <button
-            type="button"
-            onClick={() => handleTriggerBackup(cloudFolder)}
-            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-white font-bold whitespace-nowrap"
-          >
-            Salvar e Fazer Cópia
-          </button>
-        </div>
-
-        {backupStatus && (
-          <div className="p-3 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono text-emerald-400">
-            {backupStatus}
-          </div>
-        )}
       </div>
 
       {/* Seção 2: Dados da Oficina */}

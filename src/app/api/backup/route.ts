@@ -2,14 +2,27 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import fs from "fs";
 import path from "path";
+import {
+  getCloudBackupStatus,
+  performAutoCloudBackup,
+} from "@/lib/cloudBackup";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const format = searchParams.get("format") || "db"; // "db" ou "json"
+    const format = searchParams.get("format"); // "db", "json" ou "status"
+
+    // 1. Status do Backup em Nuvem Automático
+    if (format === "status") {
+      const status = getCloudBackupStatus();
+      return NextResponse.json(status);
+    }
 
     const dateStr = new Date().toISOString().replace(/:/g, "-").split(".")[0];
 
+    // 2. Exportação JSON
     if (format === "json") {
       const customers = await prisma.customer.findMany({ include: { vehicles: true } });
       const employees = await prisma.employee.findMany();
@@ -53,7 +66,7 @@ export async function GET(request: Request) {
       });
     }
 
-    // Retorna o arquivo SQLite bruto dev.db
+    // 3. Download direto do arquivo SQLite .db
     const dbPath = path.join(process.cwd(), "prisma", "dev.db");
     if (!fs.existsSync(dbPath)) {
       return NextResponse.json({ error: "Arquivo de banco dev.db não encontrado" }, { status: 404 });
@@ -75,29 +88,15 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const targetFolder = body.targetFolder || path.join(process.cwd(), "backups");
-
-    // Cria diretório se não existir
-    if (!fs.existsSync(targetFolder)) {
-      fs.mkdirSync(targetFolder, { recursive: true });
-    }
-
-    const dbPath = path.join(process.cwd(), "prisma", "dev.db");
-    if (!fs.existsSync(dbPath)) {
-      return NextResponse.json({ error: "Banco de dados dev.db não encontrado para cópia" }, { status: 404 });
-    }
-
-    const dateStr = new Date().toISOString().replace(/:/g, "-").split(".")[0];
-    const destinationPath = path.join(targetFolder, `autogestao_backup_${dateStr}.db`);
-
-    fs.copyFileSync(dbPath, destinationPath);
+    // Executa backup em nuvem automático
+    const result = performAutoCloudBackup();
+    const updatedStatus = getCloudBackupStatus();
 
     return NextResponse.json({
       success: true,
-      message: `Backup realizado com sucesso!`,
-      savedPath: destinationPath,
-      createdAt: new Date(),
+      message: `Backup em nuvem sincronizado com sucesso!`,
+      result,
+      status: updatedStatus,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Falha ao salvar cópia de backup" }, { status: 500 });
