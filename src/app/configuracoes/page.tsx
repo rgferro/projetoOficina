@@ -83,6 +83,28 @@ export default function ConfiguracoesPage() {
     loadData();
   }, []);
 
+  // Polling automático para atualizar QR Code e detectar pareamento do celular
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/whatsapp/status");
+        if (res.ok) {
+          const data = await res.json();
+          setWaStatus(data);
+          if (data.status === "CONNECTED" && isQrModalOpen) {
+            setIsQrModalOpen(false);
+            setSuccessMessage("✓ WhatsApp conectado com sucesso pelo celular!");
+            setTimeout(() => setSuccessMessage(""), 4000);
+          }
+        }
+      } catch (err) {
+        // silencioso
+      }
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [isQrModalOpen]);
+
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
