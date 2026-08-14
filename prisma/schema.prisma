@@ -50,8 +50,10 @@ model Vehicle {
 model Employee {
   id             String              @id @default(cuid())
   name           String
-  role           String              // "Mecânico", "Lavador", "Atendente", "Gerente", "Vendedor"
+  role           String              // "Mecânico", "Lavador", "Atendente", "Gerente", "Vendedor", "Administrador"
   accessLevel    String              @default("MECANICO") // ADMIN, GERENTE, MECANICO, ATENDENTE, LAVADOR
+  pinCode        String?             @default("1234") // PIN/Senha rápida de 4 dígitos
+  email          String?
   phone          String?
   commissionRate Float               @default(0.0) // % de comissão padrão
   active         Boolean             @default(true)

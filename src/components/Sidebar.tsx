@@ -18,7 +18,9 @@ import {
   Settings,
   X,
   Car,
+  Lock,
 } from "lucide-react";
+import { useAuth, ROLE_CONFIG } from "@/lib/authContext";
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -27,6 +29,7 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { currentEmployee, canAccess, isEnforced } = useAuth();
 
   const navigation = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -37,12 +40,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: "Tabela de Serviços", href: "/servicos", icon: ListOrdered },
     { name: "Fornecedores", href: "/fornecedores", icon: Truck },
     { name: "Clientes & Veículos", href: "/clientes", icon: Users },
-    { name: "Equipe & Produtividade", href: "/equipe", icon: UserCheck },
+    { name: "Equipe & Usuários", href: "/equipe", icon: UserCheck },
     { name: "Caixa & Financeiro", href: "/financeiro", icon: CircleDollarSign },
     { name: "Relatórios & BI", href: "/relatorios", icon: BarChart3 },
     { name: "CRM WhatsApp", href: "/crm", icon: MessageSquare, badge: "Alertas" },
     { name: "Backup & Ajustes", href: "/configuracoes", icon: Settings },
   ];
+
+  const currentRole = currentEmployee
+    ? ROLE_CONFIG[currentEmployee.accessLevel]
+    : ROLE_CONFIG.ADMIN;
 
   return (
     <>
@@ -80,12 +87,43 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </button>
         </div>
 
-        {/* Navigation Items */}
-        <div className="flex-1 px-4 py-4 overflow-y-auto space-y-1">
-          <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-            Menu Operacional
+        {/* User Role Card */}
+        <div className="px-4 pt-3 pb-1">
+          <div className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-between">
+            <div className="flex items-center gap-2.5 truncate">
+              <span className="text-base">{currentRole?.icon || "👤"}</span>
+              <div className="truncate">
+                <div className="text-xs font-bold text-slate-200 truncate">
+                  {currentEmployee?.name || "Operador"}
+                </div>
+                <div className="text-[10px] text-slate-400 font-medium">
+                  {currentRole?.label || "Administrador"}
+                </div>
+              </div>
+            </div>
+            {isEnforced && (
+              <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                <Lock className="w-2.5 h-2.5" />
+                Restrito
+              </span>
+            )}
           </div>
+        </div>
+
+        {/* Navigation Items */}
+        <div className="flex-1 px-4 py-3 overflow-y-auto space-y-1">
+          <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+            <span>Menu Operacional</span>
+          </div>
+
           {navigation.map((item) => {
+            const hasAccess = canAccess(item.href);
+
+            // Se estiver em modo restrito e o operador não tiver acesso, não exibe no menu
+            if (isEnforced && !hasAccess) {
+              return null;
+            }
+
             const isActive =
               item.href === "/"
                 ? pathname === "/"

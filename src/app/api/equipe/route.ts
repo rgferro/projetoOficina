@@ -54,7 +54,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, role, phone, commissionRate } = body;
+    const { name, role, accessLevel, pinCode, email, phone, commissionRate } = body;
 
     if (!name || !role) {
       return NextResponse.json(
@@ -67,6 +67,9 @@ export async function POST(request: Request) {
       data: {
         name,
         role,
+        accessLevel: accessLevel || "MECANICO",
+        pinCode: pinCode || "1234",
+        email: email || null,
         phone: phone || null,
         commissionRate: Number(commissionRate) || 0,
         active: true,
@@ -82,7 +85,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, name, role, phone, commissionRate, active } = body;
+    const { id, name, role, accessLevel, pinCode, email, phone, commissionRate, active } = body;
 
     if (!id) {
       return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
@@ -93,6 +96,9 @@ export async function PUT(request: Request) {
       data: {
         name,
         role,
+        accessLevel: accessLevel !== undefined ? accessLevel : undefined,
+        pinCode: pinCode !== undefined ? pinCode : undefined,
+        email: email !== undefined ? email : undefined,
         phone,
         commissionRate: Number(commissionRate) || 0,
         active: active !== undefined ? active : true,
@@ -102,5 +108,24 @@ export async function PUT(request: Request) {
     return NextResponse.json(updated);
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Erro ao atualizar funcionário" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
+    }
+
+    await prisma.employee.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || "Erro ao excluir funcionário" }, { status: 500 });
   }
 }
