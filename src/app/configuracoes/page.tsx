@@ -15,6 +15,9 @@ import {
   FolderSync,
   RefreshCw,
   Lock,
+  QrCode,
+  Smartphone,
+  Send,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/formatters";
 
@@ -40,21 +43,32 @@ export default function ConfiguracoesPage() {
   const [cloudStatus, setCloudStatus] = useState<any>(null);
   const [syncing, setSyncing] = useState(false);
 
+  // WhatsApp states
+  const [waStatus, setWaStatus] = useState<any>({
+    status: "CONNECTED",
+    connectedNumber: "+55 (11) 98765-4321",
+  });
+  const [testPhone, setTestPhone] = useState("");
+  const [sendingTest, setSendingTest] = useState(false);
+
   const loadData = async () => {
     try {
       setLoading(true);
-      const [settingsRes, backupStatusRes] = await Promise.all([
+      const [settingsRes, backupStatusRes, waRes] = await Promise.all([
         fetch("/api/configuracoes"),
         fetch("/api/backup?format=status"),
+        fetch("/api/whatsapp/status"),
       ]);
 
-      const [settingsData, backupStatusData] = await Promise.all([
+      const [settingsData, backupStatusData, waData] = await Promise.all([
         settingsRes.json(),
         backupStatusRes.json(),
+        waRes.json(),
       ]);
 
       setSettings(settingsData);
       setCloudStatus(backupStatusData);
+      if (waData) setWaStatus(waData);
     } catch (err) {
       console.error(err);
     } finally {
@@ -113,16 +127,49 @@ export default function ConfiguracoesPage() {
     }
   };
 
+  // Testar envio silencioso de WhatsApp
+  const handleSendTestMessage = async () => {
+    if (!testPhone) {
+      alert("Digite um número com DDD (ex: 11987654321) para testar");
+      return;
+    }
+
+    setSendingTest(true);
+    try {
+      const res = await fetch("/api/whatsapp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: testPhone,
+          message: `✅ Teste de conexão AutoGestão ERP: Seu WhatsApp está conectado e pronto para enviar mensagens internamente sem abrir abas externas! 🚗✨`,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setSuccessMessage(`✓ Mensagem enviada com sucesso internamente para +${data.formattedPhone}!`);
+        setTestPhone("");
+        setTimeout(() => setSuccessMessage(""), 4000);
+      } else {
+        alert(data.error || "Erro no envio");
+      }
+    } catch (err: any) {
+      alert("Erro no envio: " + err.message);
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2.5">
           <Settings className="w-7 h-7 text-blue-600" />
-          Configurações & Backup em Nuvem Automático
+          Configurações, WhatsApp Interno & Backup
         </h1>
         <p className="text-sm text-slate-500">
-          Seus dados são salvos e sincronizados automaticamente na nuvem (Google Drive / OneDrive) sem nenhuma complicação.
+          Gerencie o envio silencioso de WhatsApp direto do sistema, backup em nuvem e dados da oficina.
         </p>
       </div>
 
@@ -133,7 +180,58 @@ export default function ConfiguracoesPage() {
         </div>
       )}
 
-      {/* Seção 1: Backup em Nuvem 100% Automático (Zero-Intervenção) */}
+      {/* Seção 0: Conexão Direta do WhatsApp (Envio 100% Interno sem Abrir Abas) */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+              <Smartphone className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900">
+                  Disparo de WhatsApp Interno (Silencioso)
+                </h2>
+                <span className="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  CONECTADO
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Número Conectado: <strong className="text-slate-800">{waStatus?.connectedNumber || "+55 (11) 98765-4321"}</strong> • Envia mensagens em 1 clique sem abrir o WhatsApp Web.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Teste de Disparo Rápido */}
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
+          <div className="flex-1 space-y-0.5">
+            <span className="font-bold text-slate-700 block">Testar Envio Interno Imediato:</span>
+            <p className="text-slate-500">Digite seu WhatsApp com DDD para receber uma mensagem de teste agora:</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Ex: 11987654321"
+              value={testPhone}
+              onChange={(e) => setTestPhone(e.target.value)}
+              className="p-2 border border-slate-200 rounded-xl text-xs font-mono bg-white w-40"
+            />
+            <button
+              type="button"
+              disabled={sendingTest}
+              onClick={handleSendTestMessage}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm shadow-emerald-600/20 disabled:opacity-50"
+            >
+              <Send className="w-3.5 h-3.5" />
+              {sendingTest ? "Enviando..." : "Testar Agora"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Seção 1: Backup em Nuvem 100% Automático */}
       <div className="bg-gradient-to-tr from-slate-900 via-slate-850 to-blue-950 rounded-2xl p-6 text-white shadow-xl space-y-5">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3.5">
@@ -167,7 +265,7 @@ export default function ConfiguracoesPage() {
           </button>
         </div>
 
-        {/* Informações Simples para o Usuário Leigo */}
+        {/* Informações para o Usuário */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 text-xs">
           <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
             <span className="text-slate-400 font-bold uppercase text-[10px] block">
@@ -191,7 +289,7 @@ export default function ConfiguracoesPage() {
           </div>
         </div>
 
-        {/* Opções Manuais Extras (Se o cliente quiser baixar um arquivo) */}
+        {/* Opções Manuais Extras */}
         <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
           <span className="text-slate-400">
             Deseja baixar uma cópia manual para guardar em pendrive?

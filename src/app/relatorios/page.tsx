@@ -19,7 +19,36 @@ import { formatCurrency, formatPhone } from "@/lib/formatters";
 
 export default function RelatoriosPage() {
   const [activeTab, setActiveTab] = useState<"abc" | "aniversariantes" | "produtividade" | "estoque">("abc");
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [toastMsg, setToastMsg] = useState("");
+  const [sendingPhone, setSendingPhone] = useState<string | null>(null);
+
+  const handleSendSilentGreeting = async (customer: any) => {
+    setSendingPhone(customer.phone);
+    try {
+      const res = await fetch("/api/whatsapp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: customer.phone,
+          message: customer.messagePreview,
+          customerName: customer.name,
+          referenceType: "ANIVERSARIO",
+        }),
+      });
+
+      if (res.ok) {
+        setToastMsg(`✓ Parabéns enviado com sucesso para ${customer.name} via WhatsApp!`);
+        setTimeout(() => setToastMsg(""), 3500);
+      } else {
+        window.open(customer.whatsappLink, "_blank");
+      }
+    } catch (err) {
+      window.open(customer.whatsappLink, "_blank");
+    } finally {
+      setSendingPhone(null);
+    }
+  };
   const [reportData, setReportData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -65,6 +94,15 @@ export default function RelatoriosPage() {
           </p>
         </div>
       </div>
+
+      {toastMsg && (
+        <div className="p-3.5 rounded-xl bg-emerald-500 text-white text-xs font-bold flex items-center justify-between shadow-lg shadow-emerald-500/20 animate-bounce">
+          <div className="flex items-center gap-2">
+            <span>🎉 {toastMsg}</span>
+          </div>
+          <button onClick={() => setToastMsg("")} className="text-white/80 hover:text-white">✕</button>
+        </div>
+      )}
 
       {/* Navegação por Abas */}
       <div className="flex border-b border-slate-200 gap-6 text-xs font-bold flex-wrap">
@@ -244,15 +282,15 @@ export default function RelatoriosPage() {
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
-                    <a
-                      href={c.whatsappLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all"
+                    <button
+                      type="button"
+                      disabled={sendingPhone === c.phone}
+                      onClick={() => handleSendSilentGreeting(c)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all disabled:opacity-50"
                     >
                       <Send className="w-3.5 h-3.5" />
-                      Parabenizar no WhatsApp
-                    </a>
+                      {sendingPhone === c.phone ? "Enviando..." : "Parabenizar no WhatsApp"}
+                    </button>
                   </div>
                 </div>
               ))}

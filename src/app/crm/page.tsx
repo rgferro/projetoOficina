@@ -7,8 +7,11 @@ import {
   Droplets,
   Wrench,
   Sparkles,
+  CheckCircle,
+  Send,
 } from "lucide-react";
 import { formatPlate, formatPhone, formatDateOnly } from "@/lib/formatters";
+import { generateWhatsappLink } from "@/lib/whatsapp";
 
 function CRMContent() {
   const searchParams = useSearchParams();
@@ -17,6 +20,8 @@ function CRMContent() {
   const [activeTab, setActiveTab] = useState<"lavajato" | "oficina">(initialTab);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [toastMsg, setToastMsg] = useState("");
+  const [sendingPhone, setSendingPhone] = useState<string | null>(null);
 
   const loadCRMData = async () => {
     try {
@@ -34,6 +39,33 @@ function CRMContent() {
   useEffect(() => {
     loadCRMData();
   }, []);
+
+  const handleSendSilentMessage = async (alertItem: any) => {
+    setSendingPhone(alertItem.customerPhone);
+    try {
+      const res = await fetch("/api/whatsapp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: alertItem.customerPhone,
+          message: alertItem.messagePreview,
+          customerName: alertItem.customerName,
+          referenceType: "CRM_RETENCAO",
+        }),
+      });
+
+      if (res.ok) {
+        setToastMsg(`✓ WhatsApp enviado com sucesso para ${alertItem.customerName}!`);
+        setTimeout(() => setToastMsg(""), 3500);
+      } else {
+        window.open(alertItem.whatsappLink, "_blank");
+      }
+    } catch (err) {
+      window.open(alertItem.whatsappLink, "_blank");
+    } finally {
+      setSendingPhone(null);
+    }
+  };
 
   const washAlerts = data?.washRetentionAlerts || [];
   const oilAlerts = data?.oilServiceAlerts || [];
@@ -58,6 +90,16 @@ function CRMContent() {
           </span>
         </div>
       </div>
+
+      {toastMsg && (
+        <div className="p-3.5 rounded-xl bg-emerald-500 text-white text-xs font-bold flex items-center justify-between shadow-lg shadow-emerald-500/20 animate-bounce">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4" />
+            <span>{toastMsg}</span>
+          </div>
+          <button onClick={() => setToastMsg("")} className="text-white/80 hover:text-white">✕</button>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex items-center gap-3 border-b border-slate-200 pb-2">
@@ -151,15 +193,15 @@ function CRMContent() {
                       Última: {formatDateOnly(alert.lastWashDate)}
                     </span>
 
-                    <a
-                      href={alert.whatsappLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all"
+                    <button
+                      type="button"
+                      disabled={sendingPhone === alert.customerPhone}
+                      onClick={() => handleSendSilentMessage(alert)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all disabled:opacity-50"
                     >
                       <MessageSquare className="w-4 h-4" />
-                      <span>Enviar WhatsApp (1 Clique)</span>
-                    </a>
+                      <span>{sendingPhone === alert.customerPhone ? "Enviando..." : "Enviar WhatsApp (1 Clique)"}</span>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -215,15 +257,15 @@ function CRMContent() {
                       Última OS: {formatDateOnly(alert.lastOSDate)}
                     </span>
 
-                    <a
-                      href={alert.whatsappLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all"
+                    <button
+                      type="button"
+                      disabled={sendingPhone === alert.customerPhone}
+                      onClick={() => handleSendSilentMessage(alert)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all disabled:opacity-50"
                     >
                       <MessageSquare className="w-4 h-4" />
-                      <span>Enviar WhatsApp (1 Clique)</span>
-                    </a>
+                      <span>{sendingPhone === alert.customerPhone ? "Enviando..." : "Enviar WhatsApp (1 Clique)"}</span>
+                    </button>
                   </div>
                 </div>
               ))}

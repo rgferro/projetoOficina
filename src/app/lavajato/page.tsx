@@ -42,6 +42,8 @@ export default function LavaJatoPage() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedTicketForPayment, setSelectedTicketForPayment] = useState<any>(null);
   const [paymentMethod, setPaymentMethod] = useState("PIX");
+  const [toastMsg, setToastMsg] = useState("");
+  const [sendingWaId, setSendingWaId] = useState<string | null>(null);
 
   // Form states - Nova Lavagem
   const [isExpressRegister, setIsExpressRegister] = useState(false);
@@ -145,6 +147,39 @@ export default function LavaJatoPage() {
     }
   };
 
+  // Envio Silencioso de WhatsApp Direto (Sem abrir abas externas)
+  const handleSendSilentWhatsapp = async (ticket: any, message: string) => {
+    setSendingWaId(ticket.id);
+    try {
+      const res = await fetch("/api/whatsapp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: ticket.vehicle.customer.phone,
+          message: message,
+          customerName: ticket.vehicle.customer.name,
+          referenceType: "LAVA_JATO",
+          referenceId: ticket.id,
+        }),
+      });
+
+      if (res.ok) {
+        handleUpdateStatus(ticket.id, "FINALIZADO", { notifiedWhatsapp: true });
+        setToastMsg(`✓ WhatsApp enviado com sucesso para ${ticket.vehicle.customer.name}!`);
+        setTimeout(() => setToastMsg(""), 3500);
+      } else {
+        // Fallback para wa.me se falhar
+        const whatsappUrl = generateWhatsappLink(ticket.vehicle.customer.phone, message);
+        window.open(whatsappUrl, "_blank");
+      }
+    } catch (err) {
+      const whatsappUrl = generateWhatsappLink(ticket.vehicle.customer.phone, message);
+      window.open(whatsappUrl, "_blank");
+    } finally {
+      setSendingWaId(null);
+    }
+  };
+
   // Salvar Nova Entrada no Lava-Jato
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,6 +274,16 @@ export default function LavaJatoPage() {
           Nova Entrada no Lava-Jato
         </button>
       </div>
+
+      {toastMsg && (
+        <div className="p-3.5 rounded-xl bg-emerald-500 text-white text-xs font-bold flex items-center justify-between shadow-lg shadow-emerald-500/20 animate-bounce">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4" />
+            <span>{toastMsg}</span>
+          </div>
+          <button onClick={() => setToastMsg("")} className="text-white/80 hover:text-white">✕</button>
+        </div>
+      )}
 
       {/* Barra de Filtro */}
       <div className="flex items-center gap-3">
@@ -454,17 +499,16 @@ export default function LavaJatoPage() {
                         <span className="font-black text-emerald-700 text-sm">{formatCurrency(ticket.price)}</span>
                       </div>
 
-                      {/* Botão de Destaque WhatsApp */}
-                      <a
-                        href={whatsappUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => handleUpdateStatus(ticket.id, "FINALIZADO", { notifiedWhatsapp: true })}
-                        className="mt-3 w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/30 transition-all text-center"
+                      {/* Botão de Disparo WhatsApp Silencioso Interno */}
+                      <button
+                        type="button"
+                        disabled={sendingWaId === ticket.id}
+                        onClick={() => handleSendSilentWhatsapp(ticket, whatsappMsg)}
+                        className="mt-3 w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/30 transition-all text-center disabled:opacity-50"
                       >
                         <MessageSquare className="w-4 h-4" />
-                        <span>Avisar no WhatsApp</span>
-                      </a>
+                        <span>{sendingWaId === ticket.id ? "Enviando..." : "Avisar no WhatsApp"}</span>
+                      </button>
                     </div>
 
                     <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
