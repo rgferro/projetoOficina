@@ -1,33 +1,60 @@
 const { app, BrowserWindow, shell } = require("electron");
 const path = require("path");
-const { fork, spawn } = require("child_process");
 const http = require("http");
 
 let mainWindow = null;
-let serverProcess = null;
-let whatsappProcess = null;
+let serverInstance = null;
 
 const PORT = 3000;
+const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
 
-function waitForServer(url, timeout = 30000) {
-  const start = Date.now();
-  return new Promise((resolve, reject) => {
-    const interval = setInterval(() => {
-      http
-        .get(url, (res) => {
-          if (res.statusCode === 200 || res.statusCode === 304 || res.statusCode === 302) {
-            clearInterval(interval);
-            resolve();
-          }
-        })
-        .on("error", () => {
-          if (Date.now() - start > timeout) {
-            clearInterval(interval);
-            reject(new Error("Timeout ao aguardar inicialização do servidor local."));
-          }
-        });
-    }, 400);
-  });
+function getAppRoot() {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, "app.asar");
+  }
+  return path.join(__dirname, "..");
+}
+
+async function startEmbeddedServer() {
+  const appRoot = getAppRoot();
+
+  // Inicia o daemon do WhatsApp em segundo plano
+  try {
+    const waPath = path.join(appRoot, "server-whatsapp.js");
+    require(waPath);
+    console.log("✓ WhatsApp daemon carregado com sucesso.");
+  } catch (err) {
+    console.error("Aviso ao carregar WhatsApp daemon:", err);
+  }
+
+  // Inicia o servidor Next.js embutido
+  try {
+    const next = require("next");
+    const nextApp = next({
+      dev: false,
+      dir: appRoot,
+      conf: {
+        distDir: ".next",
+      },
+    });
+
+    const handle = nextApp.getRequestHandler();
+
+    await nextApp.prepare();
+
+    serverInstance = http.createServer((req, res) => {
+      handle(req, res);
+    });
+
+    await new Promise((resolve) => {
+      serverInstance.listen(PORT, "127.0.0.1", () => {
+        console.log(`✓ Servidor AutoGestão ativo na porta ${PORT}`);
+        resolve();
+      });
+    });
+  } catch (err) {
+    console.error("Erro ao iniciar servidor Next.js embutido:", err);
+  }
 }
 
 async function createWindow() {
@@ -37,8 +64,9 @@ async function createWindow() {
     minWidth: 1024,
     minHeight: 700,
     title: "AutoGestão ERP Automotivo Pro",
-    icon: path.join(__dirname, "../public/icon.png"),
+    icon: path.join(__dirname, "../build/icon.png"),
     backgroundColor: "#0f172a",
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: false,
@@ -57,14 +85,12 @@ async function createWindow() {
     return { action: "deny" };
   });
 
-  const appUrl = `http://localhost:${PORT}`;
+  const appUrl = `http://127.0.0.1:${PORT}`;
 
   try {
-    await waitForServer(appUrl);
-    mainWindow.loadURL(appUrl);
+    await mainWindow.loadURL(appUrl);
   } catch (err) {
-    console.error(err);
-    mainWindow.loadURL(appUrl);
+    console.error("Erro ao carregar URL da janela:", err);
   }
 
   mainWindow.on("closed", () => {
@@ -72,30 +98,9 @@ async function createWindow() {
   });
 }
 
-function startServices() {
-  // Inicia o microserviço de WhatsApp
-  try {
-    const waPath = path.join(__dirname, "../server-whatsapp.js");
-    whatsappProcess = fork(waPath, [], { stdio: "ignore" });
-  } catch (e) {
-    console.error("Erro ao iniciar daemon WhatsApp:", e);
-  }
-
-  // Inicia o servidor Next.js em produção
-  try {
-    const nextCliPath = path.join(__dirname, "../node_modules/next/dist/bin/next");
-    serverProcess = fork(nextCliPath, ["start", "-p", String(PORT)], {
-      cwd: path.join(__dirname, ".."),
-      stdio: "ignore",
-    });
-  } catch (e) {
-    console.error("Erro ao iniciar servidor Next.js:", e);
-  }
-}
-
-app.whenReady().then(() => {
-  startServices();
-  createWindow();
+app.whenReady().then(async () => {
+  await startEmbeddedServer();
+  await createWindow();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -105,14 +110,16 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
+  if (serverInstance) {
+    serverInstance.close();
+  }
   if (process.platform !== "darwin") {
-    if (serverProcess) serverProcess.kill();
-    if (whatsappProcess) whatsappProcess.kill();
     app.quit();
   }
 });
 
 app.on("before-quit", () => {
-  if (serverProcess) serverProcess.kill();
-  if (whatsappProcess) whatsappProcess.kill();
+  if (serverInstance) {
+    serverInstance.close();
+  }
 });

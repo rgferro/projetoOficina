@@ -33,6 +33,12 @@
     "directories": {
       "output": "dist_desktop"
     },
+    "asarUnpack": [
+      "node_modules/.prisma/**/*",
+      "node_modules/@prisma/**/*",
+      "prisma/**/*",
+      "dev.db"
+    ],
     "files": [
       ".next/**/*",
       "prisma/**/*",
