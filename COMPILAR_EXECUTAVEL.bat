@@ -30,6 +30,10 @@ if %errorlevel% neq 0 (
     exit /b %errorlevel%
 )
 echo.
+echo [*] Configurando ambiente de assinatura e empacotamento Windows...
+set CSC_IDENTITY_AUTO_DISCOVERY=false
+node tools/fix-wincodesign.js
+echo.
 echo [*] Empacotando executavel nativo para Windows (.exe / .zip)...
 call npx electron-builder --win --x64
 if %errorlevel% neq 0 (
