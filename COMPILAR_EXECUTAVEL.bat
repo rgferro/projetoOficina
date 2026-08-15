@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 > nul
-title AutoGestao ERP - Compilacao Desktop Multiplataforma
+title AutoGestao ERP - Compilador Desktop Multiplataforma
 color 0B
 
 echo =========================================================================
@@ -21,10 +21,10 @@ if "%opt%"=="4" goto END
 
 :BUILD_WIN
 echo.
-echo [*] Gerando Prisma Client e Compilando Next.js (Codigo Fechado)...
+echo [*] Compilando Next.js (Codigo Fechado Otimizado)...
 call npm run build
 if %errorlevel% neq 0 (
-    echo [!] Erro ao compilar aplicacao.
+    echo [!] Erro ao compilar Next.js.
     pause
     exit /b %errorlevel%
 )
