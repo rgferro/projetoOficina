@@ -12,7 +12,7 @@ const {
 const pino = require('pino');
 
 const PORT = 3005;
-const AUTH_DIR = path.join(__dirname, 'whatsapp_auth');
+const AUTH_DIR = process.env.WHATSAPP_AUTH_DIR || path.join(__dirname, 'whatsapp_auth');
 
 let sock = null;
 let isReconnecting = false;

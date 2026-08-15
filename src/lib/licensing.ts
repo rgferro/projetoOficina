@@ -27,7 +27,8 @@ export interface LicenseStatus {
   reason?: string;
 }
 
-const LICENSE_FILE_PATH = path.join(process.cwd(), ".license");
+const LICENSE_FILE_PATH =
+  process.env.LICENSE_FILE_PATH || path.join(process.cwd(), ".license");
 
 /**
  * Gera o hash de validação interna da chave a partir do HWID e Segredo do Projeto.
