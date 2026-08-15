@@ -31,6 +31,7 @@ export const SYSTEM_MODULES: SystemModule[] = [
   { id: "financeiro", name: "Caixa & Financeiro", href: "/financeiro", category: "Gestão" },
   { id: "relatorios", name: "Relatórios & BI", href: "/relatorios", category: "Gestão" },
   { id: "crm", name: "CRM WhatsApp", href: "/crm", category: "Gestão" },
+  { id: "manual", name: "Manual & Treinamento", href: "/manual", category: "Operacional" },
   { id: "configuracoes", name: "Backup & Ajustes", href: "/configuracoes", category: "Administrativo" },
 ];
 
@@ -85,6 +86,7 @@ export const DEFAULT_PERMISSIONS_MAP: Record<AccessLevel, string[]> = {
     "/financeiro",
     "/relatorios",
     "/crm",
+    "/manual",
     "/configuracoes",
   ],
   GERENTE: [
@@ -100,6 +102,7 @@ export const DEFAULT_PERMISSIONS_MAP: Record<AccessLevel, string[]> = {
     "/financeiro",
     "/relatorios",
     "/crm",
+    "/manual",
   ],
   ATENDENTE: [
     "/",
@@ -110,18 +113,20 @@ export const DEFAULT_PERMISSIONS_MAP: Record<AccessLevel, string[]> = {
     "/clientes",
     "/financeiro",
     "/crm",
+    "/manual",
   ],
   MECANICO: [
     "/oficina",
     "/servicos",
     "/estoque",
     "/clientes",
+    "/manual",
   ],
   LAVADOR: [
     "/lavajato",
     "/clientes",
+    "/manual",
   ],
 };
 
-// Alias para retrocompatibilidade
 export const PERMISSIONS_MAP = DEFAULT_PERMISSIONS_MAP;

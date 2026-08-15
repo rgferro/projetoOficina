@@ -15,9 +15,11 @@ import {
   Unlock,
   KeyRound,
   Users,
+  Sparkles,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth, ROLE_CONFIG, EmployeeUser } from "@/lib/authContext";
+import { InteractiveTourModal } from "@/components/InteractiveTour";
 
 interface HeaderProps {
   onOpenSidebar: () => void;
@@ -26,6 +28,7 @@ interface HeaderProps {
 export function Header({ onOpenSidebar }: HeaderProps) {
   const [currentDate, setCurrentDate] = useState("");
   const [isSwitchModalOpen, setIsSwitchModalOpen] = useState(false);
+  const [isTourOpen, setIsTourOpen] = useState(false);
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState("");
   const [targetEmployee, setTargetEmployee] = useState<EmployeeUser | null>(null);
@@ -125,6 +128,17 @@ export function Header({ onOpenSidebar }: HeaderProps) {
               </div>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 ml-1" />
+          </button>
+
+          {/* Botão de Tour Interativo / Tutorial */}
+          <button
+            type="button"
+            onClick={() => setIsTourOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold shadow-sm shadow-orange-500/20 transition-all active:scale-95"
+            title="Clique para reproduzir o Tour Interativo a qualquer momento"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">🎓 Tour do</span> Sistema
           </button>
 
           {/* Ações Rápidas */}
@@ -322,6 +336,12 @@ export function Header({ onOpenSidebar }: HeaderProps) {
           </div>
         </div>
       )}
+
+      {/* Modal do Tour Interativo do Sistema */}
+      <InteractiveTourModal
+        isOpen={isTourOpen}
+        onClose={() => setIsTourOpen(false)}
+      />
     </>
   );
 }

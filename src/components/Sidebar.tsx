@@ -19,6 +19,7 @@ import {
   X,
   Car,
   Lock,
+  BookOpen,
 } from "lucide-react";
 import { useAuth, ROLE_CONFIG } from "@/lib/authContext";
 
@@ -44,6 +45,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: "Caixa & Financeiro", href: "/financeiro", icon: CircleDollarSign },
     { name: "Relatórios & BI", href: "/relatorios", icon: BarChart3 },
     { name: "CRM WhatsApp", href: "/crm", icon: MessageSquare, badge: "Alertas" },
+    { name: "Manual & Guia", href: "/manual", icon: BookOpen, badge: "Ajuda" },
     { name: "Backup & Ajustes", href: "/configuracoes", icon: Settings },
   ];
 
