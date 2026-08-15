@@ -11,6 +11,29 @@ export interface EmployeeUser {
   active: boolean;
 }
 
+export interface SystemModule {
+  id: string;
+  name: string;
+  href: string;
+  category: "Operacional" | "Gestão" | "Administrativo";
+}
+
+export const SYSTEM_MODULES: SystemModule[] = [
+  { id: "dashboard", name: "Dashboard", href: "/", category: "Operacional" },
+  { id: "pdv", name: "PDV Balcão", href: "/pdv", category: "Operacional" },
+  { id: "lavajato", name: "Lava-Jato & Pátio", href: "/lavajato", category: "Operacional" },
+  { id: "oficina", name: "Oficina & Ordens de Serviço", href: "/oficina", category: "Operacional" },
+  { id: "estoque", name: "Estoque de Peças", href: "/estoque", category: "Gestão" },
+  { id: "servicos", name: "Tabela de Serviços", href: "/servicos", category: "Operacional" },
+  { id: "fornecedores", name: "Fornecedores", href: "/fornecedores", category: "Gestão" },
+  { id: "clientes", name: "Clientes & Veículos", href: "/clientes", category: "Operacional" },
+  { id: "equipe", name: "Equipe & Usuários", href: "/equipe", category: "Administrativo" },
+  { id: "financeiro", name: "Caixa & Financeiro", href: "/financeiro", category: "Gestão" },
+  { id: "relatorios", name: "Relatórios & BI", href: "/relatorios", category: "Gestão" },
+  { id: "crm", name: "CRM WhatsApp", href: "/crm", category: "Gestão" },
+  { id: "configuracoes", name: "Backup & Ajustes", href: "/configuracoes", category: "Administrativo" },
+];
+
 export const ROLE_CONFIG: Record<
   AccessLevel,
   { label: string; badgeColor: string; icon: string; description: string }
@@ -19,7 +42,7 @@ export const ROLE_CONFIG: Record<
     label: "Administrador",
     badgeColor: "bg-purple-100 text-purple-800 border-purple-300",
     icon: "👑",
-    description: "Acesso total a todos os módulos, financeiro, configurações e equipe.",
+    description: "Acesso total e irrestrito a todos os módulos, configurações e equipe.",
   },
   GERENTE: {
     label: "Gerente",
@@ -47,8 +70,8 @@ export const ROLE_CONFIG: Record<
   },
 };
 
-// Matriz de rotas permitidas por perfil
-export const PERMISSIONS_MAP: Record<AccessLevel, string[]> = {
+// Matriz de rotas permitidas padrão por perfil
+export const DEFAULT_PERMISSIONS_MAP: Record<AccessLevel, string[]> = {
   ADMIN: [
     "/",
     "/pdv",
@@ -99,3 +122,6 @@ export const PERMISSIONS_MAP: Record<AccessLevel, string[]> = {
     "/clientes",
   ],
 };
+
+// Alias para retrocompatibilidade
+export const PERMISSIONS_MAP = DEFAULT_PERMISSIONS_MAP;
