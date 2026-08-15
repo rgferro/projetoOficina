@@ -21,7 +21,8 @@ if "%opt%"=="4" goto END
 
 :BUILD_WIN
 echo.
-echo [*] Compilando Next.js (Codigo Fechado Otimizado)...
+echo [*] Limpando cache e compilando Next.js (Codigo Fechado Otimizado)...
+if exist .next rmdir /s /q .next
 call npm run build
 if %errorlevel% neq 0 (
     echo [!] Erro ao compilar Next.js.
@@ -31,6 +32,11 @@ if %errorlevel% neq 0 (
 echo.
 echo [*] Empacotando executavel nativo para Windows (.exe / .zip)...
 call npx electron-builder --win --x64
+if %errorlevel% neq 0 (
+    echo [!] Erro ao empacotar com Electron.
+    pause
+    exit /b %errorlevel%
+)
 echo.
 echo =========================================================================
 echo  SUCESSO! Executavel gerado na pasta: dist_desktop/
