@@ -31,8 +31,9 @@ export const SYSTEM_MODULES: SystemModule[] = [
   { id: "financeiro", name: "Caixa & Financeiro", href: "/financeiro", category: "Gestão" },
   { id: "relatorios", name: "Relatórios & BI", href: "/relatorios", category: "Gestão" },
   { id: "crm", name: "CRM WhatsApp", href: "/crm", category: "Gestão" },
+  { id: "assinatura", name: "Assinatura & Planos", href: "/assinatura", category: "Administrativo" },
   { id: "manual", name: "Manual & Treinamento", href: "/manual", category: "Operacional" },
-  { id: "configuracoes", name: "Backup & Ajustes", href: "/configuracoes", category: "Administrativo" },
+  { id: "configuracoes", name: "Ajustes da Oficina", href: "/configuracoes", category: "Administrativo" },
 ];
 
 export const ROLE_CONFIG: Record<
@@ -86,8 +87,14 @@ export const DEFAULT_PERMISSIONS_MAP: Record<AccessLevel, string[]> = {
     "/financeiro",
     "/relatorios",
     "/crm",
+    "/assinatura",
     "/manual",
+    "/master-admin",
     "/configuracoes",
+    "/sobre",
+    "/contato",
+    "/termos",
+    "/privacidade",
   ],
   GERENTE: [
     "/",
@@ -103,6 +110,10 @@ export const DEFAULT_PERMISSIONS_MAP: Record<AccessLevel, string[]> = {
     "/relatorios",
     "/crm",
     "/manual",
+    "/sobre",
+    "/contato",
+    "/termos",
+    "/privacidade",
   ],
   ATENDENTE: [
     "/",
@@ -114,6 +125,10 @@ export const DEFAULT_PERMISSIONS_MAP: Record<AccessLevel, string[]> = {
     "/financeiro",
     "/crm",
     "/manual",
+    "/sobre",
+    "/contato",
+    "/termos",
+    "/privacidade",
   ],
   MECANICO: [
     "/oficina",
@@ -121,11 +136,19 @@ export const DEFAULT_PERMISSIONS_MAP: Record<AccessLevel, string[]> = {
     "/estoque",
     "/clientes",
     "/manual",
+    "/sobre",
+    "/contato",
+    "/termos",
+    "/privacidade",
   ],
   LAVADOR: [
     "/lavajato",
     "/clientes",
     "/manual",
+    "/sobre",
+    "/contato",
+    "/termos",
+    "/privacidade",
   ],
 };
 

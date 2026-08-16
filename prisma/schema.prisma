@@ -377,3 +377,48 @@ model WorkshopSetting {
   
   updatedAt                   DateTime @updatedAt
 }
+
+model Tenant {
+  id                      String                @id @default(cuid())
+  name                    String                // Razão Social / Nome da Oficina
+  document                String?               // CNPJ ou CPF
+  plan                    String                @default("STARTER") // STARTER, PRO, ELITE
+  subscriptionStatus      String                @default("active") // active, past_due, canceled
+  subscriptionExpiresAt   DateTime?
+  maxUsers                Int                   @default(2) // Starter: 2, Pro: 4, Elite: 8 (+ extras)
+  ownerEmail              String                @unique // E-mail do Dono / Comprador
+  ownerName               String
+  ownerPhone              String?
+  mercadopagoPreapprovalId String?
+  active                  Boolean               @default(true)
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+
+  payments                SubscriptionPayment[]
+}
+
+model SubscriptionPayment {
+  id            String    @id @default(cuid())
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  paymentId     String?   // ID da transação no Mercado Pago
+  amount        Float
+  status        String    @default("pending") // approved, pending, rejected, refunded
+  method        String    @default("pix") // pix, credit_card
+  plan          String    // STARTER, PRO, ELITE, EXTRA_SEAT
+  qrCode        String?   // PIX Copia e Cola
+  qrCodeBase64  String?   // Imagem Base64 do QR Code
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String
+  status    String   @default("UNREAD") // UNREAD, READ, RESPONDED
+  createdAt DateTime @default(now())
+}
