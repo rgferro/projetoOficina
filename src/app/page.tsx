@@ -19,45 +19,65 @@ import { generateWhatsappLink, buildWashReadyMessage } from "@/lib/whatsapp";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  // 1. Dados do Lava-Jato hoje
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  const activeWashTickets = await prisma.washTicket.findMany({
-    where: {
-      status: { in: ["AGUARDANDO", "EM_LAVAGEM", "FINALIZADO"] },
-    },
-    include: {
-      vehicle: { include: { customer: true } },
-      employee: true,
-    },
-    orderBy: { enteredAt: "asc" },
-  });
+  let activeWashTickets: any[] = [];
+  let activeServiceOrders: any[] = [];
+  let todayTransactions: any[] = [];
+  let settings: any = null;
+  let totalCustomers = 0;
+  let totalVehicles = 0;
+
+  try {
+    // 1. Dados do Lava-Jato hoje
+    activeWashTickets = await prisma.washTicket.findMany({
+      where: {
+        status: { in: ["AGUARDANDO", "EM_LAVAGEM", "FINALIZADO"] },
+      },
+      include: {
+        vehicle: { include: { customer: true } },
+        employee: true,
+      },
+      orderBy: { enteredAt: "asc" },
+    });
+
+    // 2. Dados das Ordens de Serviço ativas
+    activeServiceOrders = await prisma.serviceOrder.findMany({
+      where: {
+        status: { in: ["ORCAMENTO", "APROVADO", "EM_EXECUCAO", "AGUARDANDO_PECA"] },
+      },
+      include: {
+        customer: true,
+        vehicle: true,
+        employee: true,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 6,
+    });
+
+    // 3. Faturamento de Hoje
+    todayTransactions = await prisma.financialTransaction.findMany({
+      where: {
+        date: { gte: todayStart },
+      },
+    });
+
+    // 4. Configurações da oficina
+    settings = await prisma.workshopSetting.findUnique({
+      where: { id: "default" },
+    });
+
+    // 5. Totalizadores gerais
+    totalCustomers = await prisma.customer.count();
+    totalVehicles = await prisma.vehicle.count();
+  } catch (err) {
+    console.error("Aviso ao carregar dados do Dashboard:", err);
+  }
 
   const waitingCount = activeWashTickets.filter((t) => t.status === "AGUARDANDO").length;
   const inProgressCount = activeWashTickets.filter((t) => t.status === "EM_LAVAGEM").length;
   const readyCount = activeWashTickets.filter((t) => t.status === "FINALIZADO").length;
-
-  // 2. Dados das Ordens de Serviço ativas
-  const activeServiceOrders = await prisma.serviceOrder.findMany({
-    where: {
-      status: { in: ["ORCAMENTO", "APROVADO", "EM_EXECUCAO", "AGUARDANDO_PECA"] },
-    },
-    include: {
-      customer: true,
-      vehicle: true,
-      employee: true,
-    },
-    orderBy: { createdAt: "desc" },
-    take: 6,
-  });
-
-  // 3. Faturamento de Hoje
-  const todayTransactions = await prisma.financialTransaction.findMany({
-    where: {
-      date: { gte: todayStart },
-    },
-  });
 
   const todayIncome = todayTransactions
     .filter((t) => t.type === "RECEITA")
@@ -66,15 +86,6 @@ export default async function DashboardPage() {
   const todayExpense = todayTransactions
     .filter((t) => t.type === "DESPESA")
     .reduce((sum, t) => sum + t.amount, 0);
-
-  // 4. Configurações da oficina
-  const settings = await prisma.workshopSetting.findUnique({
-    where: { id: "default" },
-  });
-
-  // 5. Totalizadores gerais
-  const totalCustomers = await prisma.customer.count();
-  const totalVehicles = await prisma.vehicle.count();
 
   return (
     <div className="space-y-8">
