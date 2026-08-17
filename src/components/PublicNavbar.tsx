@@ -50,11 +50,18 @@ export function PublicNavbar() {
         {/* Call to Action Buttons */}
         <div className="flex items-center gap-3">
           <Link
-            href="/dashboard"
+            href="/login"
+            className="px-4 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm transition-all"
+          >
+            Entrar
+          </Link>
+
+          <Link
+            href="/login"
             className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-blue-500/20 flex items-center gap-2 transition-all active:scale-95"
           >
             <Sparkles className="w-4 h-4 text-yellow-300" />
-            <span>Acessar Sistema</span>
+            <span>Criar Conta Grátis</span>
             <ArrowRight className="w-4 h-4 hidden sm:inline" />
           </Link>
         </div>

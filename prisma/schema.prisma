@@ -56,9 +56,13 @@ model Employee {
   email          String?
   phone          String?
   commissionRate Float               @default(0.0) // % de comissão padrão
+  password       String?             // Senha para login online (opcional)
   active         Boolean             @default(true)
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
+
+  tenantId       String?
+  tenant         Tenant?             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   washTickets    WashTicket[]
   serviceOrders  ServiceOrder[]
@@ -387,13 +391,16 @@ model Tenant {
   subscriptionExpiresAt   DateTime?
   maxUsers                Int                   @default(2) // Starter: 2, Pro: 4, Elite: 8 (+ extras)
   ownerEmail              String                @unique // E-mail do Dono / Comprador
+  ownerPassword           String?               // Hash da senha do Dono
   ownerName               String
   ownerPhone              String?
+  isMaster                Boolean               @default(false) // Super Admin do SaaS (Rafael)
   mercadopagoPreapprovalId String?
   active                  Boolean               @default(true)
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt
 
+  employees               Employee[]
   payments                SubscriptionPayment[]
 }
 
