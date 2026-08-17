@@ -30,6 +30,13 @@ export default function PageTourButton({
 
     if (!tourData || !tourData.steps.length) return;
 
+    if (driverObjRef.current) {
+      try {
+        driverObjRef.current.destroy();
+      } catch (err) {}
+      driverObjRef.current = null;
+    }
+
     // Filtra apenas passos cujos elementos existem na página atual (ou fallback global)
     const validSteps = tourData.steps.filter((step) => {
       if (typeof step.element === "string") {

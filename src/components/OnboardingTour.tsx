@@ -8,12 +8,20 @@ import { useAuth } from "@/lib/authContext";
 
 export default function OnboardingTour() {
   const pathname = usePathname();
-  const { currentEmployee, canAccess } = useAuth();
+  const { currentEmployee } = useAuth();
   const driverObjRef = useRef<any>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const startTour = () => {
-    const role = currentEmployee?.accessLevel || "ADMIN";
+    // Destrói qualquer instância ativa do Driver.js antes de iniciar
+    if (driverObjRef.current) {
+      try {
+        driverObjRef.current.destroy();
+      } catch (e) {}
+      driverObjRef.current = null;
+    }
 
+    const role = currentEmployee?.accessLevel || "ADMIN";
     let rawSteps: DriveStep[] = [];
 
     if (role === "MECANICO") {
@@ -126,7 +134,7 @@ export default function OnboardingTour() {
         },
       ];
     } else {
-      // ADMIN & GERENTE (Fluxo completo)
+      // ADMIN & GERENTE (Fluxo sequencial completo)
       rawSteps = [
         {
           element: "#tour-nav-configuracoes",
@@ -211,7 +219,7 @@ export default function OnboardingTour() {
       ];
     }
 
-    // Filtra apenas passos cujos elementos estão presentes no DOM da tela
+    // Filtra apenas passos cujos elementos existem na tela
     const validSteps = rawSteps.filter((s) => {
       if (typeof s.element === "string") {
         return !!document.querySelector(s.element);
@@ -234,8 +242,10 @@ export default function OnboardingTour() {
       doneBtnText: "✓ Concluir Guia",
       steps: validSteps,
       onDestroyed: () => {
+        driverObjRef.current = null;
         if (typeof window !== "undefined") {
-          localStorage.setItem("torque_onboarding_completed", "true");
+          const userKey = currentEmployee?.id || "guest";
+          localStorage.setItem(`torque_tour_seen_${userKey}`, "true");
         }
       },
     });
@@ -245,14 +255,23 @@ export default function OnboardingTour() {
   };
 
   useEffect(() => {
-    // Abre automaticamente no primeiro acesso ao painel
+    // Cancela qualquer timer pendente anterior para evitar abertura duplicada
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+
     if (typeof window !== "undefined") {
-      const hasSeenTour = localStorage.getItem("torque_onboarding_completed");
+      const userKey = currentEmployee?.id || "guest";
+      const hasSeenTour = localStorage.getItem(`torque_tour_seen_${userKey}`);
       const publicRoutes = ["/", "/login", "/cadastro", "/convite", "/sobre", "/termos", "/privacidade"];
-      if (!hasSeenTour && !publicRoutes.includes(pathname)) {
-        setTimeout(() => {
+
+      // Auto-inicia apenas para administradores/gerentes no primeiro acesso após a tela carregar
+      const isAdminOrManager = !currentEmployee || currentEmployee.accessLevel === "ADMIN" || currentEmployee.accessLevel === "GERENTE";
+      if (!hasSeenTour && isAdminOrManager && !publicRoutes.includes(pathname)) {
+        timerRef.current = setTimeout(() => {
           startTour();
-        }, 800);
+        }, 1200);
       }
     }
 
@@ -262,14 +281,19 @@ export default function OnboardingTour() {
 
     window.addEventListener("torque:open-onboarding-tour", handleOpenTour);
     return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
       window.removeEventListener("torque:open-onboarding-tour", handleOpenTour);
       if (driverObjRef.current) {
         try {
           driverObjRef.current.destroy();
         } catch (e) {}
+        driverObjRef.current = null;
       }
     };
-  }, [pathname, currentEmployee]);
+  }, [pathname, currentEmployee?.id, currentEmployee?.accessLevel]);
 
   return null;
 }
