@@ -1,10 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { SAAS_PLANS } from "@/lib/mercadopago";
+import { verifySessionToken } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
-    let tenant = await prisma.tenant.findFirst();
+    const token = req.cookies.get("torque_token")?.value;
+    const session = token ? verifySessionToken(token) : null;
+
+    let tenant = null;
+    if (session?.tenantId) {
+      tenant = await prisma.tenant.findUnique({
+        where: { id: session.tenantId },
+      });
+    }
+
+    if (!tenant && session?.email) {
+      tenant = await prisma.tenant.findFirst({
+        where: { ownerEmail: session.email },
+      });
+    }
+
+    // Se não encontrou tenant da sessão, busca o tenant ativo mais recente
+    if (!tenant) {
+      tenant = await prisma.tenant.findFirst({
+        where: { active: true },
+        orderBy: { createdAt: "desc" },
+      });
+    }
 
     if (!tenant) {
       const setting = await prisma.workshopSetting.findUnique({ where: { id: "default" } });
@@ -23,7 +46,10 @@ export async function GET(req: NextRequest) {
     }
 
     const currentUsersCount = await prisma.employee.count({
-      where: { active: true },
+      where: {
+        active: true,
+        ...(tenant ? { tenantId: tenant.id } : {}),
+      },
     });
 
     const recentPayments = await prisma.subscriptionPayment.findMany({
@@ -45,7 +71,7 @@ export async function GET(req: NextRequest) {
         status: tenant.subscriptionStatus,
         expiresAt: tenant.subscriptionExpiresAt,
         maxUsers: tenant.maxUsers,
-        currentUsersCount,
+        currentUsersCount: Math.max(1, currentUsersCount),
         ownerEmail: tenant.ownerEmail,
         ownerName: tenant.ownerName,
       },

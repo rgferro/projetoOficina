@@ -1,16 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createMercadoPagoPixPayment, SAAS_PLANS } from "@/lib/mercadopago";
+import { verifySessionToken } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { planId = "PRO", tenantId, seatsCount = 0 } = body;
 
-    // Busca ou cria o Tenant padrão
-    let tenant = await prisma.tenant.findFirst({
-      where: tenantId ? { id: tenantId } : undefined,
-    });
+    const token = req.cookies.get("torque_token")?.value;
+    const session = token ? verifySessionToken(token) : null;
+    const resolvedTenantId = tenantId || session?.tenantId;
+
+    let tenant = null;
+    if (resolvedTenantId) {
+      tenant = await prisma.tenant.findUnique({
+        where: { id: resolvedTenantId },
+      });
+    }
+
+    if (!tenant && session?.email) {
+      tenant = await prisma.tenant.findFirst({
+        where: { ownerEmail: session.email },
+      });
+    }
+
+    if (!tenant) {
+      tenant = await prisma.tenant.findFirst({
+        where: { active: true },
+        orderBy: { createdAt: "desc" },
+      });
+    }
 
     if (!tenant) {
       const setting = await prisma.workshopSetting.findUnique({ where: { id: "default" } });
@@ -58,7 +78,7 @@ export async function POST(req: NextRequest) {
       planName,
     });
   } catch (error: any) {
-    console.error("Erro ao gerar PIX Mercado Pago:", error);
+    console.error("Erro ao gerar PIX para assinatura:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Erro ao processar PIX" },
       { status: 500 }

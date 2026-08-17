@@ -1,15 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createMercadoPagoPreapproval, SAAS_PLANS } from "@/lib/mercadopago";
+import { verifySessionToken } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { planId = "PRO", tenantId } = body;
 
-    let tenant = await prisma.tenant.findFirst({
-      where: tenantId ? { id: tenantId } : undefined,
-    });
+    const token = req.cookies.get("torque_token")?.value;
+    const session = token ? verifySessionToken(token) : null;
+    const resolvedTenantId = tenantId || session?.tenantId;
+
+    let tenant = null;
+    if (resolvedTenantId) {
+      tenant = await prisma.tenant.findUnique({
+        where: { id: resolvedTenantId },
+      });
+    }
+
+    if (!tenant && session?.email) {
+      tenant = await prisma.tenant.findFirst({
+        where: { ownerEmail: session.email },
+      });
+    }
+
+    if (!tenant) {
+      tenant = await prisma.tenant.findFirst({
+        where: { active: true },
+        orderBy: { createdAt: "desc" },
+      });
+    }
 
     if (!tenant) {
       const setting = await prisma.workshopSetting.findUnique({ where: { id: "default" } });
