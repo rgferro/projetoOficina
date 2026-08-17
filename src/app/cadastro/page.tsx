@@ -1,7 +1,10 @@
-"use client";
-
-import LoginPage from "../login/page";
+import { Suspense } from "react";
+import { AuthForm } from "@/components/AuthForm";
 
 export default function CadastroPage() {
-  return <LoginPage initialTab="REGISTER" />;
+  return (
+    <Suspense fallback={<div className="text-center py-12 text-slate-400">Carregando...</div>}>
+      <AuthForm initialTab="REGISTER" />
+    </Suspense>
+  );
 }

@@ -11,20 +11,14 @@ import {
   Wrench,
   ShoppingCart,
   MessageSquare,
-  Users,
-  ChevronRight,
-  Star,
   Sparkles,
   Check,
   X,
-  Clock,
-  Smartphone,
-  HelpCircle,
-  TrendingUp,
   BarChart3,
   Flame,
   Award,
   ChevronDown,
+  TrendingUp,
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -33,13 +27,10 @@ export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showFloatingCta, setShowFloatingCta] = useState(false);
 
-  // Exibe Floating CTA ao rolar a página
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 600) {
-        setShowFloatingCta(true);
-      } else {
-        setShowFloatingCta(false);
+      if (typeof window !== "undefined") {
+        setShowFloatingCta(window.scrollY > 600);
       }
     };
     window.addEventListener("scroll", handleScroll);
@@ -54,13 +45,11 @@ export default function LandingPage() {
     <div className="space-y-24 pb-20 font-sans text-slate-900 selection:bg-blue-600 selection:text-white">
       {/* 🚀 1. HERO SECTION & PROPOSTA DE VALOR */}
       <section className="relative pt-6 sm:pt-12 pb-8 text-center max-w-5xl mx-auto space-y-8">
-        {/* Badge de Destaque */}
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-700 text-xs font-extrabold shadow-sm animate-pulse">
           <Flame className="w-4 h-4 text-amber-500 fill-current" />
           <span>O ERP Automotivo Mais Moderno do Brasil • 100% na Nuvem</span>
         </div>
 
-        {/* H1 Focado na Transformação */}
         <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-950 tracking-tight leading-[1.15]">
           Transforme sua Oficina Mecânica ou Lava-Jato em um Negócio{" "}
           <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-amber-500 bg-clip-text text-transparent">
@@ -68,13 +57,11 @@ export default function LandingPage() {
           </span>
         </h1>
 
-        {/* Subtítulo Sem Barreiras */}
         <p className="text-base sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
           Controle ordens de serviço com fotos de avarias, gerencie o pátio em Kanban e envie{" "}
           <strong className="text-slate-900 font-bold">avisos automáticos no WhatsApp</strong> do cliente. Sem instalação, sem complexidade e sem precisar de cartão de crédito.
         </p>
 
-        {/* Botões de Ação de Alta Conversão */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
           <Link
             href="/cadastro"
@@ -94,7 +81,6 @@ export default function LandingPage() {
           </Link>
         </div>
 
-        {/* Micro-copy de Confiança */}
         <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 pt-2 text-xs font-bold text-slate-600">
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -114,11 +100,10 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* 📱 MOCKUP INTERATIVO DA PLATAFORMA */}
+        {/* MOCKUP INTERATIVO */}
         <div className="pt-6">
           <div className="relative mx-auto max-w-5xl rounded-3xl bg-slate-900 p-2 sm:p-4 shadow-2xl ring-1 ring-slate-900/10">
             <div className="rounded-2xl bg-slate-950 p-4 sm:p-6 text-left border border-slate-800 space-y-4">
-              {/* Top Bar Mockup */}
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-rose-500" />
@@ -134,7 +119,6 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* Cards do Mockup (Pátio Kanban em Tempo Real) */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                 {/* Coluna 1: Lava-Jato */}
                 <div className="bg-slate-900/90 rounded-2xl p-4 border border-cyan-900/40 space-y-3">
@@ -229,11 +213,11 @@ export default function LandingPage() {
           </div>
 
           <div className="space-y-1 pt-4 sm:pt-0">
-            <div className="text-3xl sm:text-4xl font-black text-amber-500 font-mono flex items-center justify-center gap-1">
-              4.9 <Star className="w-6 h-6 fill-current text-amber-400 inline" />
+            <div className="text-3xl sm:text-4xl font-black text-amber-500 font-mono">
+              4.9 ★
             </div>
             <div className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-              Satisfação dos Clientes
+              Avaliação Média
             </div>
           </div>
 
@@ -248,7 +232,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ⚖️ 3. SEÇÃO ANTES VS. DEPOIS (A DOR VS. A TRANSFORMAÇÃO) */}
+      {/* ⚖️ 3. SEÇÃO ANTES VS. DEPOIS */}
       <section className="max-w-5xl mx-auto space-y-8">
         <div className="text-center space-y-2 max-w-2xl mx-auto">
           <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
@@ -260,7 +244,6 @@ export default function LandingPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Como é HOJE (Sem o Torque ERP) */}
           <div className="bg-rose-50/70 rounded-3xl p-6 sm:p-8 border border-rose-200 space-y-4">
             <div className="flex items-center gap-2 text-rose-700 font-black text-base uppercase tracking-wide">
               <X className="w-6 h-6 bg-rose-200 text-rose-800 rounded-full p-1" />
@@ -286,7 +269,6 @@ export default function LandingPage() {
             </ul>
           </div>
 
-          {/* Como fica COM O TORQUE ERP */}
           <div className="bg-emerald-50/70 rounded-3xl p-6 sm:p-8 border-2 border-emerald-300 shadow-md space-y-4">
             <div className="flex items-center gap-2 text-emerald-800 font-black text-base uppercase tracking-wide">
               <Check className="w-6 h-6 bg-emerald-200 text-emerald-800 rounded-full p-1" />
@@ -314,7 +296,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 🛠️ 4. RECURSOS POR CASO DE USO COM ABAS (OFICINA, LAVA-JATO, GESTÃO) */}
+      {/* 🛠️ 4. RECURSOS POR CASO DE USO COM ABAS */}
       <section id="recursos" className="max-w-5xl mx-auto space-y-8">
         <div className="text-center space-y-2 max-w-2xl mx-auto">
           <span className="text-xs font-black uppercase tracking-widest text-blue-600">
@@ -328,7 +310,6 @@ export default function LandingPage() {
           </p>
         </div>
 
-        {/* Seletor de Abas */}
         <div className="flex items-center justify-center p-1.5 bg-slate-200/70 rounded-2xl max-w-md mx-auto">
           <button
             type="button"
@@ -365,7 +346,6 @@ export default function LandingPage() {
           </button>
         </div>
 
-        {/* Conteúdo da Aba 1: Oficinas Mecânicas */}
         {activeTab === "oficina" && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fadeIn">
             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-3 hover:border-blue-300 transition-all">
@@ -400,7 +380,6 @@ export default function LandingPage() {
           </div>
         )}
 
-        {/* Conteúdo da Aba 2: Lava-Jatos */}
         {activeTab === "lavajato" && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fadeIn">
             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-3 hover:border-cyan-300 transition-all">
@@ -435,7 +414,6 @@ export default function LandingPage() {
           </div>
         )}
 
-        {/* Conteúdo da Aba 3: Gestão & Caixa */}
         {activeTab === "gestao" && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fadeIn">
             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-3 hover:border-emerald-300 transition-all">
@@ -484,7 +462,6 @@ export default function LandingPage() {
             Comece 100% grátis hoje e só faça upgrade quando sua equipe crescer.
           </p>
 
-          {/* Seletor Mensal vs Anual */}
           <div className="inline-flex items-center gap-3 p-1.5 bg-slate-900 border border-slate-700 rounded-2xl mt-4">
             <button
               type="button"
@@ -514,9 +491,8 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Grid de 3 Planos */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-          {/* 1. Starter */}
+          {/* Starter */}
           <div className="bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-800 space-y-6 flex flex-col justify-between">
             <div className="space-y-3">
               <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -546,7 +522,7 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* 2. Oficina Pro (DESTAQUE MÁXIMO) */}
+          {/* Pro */}
           <div className="bg-gradient-to-b from-blue-900/90 via-slate-900 to-indigo-950 rounded-3xl p-6 sm:p-8 border-2 border-amber-400 shadow-2xl space-y-6 flex flex-col justify-between relative transform md:-translate-y-2">
             <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-400 text-slate-950 text-[11px] font-black uppercase px-4 py-1 rounded-full shadow-md tracking-wider">
               ⭐ Mais Escolhido pelas Oficinas
@@ -560,7 +536,6 @@ export default function LandingPage() {
                 {billingPeriod === "annual" ? "R$ 55,90" : "R$ 69,90"}{" "}
                 <span className="text-xs font-normal text-slate-300">/mês</span>
               </div>
-              {/* Ancoragem Psicológica Diária */}
               <div className="text-xs text-amber-300 font-bold bg-amber-950/60 p-2 rounded-xl border border-amber-800">
                 🔥 Apenas R$ {billingPeriod === "annual" ? "1,86" : "2,33"}/dia (Menos que 1 cafezinho!)
               </div>
@@ -584,7 +559,7 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* 3. Oficina Elite */}
+          {/* Elite */}
           <div className="bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-800 space-y-6 flex flex-col justify-between">
             <div className="space-y-3">
               <div className="text-xs font-bold uppercase tracking-wider text-purple-400">
@@ -616,13 +591,14 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Selo de Garantia de Satisfação */}
         <div className="pt-4 text-center max-w-xl mx-auto flex items-center justify-center gap-3 text-xs text-slate-400 bg-slate-900/60 p-3 rounded-2xl border border-slate-800">
           <ShieldCheck className="w-5 h-5 text-emerald-400 flex-shrink-0" />
           <span>
             <strong>Garantia de Satisfação Total:</strong> Cancele a qualquer momento com 1 clique direto no painel, sem multa e sem contratos de fidelidade.
           </span>
         </div>
+      </section>
+
       {/* ❓ 6. QUEBRA DE OBJEÇÕES (FAQ INTERATIVO) */}
       <section className="max-w-3xl mx-auto space-y-6">
         <div className="text-center space-y-2">
@@ -683,7 +659,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 🚀 8. CTA FINAL DE ALTA CONVERSÃO */}
+      {/* 🚀 7. CTA FINAL DE ALTA CONVERSÃO */}
       <section className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 text-white rounded-3xl p-8 sm:p-14 text-center max-w-5xl mx-auto space-y-6 shadow-2xl relative overflow-hidden">
         <h2 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
           Pronto para dobrar a produtividade <br className="hidden sm:inline" /> da sua oficina?
@@ -706,7 +682,7 @@ export default function LandingPage() {
         </p>
       </section>
 
-      {/* 📌 9. FLOATING BOTTOM CTA (STICKY BAR) */}
+      {/* 📌 8. FLOATING BOTTOM CTA */}
       {showFloatingCta && (
         <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-8 z-50 animate-fadeIn">
           <div className="bg-slate-950/95 backdrop-blur-md text-white p-3 sm:px-6 sm:py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-center justify-between gap-4">
@@ -726,7 +702,7 @@ export default function LandingPage() {
         </div>
       )}
 
-      {/* 🏛️ 10. RODAPÉ INSTITUCIONAL & LGPD */}
+      {/* 🏛️ 9. RODAPÉ INSTITUCIONAL & LGPD */}
       <footer className="pt-12 border-t border-slate-200 text-xs text-slate-500 space-y-6 max-w-5xl mx-auto">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
