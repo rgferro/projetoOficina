@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
       name: updatedEmployee.name,
       email: updatedEmployee.email || "",
       role: updatedEmployee.role,
-      accessLevel: updatedEmployee.accessLevel,
+      accessLevel: (updatedEmployee.accessLevel as any) || "ATENDENTE",
       tenantId: updatedEmployee.tenantId,
       isOwner: false,
       isMaster: false,
