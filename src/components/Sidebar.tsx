@@ -35,7 +35,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { currentEmployee, canAccess, isEnforced } = useAuth();
 
   const navigation = [
-    { name: "Dashboard", href: "/", icon: LayoutDashboard },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "PDV Balcão", href: "/pdv", icon: ShoppingCart, badge: "Vendas" },
     { name: "Lava-Jato", href: "/lavajato", icon: Droplets, badge: "Pátio" },
     { name: "Oficina & OS", href: "/oficina", icon: Wrench },
@@ -73,7 +73,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       >
         {/* Brand Header */}
         <div className="h-16 px-6 flex items-center justify-between border-b border-slate-800 bg-slate-950">
-          <Link href="/" className="flex items-center gap-3 font-bold text-lg tracking-tight">
+          <Link href="/dashboard" className="flex items-center gap-3 font-bold text-lg tracking-tight">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
               <Zap className="w-5 h-5 fill-current" />
             </div>

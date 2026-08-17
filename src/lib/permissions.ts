@@ -19,7 +19,7 @@ export interface SystemModule {
 }
 
 export const SYSTEM_MODULES: SystemModule[] = [
-  { id: "dashboard", name: "Dashboard", href: "/", category: "Operacional" },
+  { id: "dashboard", name: "Dashboard", href: "/dashboard", category: "Operacional" },
   { id: "pdv", name: "PDV Balcão", href: "/pdv", category: "Operacional" },
   { id: "lavajato", name: "Lava-Jato & Pátio", href: "/lavajato", category: "Operacional" },
   { id: "oficina", name: "Oficina & Ordens de Serviço", href: "/oficina", category: "Operacional" },
