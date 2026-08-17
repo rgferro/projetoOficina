@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth, ROLE_CONFIG } from "@/lib/authContext";
-import { ShieldAlert, ArrowLeft, Users, Droplets, Wrench, ShoppingCart } from "lucide-react";
+import { getDefaultRouteForRole } from "@/lib/permissions";
+import { ShieldAlert, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 export function AccessGuard({ children }: { children: React.ReactNode }) {
@@ -11,24 +13,27 @@ export function AccessGuard({ children }: { children: React.ReactNode }) {
   const { currentEmployee, canAccess, isEnforced } = useAuth();
 
   const hasAccess = canAccess(pathname);
+  const defaultAllowedRoute = getDefaultRouteForRole(currentEmployee?.accessLevel);
+
+  useEffect(() => {
+    // Se o usuário tentar acessar a rota raiz /dashboard e seu cargo não tem permissão (ex: Mecânico ou Lavador),
+    // redireciona automaticamente e sem fricção para a tela de trabalho principal dele
+    if (isEnforced && !hasAccess && (pathname === "/dashboard" || pathname === "/")) {
+      router.replace(defaultAllowedRoute);
+    }
+  }, [isEnforced, hasAccess, pathname, defaultAllowedRoute, router]);
 
   if (isEnforced && !hasAccess) {
     const roleConfig = currentEmployee
       ? ROLE_CONFIG[currentEmployee.accessLevel]
-      : ROLE_CONFIG.LAVADOR;
+      : ROLE_CONFIG.MECANICO;
 
-    // Sugere a melhor rota permitida para o perfil
-    let defaultAllowedRoute = "/";
-    let defaultLabel = "Início";
-
+    let defaultLabel = "Ir para Minha Tela Principal";
     if (currentEmployee?.accessLevel === "LAVADOR") {
-      defaultAllowedRoute = "/lavajato";
       defaultLabel = "Ir para o Lava-Jato";
     } else if (currentEmployee?.accessLevel === "MECANICO") {
-      defaultAllowedRoute = "/oficina";
       defaultLabel = "Ir para Oficina & OS";
     } else if (currentEmployee?.accessLevel === "ATENDENTE") {
-      defaultAllowedRoute = "/pdv";
       defaultLabel = "Ir para o PDV Balcão";
     }
 
@@ -53,7 +58,7 @@ export function AccessGuard({ children }: { children: React.ReactNode }) {
           </p>
 
           <p className="text-[11px] text-slate-400 italic">
-            Para acessar esta tela, solicite autorização ao Administrador ou alterne para um usuário com privilégios no topo da tela.
+            Redirecionando para sua tela principal de trabalho...
           </p>
         </div>
 
@@ -64,13 +69,6 @@ export function AccessGuard({ children }: { children: React.ReactNode }) {
           >
             <ArrowLeft className="w-4 h-4" />
             {defaultLabel}
-          </Link>
-
-          <Link
-            href="/clientes"
-            className="px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs transition-all"
-          >
-            Clientes & Veículos
           </Link>
         </div>
       </div>

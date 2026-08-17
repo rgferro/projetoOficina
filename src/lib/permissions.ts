@@ -153,3 +153,18 @@ export const DEFAULT_PERMISSIONS_MAP: Record<AccessLevel, string[]> = {
 };
 
 export const PERMISSIONS_MAP = DEFAULT_PERMISSIONS_MAP;
+
+// Rota principal / Tela inicial de trabalho por perfil
+export const ROLE_DEFAULT_ROUTES: Record<AccessLevel, string> = {
+  ADMIN: "/dashboard",
+  GERENTE: "/dashboard",
+  ATENDENTE: "/pdv",
+  MECANICO: "/oficina",
+  LAVADOR: "/lavajato",
+};
+
+export function getDefaultRouteForRole(accessLevel?: string | null, isMaster?: boolean): string {
+  if (isMaster) return "/master-admin";
+  if (!accessLevel) return "/dashboard";
+  return ROLE_DEFAULT_ROUTES[accessLevel as AccessLevel] || "/dashboard";
+}

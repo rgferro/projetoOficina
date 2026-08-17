@@ -29,6 +29,7 @@ import {
   validateCNPJ,
   validatePasswordStrength,
 } from "@/lib/validation";
+import { getDefaultRouteForRole } from "@/lib/permissions";
 
 export function AuthForm({ initialTab = "LOGIN" }: { initialTab?: "LOGIN" | "REGISTER" }) {
   const router = useRouter();
@@ -171,11 +172,8 @@ export function AuthForm({ initialTab = "LOGIN" }: { initialTab?: "LOGIN" | "REG
         if (typeof window !== "undefined") {
           localStorage.setItem("torque_user", JSON.stringify(data.user));
         }
-        if (data.user?.isMaster) {
-          router.push("/master-admin");
-        } else {
-          router.push("/dashboard");
-        }
+        const targetRoute = getDefaultRouteForRole(data.user?.accessLevel, data.user?.isMaster);
+        router.push(targetRoute);
       } else {
         setError(data.error || "Erro ao realizar login.");
       }
