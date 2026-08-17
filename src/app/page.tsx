@@ -191,42 +191,42 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 📊 2. BARRA DE MÉTRICAS & PROVA SOCIAL */}
-      <section className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-10 shadow-lg max-w-5xl mx-auto">
+      {/* 🚀 2. DIFERENCIAIS DA PLATAFORMA */}
+      <section className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-lg max-w-5xl mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
           <div className="space-y-1">
-            <div className="text-3xl sm:text-4xl font-black text-blue-600 font-mono">
-              +1.200
+            <div className="text-xl sm:text-2xl font-black text-blue-600 flex items-center justify-center gap-1.5">
+              <Zap className="w-5 h-5" /> 100% Web
             </div>
-            <div className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-              Oficinas & Lava-Jatos
-            </div>
-          </div>
-
-          <div className="space-y-1 pt-4 sm:pt-0">
-            <div className="text-3xl sm:text-4xl font-black text-indigo-600 font-mono">
-              +580 mil
-            </div>
-            <div className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-              OS & Lavagens Criadas
+            <div className="text-xs text-slate-500 font-semibold">
+              Sem instalação, acesse no celular ou PC
             </div>
           </div>
 
           <div className="space-y-1 pt-4 sm:pt-0">
-            <div className="text-3xl sm:text-4xl font-black text-amber-500 font-mono">
-              4.9 ★
+            <div className="text-xl sm:text-2xl font-black text-emerald-600 flex items-center justify-center gap-1.5">
+              <MessageSquare className="w-5 h-5" /> WhatsApp
             </div>
-            <div className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-              Avaliação Média
+            <div className="text-xs text-slate-500 font-semibold">
+              Avisos automáticos de status e orçamento
             </div>
           </div>
 
           <div className="space-y-1 pt-4 sm:pt-0">
-            <div className="text-3xl sm:text-4xl font-black text-emerald-600 font-mono">
-              100%
+            <div className="text-xl sm:text-2xl font-black text-amber-500 flex items-center justify-center gap-1.5">
+              <Sparkles className="w-5 h-5 fill-current" /> Grátis
             </div>
-            <div className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-              Web & Sem Instalação
+            <div className="text-xs text-slate-500 font-semibold">
+              Até 2 Usuários sem precisar de cartão
+            </div>
+          </div>
+
+          <div className="space-y-1 pt-4 sm:pt-0">
+            <div className="text-xl sm:text-2xl font-black text-indigo-600 flex items-center justify-center gap-1.5">
+              <ShieldCheck className="w-5 h-5" /> Seguro
+            </div>
+            <div className="text-xs text-slate-500 font-semibold">
+              Dados protegidos e backups diários
             </div>
           </div>
         </div>
@@ -665,7 +665,7 @@ export default function LandingPage() {
           Pronto para dobrar a produtividade <br className="hidden sm:inline" /> da sua oficina?
         </h2>
         <p className="text-sm sm:text-base text-blue-100 max-w-2xl mx-auto">
-          Junte-se a mais de 1.200 empresários que transformaram o pátio e o caixa de suas oficinas com o Torque ERP.
+          Organize o pátio, as ordens de serviço e o fluxo de caixa da sua oficina com agilidade e clareza.
         </p>
         <div className="pt-2">
           <Link
