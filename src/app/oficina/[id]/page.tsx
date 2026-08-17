@@ -82,9 +82,6 @@ export default function DetalhesOrdemServicoPage({
   const [photoType, setPhotoType] = useState("AVARIA");
   const [photoCaption, setPhotoCaption] = useState("");
 
-  const [saving, setSaving] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
-
   const loadData = async () => {
     try {
       setLoading(true);
