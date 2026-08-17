@@ -53,11 +53,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "zip",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -69,12 +73,18 @@
       "shortcutName": "AutoGestao Oficina"
     },
     "mac": {
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "category": "public.app-category.business",
       "icon": "public/icon.png"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "category": "Office",
       "icon": "public/icon.png"
     }
@@ -82,7 +92,7 @@
   "dependencies": {
     "@prisma/client": "^5.19.1",
     "@types/qrcode": "^1.5.6",
-    "@whiskeysockets/baileys": "^6.7.9",
+    "@whiskeysockets/baileys": "6.7.24",
     "clsx": "^2.1.1",
     "concurrently": "^10.0.4",
     "date-fns": "^3.6.0",

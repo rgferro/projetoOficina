@@ -42,16 +42,11 @@ async function startWhatsAppService() {
 
   try {
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
-    const { version } = await fetchLatestBaileysVersion().catch(() => ({
-      version: [2, 3000, 1043857760],
-    }));
 
     sock = makeWASocket({
-      version,
       auth: state,
       browser: Browsers.macOS('Desktop'),
       logger: pino({ level: 'silent' }),
-      printQRInTerminal: false,
       syncFullHistory: false,
       generateHighQualityLinkPreview: false,
       markOnlineOnConnect: false,
@@ -77,7 +72,7 @@ async function startWhatsAppService() {
             qrCodeUrl: qrDataUrl,
             lastConnectedAt: null,
           };
-          console.log('⚡ [WhatsApp Daemon] QR Code oficial emitido e pronto!');
+          console.log('⚡ [WhatsApp Daemon] QR Code oficial emitido e pronto para escaneamento!');
         } catch (err) {
           console.error('Erro ao gerar QR Code:', err);
         }
@@ -103,7 +98,7 @@ async function startWhatsAppService() {
 
         console.log(`⚠️ [WhatsApp Daemon] Conexão finalizada (${statusCode}). Reconectando: ${!isLoggedOut}`);
 
-        if (isLoggedOut) {
+        if (isLoggedOut || statusCode === 401 || statusCode === 405) {
           if (fs.existsSync(AUTH_DIR)) {
             fs.rmSync(AUTH_DIR, { recursive: true, force: true });
           }
@@ -116,12 +111,12 @@ async function startWhatsAppService() {
           setTimeout(() => {
             isReconnecting = false;
             startWhatsAppService();
-          }, 2000);
+          }, 1500);
         } else {
           setTimeout(() => {
             isReconnecting = false;
             startWhatsAppService();
-          }, 2500);
+          }, 2000);
         }
       }
     });

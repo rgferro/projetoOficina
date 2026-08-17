@@ -85,24 +85,35 @@ export default function ConfiguracoesPage() {
 
   // Polling automático para atualizar QR Code e detectar pareamento do celular
   useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch("/api/whatsapp/status");
-        if (res.ok) {
-          const data = await res.json();
-          setWaStatus(data);
-          if (data.status === "CONNECTED" && isQrModalOpen) {
-            setIsQrModalOpen(false);
-            setSuccessMessage("✓ WhatsApp conectado com sucesso pelo celular!");
-            setTimeout(() => setSuccessMessage(""), 4000);
-          }
-        }
-      } catch (err) {
-        // silencioso
-      }
-    }, 2500);
+    let interval: any = null;
 
-    return () => clearInterval(interval);
+    if (isQrModalOpen) {
+      fetch("/api/whatsapp/status")
+        .then((r) => r.json())
+        .then((data) => setWaStatus(data))
+        .catch(() => {});
+
+      interval = setInterval(async () => {
+        try {
+          const res = await fetch("/api/whatsapp/status");
+          if (res.ok) {
+            const data = await res.json();
+            setWaStatus(data);
+            if (data.status === "CONNECTED") {
+              setIsQrModalOpen(false);
+              setSuccessMessage("✓ WhatsApp conectado com sucesso pelo celular!");
+              setTimeout(() => setSuccessMessage(""), 4000);
+            }
+          }
+        } catch (err) {
+          // silencioso
+        }
+      }, 1500);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [isQrModalOpen]);
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -424,8 +435,13 @@ export default function ConfiguracoesPage() {
                   <p className="font-bold text-slate-800">Passos no seu celular:</p>
                   <button
                     type="button"
-                    onClick={() => {
-                      fetch("/api/whatsapp/disconnect", { method: "POST" });
+                    onClick={async () => {
+                      setWaStatus((prev: any) => ({ ...prev, qrCodeUrl: null, status: "CONNECTING" }));
+                      await fetch("/api/whatsapp/disconnect", { method: "POST" });
+                      setTimeout(async () => {
+                        const res = await fetch("/api/whatsapp/status");
+                        if (res.ok) setWaStatus(await res.json());
+                      }, 1000);
                     }}
                     className="text-[10px] text-emerald-700 font-bold hover:underline flex items-center gap-1"
                   >
