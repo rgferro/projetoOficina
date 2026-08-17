@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
-import { sendEmployeeInviteEmail } from "@/lib/brevo";
+import { sendEmployeeInviteEmail } from "@/lib/email";
 import { hashPassword } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
