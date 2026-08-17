@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    // Verifica se o e-mail já possui cadastro
+    // 1. Verifica se o e-mail já possui cadastro
     const existingTenant = await prisma.tenant.findUnique({
       where: { ownerEmail: cleanEmail },
     });
@@ -28,14 +28,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Gera código numérico aleatório de 6 dígitos
+    // 2. Gera código numérico aleatório de 6 dígitos
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Expira em 15 minutos
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 15);
 
-    // Salva ou atualiza na tabela de verificação
+    // 3. Salva ou atualiza na tabela de verificação
     await prisma.emailVerification.upsert({
       where: { email: cleanEmail },
       create: {
@@ -49,8 +49,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Envia o e-mail via Resend API
-    await sendVerificationEmail(cleanEmail, code);
+    // 4. Envia o e-mail via Brevo API
+    const emailResult: any = await sendVerificationEmail(cleanEmail, code);
+
+    if (emailResult && emailResult.success === false && !emailResult.simulated) {
+      console.warn("⚠️ Aviso no envio de e-mail:", emailResult);
+    }
 
     return NextResponse.json({
       success: true,
