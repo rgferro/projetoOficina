@@ -63,6 +63,7 @@ export default function EquipePage() {
     accessLevel: "MECANICO" as AccessLevel,
     email: "",
     phone: "",
+    password: "",
     commissionRate: "10",
     active: true,
   });
