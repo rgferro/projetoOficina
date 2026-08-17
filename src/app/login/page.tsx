@@ -3,13 +3,30 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Zap, Lock, Mail, User, Building2, ArrowRight, ShieldCheck, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  Zap,
+  Lock,
+  Mail,
+  User,
+  Building2,
+  ArrowRight,
+  ShieldCheck,
+  CheckCircle2,
+  AlertCircle,
+  MapPin,
+  Send,
+  Check,
+  Phone,
+  FileText,
+} from "lucide-react";
+import { maskDocument, maskPhone, maskCEP, validateCPF, validateCNPJ } from "@/lib/validation";
 
 export default function LoginPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"LOGIN" | "REGISTER">("LOGIN");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
   // Form de Login
   const [loginForm, setLoginForm] = useState({
@@ -18,14 +35,86 @@ export default function LoginPage() {
   });
 
   // Form de Cadastro (Dono da Oficina)
+  const [docType, setDocType] = useState<"CNPJ" | "CPF">("CNPJ");
+  const [codeSent, setCodeSent] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [cepLoading, setCepLoading] = useState(false);
+
   const [registerForm, setRegisterForm] = useState({
+    workshopName: "",
     ownerName: "",
+    ownerPhone: "",
     ownerEmail: "",
     ownerPassword: "",
-    ownerPhone: "",
-    workshopName: "",
     document: "",
+    cep: "",
+    street: "",
+    number: "",
+    complement: "",
+    neighborhood: "",
+    city: "",
+    state: "",
+    verificationCode: "",
   });
+
+  // Busca automática de endereço no ViaCEP
+  const handleCepChange = async (val: string) => {
+    const masked = maskCEP(val);
+    setRegisterForm((prev) => ({ ...prev, cep: masked }));
+
+    const clean = masked.replace(/\D/g, "");
+    if (clean.length === 8) {
+      try {
+        setCepLoading(true);
+        const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+        const data = await res.json();
+        if (!data.erro) {
+          setRegisterForm((prev) => ({
+            ...prev,
+            street: data.logradouro || prev.street,
+            neighborhood: data.bairro || prev.neighborhood,
+            city: data.localidade || prev.city,
+            state: data.uf || prev.state,
+          }));
+        }
+      } catch (e) {
+        console.error("Erro ao consultar ViaCEP:", e);
+      } finally {
+        setCepLoading(false);
+      }
+    }
+  };
+
+  // Enviar código de verificação por e-mail
+  const handleSendCode = async () => {
+    if (!registerForm.ownerEmail || !registerForm.ownerEmail.includes("@")) {
+      setError("Digite um e-mail válido antes de solicitar o código de verificação.");
+      return;
+    }
+
+    setSendingCode(true);
+    setError(null);
+    setInfoMsg(null);
+
+    try {
+      const res = await fetch("/api/auth/send-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: registerForm.ownerEmail }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCodeSent(true);
+        setInfoMsg(data.message);
+      } else {
+        setError(data.error || "Erro ao enviar código.");
+      }
+    } catch (e: any) {
+      setError(e.message || "Erro de conexão ao enviar código.");
+    } finally {
+      setSendingCode(false);
+    }
+  };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,11 +152,33 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
+    // Validação do Documento antes de enviar
+    const cleanDoc = registerForm.document.replace(/\D/g, "");
+    if (docType === "CPF" && cleanDoc && !validateCPF(cleanDoc)) {
+      setError("O CPF informado é inválido. Por favor, confira os números digitados.");
+      setLoading(false);
+      return;
+    }
+    if (docType === "CNPJ" && cleanDoc && !validateCNPJ(cleanDoc)) {
+      setError("O CNPJ informado é inválido. Por favor, confira os números digitados.");
+      setLoading(false);
+      return;
+    }
+
+    if (!registerForm.verificationCode) {
+      setError("Por favor, digite o código de 6 dígitos enviado para seu e-mail.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(registerForm),
+        body: JSON.stringify({
+          ...registerForm,
+          documentType: docType,
+        }),
       });
       const data = await res.json();
       if (data.success) {
@@ -86,7 +197,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto py-8 px-4 space-y-6">
+    <div className="max-w-xl mx-auto py-8 px-4 space-y-6">
       {/* Brand Header */}
       <div className="text-center space-y-2">
         <Link href="/" className="inline-flex items-center gap-2.5">
@@ -111,6 +222,7 @@ export default function LoginPage() {
             onClick={() => {
               setActiveTab("LOGIN");
               setError(null);
+              setInfoMsg(null);
             }}
             className={`py-2.5 text-xs font-bold rounded-xl transition-all ${
               activeTab === "LOGIN"
@@ -125,6 +237,7 @@ export default function LoginPage() {
             onClick={() => {
               setActiveTab("REGISTER");
               setError(null);
+              setInfoMsg(null);
             }}
             className={`py-2.5 text-xs font-bold rounded-xl transition-all ${
               activeTab === "REGISTER"
@@ -140,6 +253,13 @@ export default function LoginPage() {
           <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-2 animate-fadeIn">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {infoMsg && (
+          <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold flex items-center gap-2 animate-fadeIn">
+            <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+            <span>{infoMsg}</span>
           </div>
         )}
 
@@ -189,70 +309,235 @@ export default function LoginPage() {
 
         {/* Formulário: CRIAR CONTA (DONO DA OFICINA) */}
         {activeTab === "REGISTER" && (
-          <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
+          <form onSubmit={handleRegisterSubmit} className="space-y-4">
             <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-2xl text-[11px] text-blue-800 leading-snug">
               🎁 <strong>Plano Starter Gratuito:</strong> Até 2 Usuários inclusos (Dono + 1 Operador), sem necessidade de cartão de crédito.
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700">Nome da Oficina / Lava-Jato *</label>
-              <input
-                type="text"
-                required
-                value={registerForm.workshopName}
-                onChange={(e) => setRegisterForm({ ...registerForm, workshopName: e.target.value })}
-                placeholder="Ex: Centro Automotivo Silva"
-                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500"
-              />
-            </div>
+            {/* Dados da Oficina */}
+            <div className="space-y-3 pt-1">
+              <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                1. Dados da Oficina
+              </div>
 
-            <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700">Seu Nome *</label>
+                <label className="text-xs font-bold text-slate-700">Nome da Oficina / Lava-Jato *</label>
                 <input
                   type="text"
                   required
-                  value={registerForm.ownerName}
-                  onChange={(e) => setRegisterForm({ ...registerForm, ownerName: e.target.value })}
-                  placeholder="Nome do Dono"
+                  value={registerForm.workshopName}
+                  onChange={(e) => setRegisterForm({ ...registerForm, workshopName: e.target.value })}
+                  placeholder="Ex: Centro Automotivo Silva"
                   className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500"
                 />
               </div>
 
+              {/* Toggle CPF vs CNPJ */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700">WhatsApp / Celular</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700">Documento da Empresa</label>
+                  <div className="flex items-center gap-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDocType("CNPJ");
+                        setRegisterForm((p) => ({ ...p, document: "" }));
+                      }}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${
+                        docType === "CNPJ" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      CNPJ (Pessoa Jurídica)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDocType("CPF");
+                        setRegisterForm((p) => ({ ...p, document: "" }));
+                      }}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${
+                        docType === "CPF" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      CPF (Pessoa Física)
+                    </button>
+                  </div>
+                </div>
                 <input
-                  type="tel"
-                  value={registerForm.ownerPhone}
-                  onChange={(e) => setRegisterForm({ ...registerForm, ownerPhone: e.target.value })}
-                  placeholder="(11) 98765-4321"
-                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500"
+                  type="text"
+                  value={registerForm.document}
+                  onChange={(e) =>
+                    setRegisterForm({ ...registerForm, document: maskDocument(e.target.value) })
+                  }
+                  placeholder={docType === "CNPJ" ? "00.000.000/0001-00" : "000.000.000-00"}
+                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500 font-mono"
                 />
+              </div>
+
+              {/* Endereço com Busca Automática de CEP */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                    <span>CEP</span>
+                    {cepLoading && <span className="text-[9px] text-blue-600 animate-pulse">Buscando...</span>}
+                  </label>
+                  <input
+                    type="text"
+                    value={registerForm.cep}
+                    onChange={(e) => handleCepChange(e.target.value)}
+                    placeholder="00000-000"
+                    maxLength={9}
+                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500 font-mono"
+                  />
+                </div>
+
+                <div className="col-span-2 space-y-1">
+                  <label className="text-xs font-bold text-slate-700">Rua / Logradouro</label>
+                  <input
+                    type="text"
+                    value={registerForm.street}
+                    onChange={(e) => setRegisterForm({ ...registerForm, street: e.target.value })}
+                    placeholder="Av. Principal"
+                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700">Número</label>
+                  <input
+                    type="text"
+                    value={registerForm.number}
+                    onChange={(e) => setRegisterForm({ ...registerForm, number: e.target.value })}
+                    placeholder="123"
+                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500"
+                  />
+                </div>
+
+                <div className="col-span-2 space-y-1">
+                  <label className="text-xs font-bold text-slate-700">Bairro / Cidade - UF</label>
+                  <div className="flex gap-1">
+                    <input
+                      type="text"
+                      value={registerForm.neighborhood}
+                      onChange={(e) =>
+                        setRegisterForm({ ...registerForm, neighborhood: e.target.value })
+                      }
+                      placeholder="Bairro"
+                      className="w-1/2 text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500"
+                    />
+                    <input
+                      type="text"
+                      value={registerForm.city ? `${registerForm.city}/${registerForm.state}` : ""}
+                      onChange={(e) => setRegisterForm({ ...registerForm, city: e.target.value })}
+                      placeholder="Cidade/UF"
+                      className="w-1/2 text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700">Seu E-mail de Acesso *</label>
-              <input
-                type="email"
-                required
-                value={registerForm.ownerEmail}
-                onChange={(e) => setRegisterForm({ ...registerForm, ownerEmail: e.target.value })}
-                placeholder="dono@oficina.com.br"
-                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500"
-              />
-            </div>
+            {/* Dados do Dono & Verificação de E-mail */}
+            <div className="space-y-3 pt-3 border-t border-slate-100">
+              <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-emerald-600" />
+                2. Responsável & E-mail de Acesso
+              </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700">Crie sua Senha *</label>
-              <input
-                type="password"
-                required
-                value={registerForm.ownerPassword}
-                onChange={(e) => setRegisterForm({ ...registerForm, ownerPassword: e.target.value })}
-                placeholder="Mínimo 6 caracteres"
-                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500"
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700">Seu Nome *</label>
+                  <input
+                    type="text"
+                    required
+                    value={registerForm.ownerName}
+                    onChange={(e) => setRegisterForm({ ...registerForm, ownerName: e.target.value })}
+                    placeholder="Nome do Dono"
+                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700">WhatsApp *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={registerForm.ownerPhone}
+                    onChange={(e) =>
+                      setRegisterForm({ ...registerForm, ownerPhone: maskPhone(e.target.value) })
+                    }
+                    placeholder="(11) 98765-4321"
+                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Campo E-mail com Botão de Enviar Código */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700">Seu E-mail de Acesso *</label>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    required
+                    value={registerForm.ownerEmail}
+                    onChange={(e) =>
+                      setRegisterForm({ ...registerForm, ownerEmail: e.target.value })
+                    }
+                    placeholder="dono@oficina.com.br"
+                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendCode}
+                    disabled={sendingCode || !registerForm.ownerEmail}
+                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all flex-shrink-0 disabled:opacity-50"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    {sendingCode ? "Enviando..." : codeSent ? "Reenviar" : "Enviar Código"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Campo de Digitar Código de 6 Dígitos */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                    <span>Código do E-mail *</span>
+                    {codeSent && <span className="text-[10px] text-emerald-600 font-bold">✓ Enviado</span>}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    value={registerForm.verificationCode}
+                    onChange={(e) =>
+                      setRegisterForm({
+                        ...registerForm,
+                        verificationCode: e.target.value.replace(/\D/g, ""),
+                      })
+                    }
+                    placeholder="6 dígitos (ex: 123456)"
+                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500 font-mono tracking-widest text-center"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700">Crie sua Senha *</label>
+                  <input
+                    type="password"
+                    required
+                    value={registerForm.ownerPassword}
+                    onChange={(e) =>
+                      setRegisterForm({ ...registerForm, ownerPassword: e.target.value })
+                    }
+                    placeholder="Mínimo 6 caracteres"
+                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500"
+                  />
+                </div>
+              </div>
             </div>
 
             <button
@@ -261,7 +546,7 @@ export default function LoginPage() {
               className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all active:scale-95"
             >
               <CheckCircle2 className="w-4 h-4" />
-              {loading ? "Cadastrando..." : "Criar Minha Conta Grátis"}
+              {loading ? "Criando Conta..." : "Criar Minha Conta Grátis (2 Usuários)"}
             </button>
           </form>
         )}

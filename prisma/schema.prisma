@@ -394,6 +394,13 @@ model Tenant {
   ownerPassword           String?               // Hash da senha do Dono
   ownerName               String
   ownerPhone              String?
+  cep                     String?               // CEP da Oficina
+  street                  String?               // Logradouro / Rua
+  number                  String?               // Número
+  complement              String?               // Complemento / Bloco
+  neighborhood            String?               // Bairro
+  city                    String?               // Cidade
+  state                   String?               // Estado (UF)
   isMaster                Boolean               @default(false) // Super Admin do SaaS (Rafael)
   mercadopagoPreapprovalId String?
   active                  Boolean               @default(true)
@@ -402,6 +409,13 @@ model Tenant {
 
   employees               Employee[]
   payments                SubscriptionPayment[]
+}
+
+model EmailVerification {
+  email     String   @id
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
 
 model SubscriptionPayment {
