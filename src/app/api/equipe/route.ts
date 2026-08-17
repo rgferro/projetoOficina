@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
         },
         orderItems: {
           where: {
-            order: {
+            serviceOrder: {
               status: "CONCLUIDO",
               createdAt: {
                 gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
             },
           },
           include: {
-            order: true,
+            serviceOrder: true,
           },
         },
       },
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     const enriched = employees.map((emp) => {
       const washVolume = emp.washTickets.reduce((sum, w) => sum + w.price, 0);
       const osServicesVolume = emp.orderItems
-        .filter((item) => item.serviceId !== null)
+        .filter((item) => item.type === "SERVICO")
         .reduce((sum, item) => sum + item.totalPrice, 0);
       const totalVolume = washVolume + osServicesVolume;
       const estimatedCommission = totalVolume * (emp.commissionRate / 100);
