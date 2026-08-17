@@ -177,9 +177,18 @@ export async function createMercadoPagoPreapproval(tenant: {
           try {
             const data = JSON.parse(body);
             if (data.id && data.init_point) {
+              const isTest = MP_ACCESS_TOKEN.startsWith("TEST-");
+              let checkoutUrl = data.init_point;
+              if (isTest && checkoutUrl) {
+                checkoutUrl = checkoutUrl.replace(
+                  "www.mercadopago.com.br",
+                  "sandbox.mercadopago.com.br"
+                );
+              }
+
               resolve({
                 preapproval_id: data.id,
-                init_point: data.init_point,
+                init_point: checkoutUrl,
               });
             } else {
               reject(new Error(data.message || "Erro ao criar assinatura recorrente no Mercado Pago"));

@@ -139,6 +139,22 @@ export default function AssinaturaPage() {
         </div>
       </div>
 
+      {/* Banner de Homologação Sandbox */}
+      <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+        <div className="flex items-center gap-2.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
+          <div>
+            <strong className="block font-bold">🧪 Modo de Teste Sandbox Ativo (Mercado Pago)</strong>
+            <span className="text-slate-600">
+              Cartão de Teste Aprovado: <strong className="font-mono text-slate-800">4235 4567 8901 2345</strong> • CVV: <strong className="font-mono text-slate-800">123</strong> • Validade: <strong className="font-mono text-slate-800">12/28</strong>
+            </span>
+          </div>
+        </div>
+        <div className="text-[11px] font-mono bg-amber-200/60 px-2.5 py-1 rounded-lg text-amber-950 font-bold">
+          Ambiente Sandbox
+        </div>
+      </div>
+
       {/* Grade de Planos */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Plano Starter */}
