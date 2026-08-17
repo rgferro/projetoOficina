@@ -1,6 +1,6 @@
 ---
 name: saas-auth-validation-brevo-cep
-description: Arquitetura completa e reutilizável de autenticação Multi-Tenant para SaaS Web com cadastro de proprietário, login unificado (proprietário, equipe e super admin), validação oficial de CPF/CNPJ (Módulo 11), busca de endereço automática via CEP (ViaCEP), padrão de segurança de senha forte e verificação de e-mail por código de 6 dígitos via Brevo REST API v3 nativa sem SDKs pesados.
+description: Arquitetura completa e reutilizável de autenticação Multi-Tenant para SaaS Web com cadastro de proprietário, login unificado com e-mail e senha segura, validação oficial de CPF/CNPJ (Módulo 11), busca de endereço automática via CEP (ViaCEP), padrão de segurança de senha forte e verificação de e-mail por código de 6 dígitos via Brevo REST API v3 nativa sem SDKs pesados.
 ---
 
 # 🚀 Skill: SaaS Multi-Tenant Auth com Validação CPF/CNPJ, ViaCEP e Brevo
@@ -17,18 +17,20 @@ Esta skill fornece uma arquitetura enterprise de autenticação, onboarding e ca
    - Suporte a múltiplos colaboradores subordinados com controle de perfis (Admin, Gerente, Operador).
 2. **👑 Reconhecimento Automático de Super Admin Master:**
    - E-mail do proprietário da plataforma é identificado no login (`isMaster: true`), liberando acesso irrestrito ao painel `/master-admin` e tenant de testes matriz.
-3. **🆔 Validação Oficial de Documentos Brasileiros (Receita Federal):**
+3. **🔑 Login Unificado com E-mail e Senha Segura:**
+   - Campo de entrada limpo e direto (`E-mail ou Usuário` e `Senha`).
+4. **🆔 Validação Oficial de Documentos Brasileiros (Receita Federal):**
    - **CPF:** Cálculo dos 2 dígitos verificadores e rejeição de sequências repetidas.
    - **CNPJ:** Cálculo oficial com **Módulo 11** para os 2 dígitos verificadores e máscaras automáticas.
-4. **📍 Preenchimento Automático de Endereço via CEP (ViaCEP):**
+5. **📍 Preenchimento Automático de Endereço via CEP (ViaCEP):**
    - Ao digitar os 8 dígitos do CEP, busca e preenche em tempo real: Rua, Bairro, Cidade e UF.
-5. **🔒 Padrão de Segurança de Senha Forte:**
+6. **🔒 Padrão de Segurança de Senha Forte:**
    - Exige e valida: 8+ caracteres, maiúscula, minúscula, número e caractere especial (`@$!%*?&`).
    - Medidor visual e checklist dinâmico em tempo real no frontend + bloqueio no backend.
-6. **📧 Confirmação de E-mail por Código de 6 Dígitos (Brevo REST API v3):**
+7. **📧 Confirmação de E-mail por Código de 6 Dígitos (Brevo REST API v3):**
    - Disparo instantâneo sem SDKs usando a API REST nativa `https://api.brevo.com/v3/smtp/email`.
    - Códigos numéricos com expiração de 15 minutos salvos na tabela `EmailVerification`.
-7. **🎯 UX com Alertas no Ponto de Clique & Auto-Scroll:**
+8. **🎯 UX com Alertas no Ponto de Clique & Auto-Scroll:**
    - Mensagens de erro posicionadas imediatamente acima do botão de submissão e no campo com problema, com scroll suave automático até o erro.
 
 ---
@@ -70,7 +72,6 @@ model Employee {
   name           String
   role           String
   accessLevel    String    @default("MECANICO") // ADMIN, GERENTE, ATENDENTE, OPERADOR
-  pinCode        String?   @default("1234")
   email          String?
   phone          String?
   password       String?

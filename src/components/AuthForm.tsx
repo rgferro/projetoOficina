@@ -326,14 +326,14 @@ export function AuthForm({ initialTab = "LOGIN" }: { initialTab?: "LOGIN" | "REG
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Senha ou PIN</label>
+              <label className="text-xs font-bold text-slate-700">Senha</label>
               <div className="relative">
                 <input
                   type="password"
                   required
                   value={loginForm.password}
                   onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                  placeholder="Sua senha de acesso ou PIN de 4 dígitos"
+                  placeholder="Digite sua senha de acesso"
                   className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 pl-10 text-slate-900 focus:outline-blue-500"
                 />
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
