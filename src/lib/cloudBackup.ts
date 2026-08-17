@@ -11,6 +11,14 @@ export interface CloudDetectionResult {
   totalBackups: number;
 }
 
+export interface GoogleDriveBackupConfig {
+  enabled: boolean;
+  email?: string | null;
+  folderId?: string | null;
+  webhookUrl?: string | null;
+  lastBackupDate?: string | null;
+}
+
 // Procura automaticamente pastas do Google Drive, OneDrive ou Dropbox
 export function detectCloudFolder(): { provider: "Google Drive" | "OneDrive" | "Dropbox" | "Pasta Segura Local"; folderPath: string } {
   const userHome = os.homedir();
