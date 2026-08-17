@@ -555,7 +555,7 @@ export default function LandingPage() {
               href="/cadastro"
               className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-500 hover:to-yellow-600 text-slate-950 font-black text-sm text-center shadow-xl shadow-amber-500/20 transition-all active:scale-95"
             >
-              Testar Plano Pro Grátis
+              Assinar Plano Pro
             </Link>
           </div>
 

@@ -341,7 +341,7 @@ export default function LandingPage() {
               </div>
             </div>
             <Link href="/cadastro" className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-slate-950 font-black text-sm text-center shadow-xl">
-              Testar Plano Pro
+              Assinar Plano Pro
             </Link>
           </div>
 
