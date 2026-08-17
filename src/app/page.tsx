@@ -1,499 +1,235 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
-import { formatCurrency, formatPlate, formatPhone, formatDateTime } from "@/lib/formatters";
 import {
-  Droplets,
-  Wrench,
-  CircleDollarSign,
-  Users,
-  MessageSquare,
-  Clock,
+  Zap,
   CheckCircle2,
   ArrowRight,
+  ShieldCheck,
+  Droplets,
+  Wrench,
+  ShoppingCart,
+  MessageSquare,
+  QrCode,
+  Users,
+  ChevronRight,
+  Star,
   Sparkles,
-  AlertTriangle,
 } from "lucide-react";
-import { generateWhatsappLink, buildWashReadyMessage } from "@/lib/whatsapp";
+import Image from "next/image";
 
-// Força renderização dinâmica para dados sempre frescos
-export const dynamic = "force-dynamic";
-
-export default async function DashboardPage() {
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-
-  let activeWashTickets: any[] = [];
-  let activeServiceOrders: any[] = [];
-  let todayTransactions: any[] = [];
-  let settings: any = null;
-  let totalCustomers = 0;
-  let totalVehicles = 0;
-
-  try {
-    // 1. Dados do Lava-Jato hoje
-    activeWashTickets = await prisma.washTicket.findMany({
-      where: {
-        status: { in: ["AGUARDANDO", "EM_LAVAGEM", "FINALIZADO"] },
-      },
-      include: {
-        vehicle: { include: { customer: true } },
-        employee: true,
-      },
-      orderBy: { enteredAt: "asc" },
-    });
-
-    // 2. Dados das Ordens de Serviço ativas
-    activeServiceOrders = await prisma.serviceOrder.findMany({
-      where: {
-        status: { in: ["ORCAMENTO", "APROVADO", "EM_EXECUCAO", "AGUARDANDO_PECA"] },
-      },
-      include: {
-        customer: true,
-        vehicle: true,
-        employee: true,
-      },
-      orderBy: { createdAt: "desc" },
-      take: 6,
-    });
-
-    // 3. Faturamento de Hoje
-    todayTransactions = await prisma.financialTransaction.findMany({
-      where: {
-        date: { gte: todayStart },
-      },
-    });
-
-    // 4. Configurações da oficina
-    settings = await prisma.workshopSetting.findUnique({
-      where: { id: "default" },
-    });
-
-    // 5. Totalizadores gerais
-    totalCustomers = await prisma.customer.count();
-    totalVehicles = await prisma.vehicle.count();
-  } catch (err) {
-    console.error("Aviso ao carregar dados do Dashboard:", err);
-  }
-
-  const waitingCount = activeWashTickets.filter((t) => t.status === "AGUARDANDO").length;
-  const inProgressCount = activeWashTickets.filter((t) => t.status === "EM_LAVAGEM").length;
-  const readyCount = activeWashTickets.filter((t) => t.status === "FINALIZADO").length;
-
-  const todayIncome = todayTransactions
-    .filter((t) => t.type === "RECEITA")
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const todayExpense = todayTransactions
-    .filter((t) => t.type === "DESPESA")
-    .reduce((sum, t) => sum + t.amount, 0);
-
+export default function LandingPage() {
   return (
-    <div className="space-y-8">
-      {/* Top Banner / Welcome */}
-      <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-800 rounded-2xl p-6 text-white shadow-xl shadow-blue-900/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/30 text-blue-100 text-xs font-semibold backdrop-blur-sm mb-2 border border-blue-400/20">
-            <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-            Sistema Ativo & Operacional
+    <div className="space-y-16 pb-16">
+      {/* 🚀 HERO SECTION */}
+      <section className="relative overflow-hidden pt-6 sm:pt-10 pb-8 text-center max-w-4xl mx-auto space-y-6">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-black shadow-sm">
+          <Zap className="w-3.5 h-3.5 fill-current text-amber-500" />
+          <span>O ERP Automotivo Mais Rápido do Brasil • 100% Web</span>
+        </div>
+
+        <h1 className="text-4xl sm:text-6xl font-black text-slate-900 tracking-tight leading-tight">
+          Acelere a Gestão da sua <br className="hidden sm:inline" />
+          <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-amber-500 bg-clip-text text-transparent">
+            Oficina & Lava-Jato
           </span>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            {settings?.workshopName || "AutoGestão Oficina & Lava-Jato"}
-          </h1>
-          <p className="text-blue-100 text-sm mt-1 max-w-xl">
-            Acompanhamento em tempo real do pátio, fila de lavagem, ordens de serviço e caixa do dia.
+        </h1>
+
+        <p className="text-sm sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
+          Controle de ordens de serviço com fotos de avarias, pátio kanban, PDV de peças com código de barras e <strong>avisos automáticos no WhatsApp</strong> em uma plataforma simples e completa.
+        </p>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <Link
+            href="/dashboard"
+            className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-sm shadow-xl shadow-blue-500/25 flex items-center justify-center gap-2 transition-all active:scale-95"
+          >
+            <Sparkles className="w-4 h-4 text-yellow-300" />
+            Entrar no Painel Operacional
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+
+          <Link
+            href="/assinatura"
+            className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm border border-slate-300 shadow-sm flex items-center justify-center gap-2 transition-all"
+          >
+            Ver Planos (Grátis até 2 Usuários)
+          </Link>
+        </div>
+
+        <div className="flex items-center justify-center gap-6 pt-4 text-xs font-semibold text-slate-500">
+          <div className="flex items-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>2 Usuários Grátis</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>Sem Cartão de Crédito</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>100% Online na Nuvem</span>
+          </div>
+        </div>
+      </section>
+
+      {/* 🛠️ RECURSOS ESSENCIAIS */}
+      <section className="space-y-6">
+        <div className="text-center space-y-2 max-w-2xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+            Tudo o que sua oficina precisa do pátio ao caixa
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500">
+            Ferramentas integradas para acabar com planilhas e papéis perdidos.
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2.5">
-          <Link
-            href="/lavajato"
-            className="px-4 py-2.5 rounded-xl bg-white text-blue-700 hover:bg-blue-50 font-bold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2"
-          >
-            <Droplets className="w-4 h-4 text-cyan-600" />
-            Quadro Lava-Jato
-          </Link>
-          <Link
-            href="/oficina/nova"
-            className="px-4 py-2.5 rounded-xl bg-blue-900/60 hover:bg-blue-900/80 border border-blue-400/30 text-white font-bold text-xs sm:text-sm transition-all flex items-center gap-2"
-          >
-            <Wrench className="w-4 h-4" />
-            Criar Nova OS
-          </Link>
-        </div>
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Card 1 */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-3 hover:border-blue-300 transition-all">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+              <Wrench className="w-6 h-6" />
+            </div>
+            <h3 className="font-bold text-base text-slate-900">Oficina & Ordens de Serviço</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Checklist de entrada com fotos de avarias, diagnóstico técnico, peças, comissão de mecânicos e termo de garantia de 90 dias.
+            </p>
+          </div>
 
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        {/* Card 1: Lava-Jato Ativo */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Lava-Jato (Pátio)
-            </span>
-            <div className="w-10 h-10 rounded-xl bg-cyan-100 text-cyan-700 flex items-center justify-center">
-              <Droplets className="w-5 h-5" />
+          {/* Card 2 */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-3 hover:border-cyan-300 transition-all">
+            <div className="w-12 h-12 rounded-2xl bg-cyan-50 text-cyan-600 flex items-center justify-center font-bold">
+              <Droplets className="w-6 h-6" />
             </div>
+            <h3 className="font-bold text-base text-slate-900">Lava-Jato & Pátio Kanban</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Controle visual de filas e lavagens. Disparo automático no WhatsApp do cliente avisando quando o carro estiver limpo.
+            </p>
           </div>
-          <div className="mt-3">
-            <div className="text-3xl font-black text-slate-900">
-              {activeWashTickets.length}
-              <span className="text-xs font-medium text-slate-500 ml-1.5">veículos</span>
-            </div>
-            <div className="flex items-center gap-2 mt-3 text-[11px] font-semibold">
-              <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800">
-                ⏳ {waitingCount} fila
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800">
-                🧼 {inProgressCount} lavando
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
-                ✨ {readyCount} pronto
-              </span>
-            </div>
-          </div>
-        </div>
 
-        {/* Card 2: Oficina (OS em Aberto) */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Oficina (OS Ativas)
-            </span>
-            <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
-              <Wrench className="w-5 h-5" />
+          {/* Card 3 */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-3 hover:border-emerald-300 transition-all">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+              <ShoppingCart className="w-6 h-6" />
             </div>
+            <h3 className="font-bold text-base text-slate-900">PDV Balcão & Caixa</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Venda rápida de peças e lubrificantes com leitor de código de barras, pagamentos em PIX e Cartão com cálculo de troco.
+            </p>
           </div>
-          <div className="mt-3">
-            <div className="text-3xl font-black text-slate-900">
-              {activeServiceOrders.length}
-              <span className="text-xs font-medium text-slate-500 ml-1.5">ordens</span>
+
+          {/* Card 4 */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-3 hover:border-rose-300 transition-all">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+              <MessageSquare className="w-6 h-6" />
             </div>
-            <p className="text-xs text-slate-500 mt-3 flex items-center gap-1 font-medium">
-              <Clock className="w-3.5 h-3.5 text-blue-500" />
-              Em execução & orçamentos
+            <h3 className="font-bold text-base text-slate-900">CRM WhatsApp Marketing</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Lembretes de troca de óleo a cada 6 meses, lembretes de lavagem e cupons de aniversário automáticos para fidelizar clientes.
             </p>
           </div>
         </div>
+      </section>
 
-        {/* Card 3: Caixa de Hoje */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Faturamento Hoje
-            </span>
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
-              <CircleDollarSign className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-emerald-600">
-              {formatCurrency(todayIncome)}
-            </div>
-            <p className="text-xs text-slate-500 mt-3 flex items-center justify-between font-medium">
-              <span>Despesas: {formatCurrency(todayExpense)}</span>
-              <span className="text-emerald-700 font-semibold">
-                Líq: {formatCurrency(todayIncome - todayExpense)}
-              </span>
-            </p>
-          </div>
+      {/* 💰 TABELA DE PLANOS & PREÇOS */}
+      <section className="bg-slate-900 text-white p-8 sm:p-12 rounded-3xl shadow-2xl space-y-8 relative overflow-hidden">
+        <div className="text-center space-y-2 max-w-2xl mx-auto">
+          <span className="text-xs font-black uppercase tracking-widest text-amber-400">
+            Planos & Preços Transparentes
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-black">
+            Escolha o plano ideal para a sua oficina
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-400">
+            Comece de graça e faça upgrade quando sua equipe crescer. Cobrança via PIX ou Cartão no Mercado Pago.
+          </p>
         </div>
 
-        {/* Card 4: Base de Clientes */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Base de Clientes
-            </span>
-            <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center">
-              <Users className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-3xl font-black text-slate-900">
-              {totalCustomers}
-              <span className="text-xs font-medium text-slate-500 ml-1.5">clientes</span>
-            </div>
-            <p className="text-xs text-slate-500 mt-3 flex items-center gap-1 font-medium">
-              🚗 {totalVehicles} veículos cadastrados
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Grid Principal: Lava-Jato no Pátio & OS Recentes */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Coluna 1 & 2: Lava-Jato em Andamento */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <Droplets className="w-5 h-5 text-cyan-600" />
-                Fila do Lava-Jato em Tempo Real
-              </h2>
-              <p className="text-xs text-slate-500">
-                Veículos atualmente no pátio aguardando, lavando ou prontos para retirada.
-              </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Starter */}
+          <div className="bg-slate-800/90 rounded-2xl p-6 border border-slate-700 space-y-4 flex flex-col justify-between">
+            <div className="space-y-2">
+              <div className="text-xs font-bold uppercase text-slate-400">Starter (Grátis)</div>
+              <div className="text-3xl font-black text-white">R$ 0,00</div>
+              <p className="text-xs text-slate-300">Até 2 Usuários (Dono + 1 Operador)</p>
+              <ul className="space-y-2 text-xs text-slate-300 pt-2 border-t border-slate-700">
+                <li className="flex items-center gap-2">✓ Até 30 OS/mês</li>
+                <li className="flex items-center gap-2">✓ Até 50 Lavagens/mês</li>
+                <li className="flex items-center gap-2">✓ PDV Balcão & Caixa</li>
+              </ul>
             </div>
             <Link
-              href="/lavajato"
-              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+              href="/dashboard"
+              className="w-full py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs text-center transition-colors"
             >
-              Ver Kanban Completo <ArrowRight className="w-3.5 h-3.5" />
+              Começar Grátis
             </Link>
           </div>
 
-          {activeWashTickets.length === 0 ? (
-            <div className="text-center py-10 border border-dashed border-slate-200 rounded-xl">
-              <Droplets className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <p className="text-sm font-medium text-slate-600">Nenhum veículo no pátio no momento.</p>
-              <Link
-                href="/lavajato?action=new"
-                className="inline-flex items-center gap-1.5 mt-3 text-xs font-bold text-blue-600 hover:underline"
-              >
-                + Dar entrada em um veículo
-              </Link>
+          {/* Pro */}
+          <div className="bg-gradient-to-b from-blue-600 to-indigo-700 rounded-2xl p-6 border-2 border-amber-400 shadow-xl space-y-4 flex flex-col justify-between relative">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-400 text-slate-950 text-[10px] font-black uppercase px-3 py-0.5 rounded-full">
+              Mais Escolhido
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              {activeWashTickets.map((ticket) => {
-                const whatsappMsg = buildWashReadyMessage({
-                  customerName: ticket.vehicle.customer.name,
-                  vehicleName: `${ticket.vehicle.brand} ${ticket.vehicle.model}`,
-                  plate: ticket.vehicle.plate,
-                  price: ticket.price,
-                  workshopName: settings?.workshopName,
-                  customTemplate: settings?.whatsappWashReadyTemplate,
-                });
-                const whatsappUrl = generateWhatsappLink(
-                  ticket.vehicle.customer.phone,
-                  whatsappMsg
-                );
-
-                const statusColor =
-                  ticket.status === "FINALIZADO"
-                    ? "border-emerald-300 bg-emerald-50/40"
-                    : ticket.status === "EM_LAVAGEM"
-                    ? "border-blue-200 bg-blue-50/30"
-                    : "border-amber-200 bg-amber-50/30";
-
-                const statusBadge =
-                  ticket.status === "FINALIZADO" ? (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      ✨ Pronto p/ Retirada
-                    </span>
-                  ) : ticket.status === "EM_LAVAGEM" ? (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
-                      🧼 Em Lavagem
-                    </span>
-                  ) : (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                      ⏳ Na Fila
-                    </span>
-                  );
-
-                return (
-                  <div
-                    key={ticket.id}
-                    className={`p-4 rounded-xl border ${statusColor} flex flex-col justify-between transition-all hover:shadow-sm`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-mono text-xs font-extrabold px-2 py-0.5 rounded bg-slate-900 text-white tracking-wider">
-                          {formatPlate(ticket.vehicle.plate)}
-                        </span>
-                        {statusBadge}
-                      </div>
-                      <h3 className="text-sm font-bold text-slate-800 truncate">
-                        {ticket.vehicle.brand} {ticket.vehicle.model}
-                      </h3>
-                      <p className="text-xs text-slate-600 font-medium truncate mt-0.5">
-                        👤 {ticket.vehicle.customer.name} ({formatPhone(ticket.vehicle.customer.phone)})
-                      </p>
-                      <div className="text-xs text-slate-500 mt-2 flex items-center justify-between">
-                        <span>{ticket.serviceType}</span>
-                        <span className="font-bold text-slate-900">{formatCurrency(ticket.price)}</span>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between gap-2">
-                      <span className="text-[11px] text-slate-400">
-                        {formatDateTime(ticket.enteredAt)}
-                      </span>
-
-                      {ticket.status === "FINALIZADO" && (
-                        <a
-                          href={whatsappUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5" />
-                          Avisar no WhatsApp
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Coluna 3: Alertas CRM Rápidos */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 flex flex-col justify-between space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-emerald-600" />
-                CRM & Reengajamento
-              </h2>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                Preditivo
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 mb-4">
-              Dispare mensagens automáticas para clientes com retorno pendente de lava-jato ou revisão de 6 meses.
-            </p>
-
-            <div className="space-y-3">
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
-                  <Droplets className="w-4 h-4 text-cyan-600" />
-                  Retorno de Lava-Jato
-                </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  Clientes que não lavam há +15 ou +30 dias.
-                </p>
-                <Link
-                  href="/crm?tab=lavajato"
-                  className="mt-2.5 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
-                >
-                  Ver lista de contatos <ArrowRight className="w-3 h-3" />
-                </Link>
+            <div className="space-y-2">
+              <div className="text-xs font-bold uppercase text-blue-200">Oficina Pro</div>
+              <div className="text-3xl font-black text-white">
+                R$ 69,90 <span className="text-xs font-normal">/mês</span>
               </div>
-
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
-                  <Wrench className="w-4 h-4 text-blue-600" />
-                  Troca de Óleo & Revisão
-                </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  Clientes com mais de 6 meses da última OS.
-                </p>
-                <Link
-                  href="/crm?tab=oficina"
-                  className="mt-2.5 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
-                >
-                  Disparar lembretes <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
+              <p className="text-xs text-blue-100">Até 4 Usuários com controle de perfis</p>
+              <ul className="space-y-2 text-xs text-white pt-2 border-t border-blue-500">
+                <li className="flex items-center gap-2">✓ <strong>OS e Lavagens Ilimitadas</strong></li>
+                <li className="flex items-center gap-2">✓ CRM WhatsApp Automático</li>
+                <li className="flex items-center gap-2">✓ Importador de Notas NF-e XML</li>
+              </ul>
             </div>
+            <Link
+              href="/assinatura"
+              className="w-full py-3 rounded-xl bg-white hover:bg-slate-100 text-blue-900 font-extrabold text-xs text-center shadow-md transition-colors"
+            >
+              Assinar Plano Pro
+            </Link>
           </div>
 
-          <Link
-            href="/crm"
-            className="w-full py-2.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-center font-bold text-xs flex items-center justify-center gap-2 transition-all"
-          >
-            <MessageSquare className="w-4 h-4 text-emerald-600" />
-            Abrir Central de WhatsApp Marketing
-          </Link>
+          {/* Elite */}
+          <div className="bg-slate-800/90 rounded-2xl p-6 border border-slate-700 space-y-4 flex flex-col justify-between">
+            <div className="space-y-2">
+              <div className="text-xs font-bold uppercase text-slate-400">Oficina Elite</div>
+              <div className="text-3xl font-black text-white">
+                R$ 129,90 <span className="text-xs font-normal">/mês</span>
+              </div>
+              <p className="text-xs text-slate-300">Até 8 Usuários Inclusos</p>
+              <ul className="space-y-2 text-xs text-slate-300 pt-2 border-t border-slate-700">
+                <li className="flex items-center gap-2">✓ Multi-Caixas e Múltiplos Turnos</li>
+                <li className="flex items-center gap-2">✓ Relatórios Avançados de BI</li>
+                <li className="flex items-center gap-2">✓ Suporte VIP Prioritário</li>
+              </ul>
+            </div>
+            <Link
+              href="/assinatura"
+              className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs text-center transition-colors"
+            >
+              Assinar Plano Elite
+            </Link>
+          </div>
         </div>
-      </div>
+      </section>
 
-      {/* Seção Ordens de Serviço Recentes */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Wrench className="w-5 h-5 text-blue-600" />
-              Ordens de Serviço em Aberto
-            </h2>
-            <p className="text-xs text-slate-500">
-              Serviços mecânicos em andamento na oficina.
-            </p>
+      {/* 💬 FOOTER INSTITUCIONAL */}
+      <footer className="pt-8 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center text-[10px] font-black">
+            ⚡
           </div>
-          <Link
-            href="/oficina"
-            className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
-          >
-            Ver Todas as OSs <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+          <span className="font-bold text-slate-800">Torque ERP</span>
+          <span>© 2026 • torquerp.com.br</span>
         </div>
 
-        {activeServiceOrders.length === 0 ? (
-          <div className="text-center py-8 border border-dashed border-slate-200 rounded-xl">
-            <p className="text-sm text-slate-500">Nenhuma Ordem de Serviço aberta no momento.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider border-b border-slate-200">
-                <tr>
-                  <th className="py-3 px-4">Nº OS</th>
-                  <th className="py-3 px-4">Veículo / Placa</th>
-                  <th className="py-3 px-4">Cliente</th>
-                  <th className="py-3 px-4">Mecânico</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Valor Total</th>
-                  <th className="py-3 px-4 text-right">Ação</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {activeServiceOrders.map((os) => {
-                  const statusMap: Record<string, { label: string; cls: string }> = {
-                    ORCAMENTO: { label: "Orçamento", cls: "bg-purple-100 text-purple-800" },
-                    APROVADO: { label: "Aprovado", cls: "bg-blue-100 text-blue-800" },
-                    EM_EXECUCAO: { label: "Em Execução", cls: "bg-amber-100 text-amber-800" },
-                    AGUARDANDO_PECA: { label: "Aguardando Peça", cls: "bg-red-100 text-red-800" },
-                    CONCLUIDO: { label: "Concluído", cls: "bg-emerald-100 text-emerald-800" },
-                  };
-                  const currentStatus = statusMap[os.status] || {
-                    label: os.status,
-                    cls: "bg-slate-100 text-slate-800",
-                  };
-
-                  return (
-                    <tr key={os.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-4 font-bold text-blue-600">
-                        #{os.osNumber}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-slate-800">{os.vehicle.model}</div>
-                        <div className="font-mono text-[11px] text-slate-500 font-bold">
-                          {formatPlate(os.vehicle.plate)}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="font-medium text-slate-800">{os.customer.name}</div>
-                        <div className="text-[11px] text-slate-500">{formatPhone(os.customer.phone)}</div>
-                      </td>
-                      <td className="py-3 px-4 text-slate-700">
-                        {os.employee?.name || "Não atribuído"}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] ${currentStatus.cls}`}>
-                          {currentStatus.label}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 font-extrabold text-slate-900">
-                        {formatCurrency(os.grandTotal)}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <Link
-                          href={`/oficina/${os.id}`}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold transition-colors"
-                        >
-                          Abrir OS
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+        <div className="flex items-center gap-4">
+          <Link href="/sobre" className="hover:text-blue-600 transition-colors">Sobre Nós</Link>
+          <Link href="/contato" className="hover:text-blue-600 transition-colors">Fale Conosco</Link>
+          <Link href="/termos" className="hover:text-blue-600 transition-colors">Termos de Uso</Link>
+          <Link href="/privacidade" className="hover:text-blue-600 transition-colors">Política de Privacidade</Link>
+        </div>
+      </footer>
     </div>
   );
 }

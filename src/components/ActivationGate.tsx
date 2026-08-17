@@ -35,6 +35,13 @@ export function ActivationGate({ children }: { children: React.ReactNode }) {
   const [successMessage, setSuccessMessage] = useState("");
 
   const checkStatus = async () => {
+    // Se estiver em modo SaaS Web (Padrão Online), libera o acesso direto sem travar no HWID
+    if (process.env.NEXT_PUBLIC_APP_MODE !== "offline") {
+      setStatus({ isLicensed: true, hardwareId: "ONLINE-SAAS", projectId: "TORQUE_ERP" });
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const res = await fetch("/api/license/status");
