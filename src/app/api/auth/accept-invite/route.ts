@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       email: updatedEmployee.email || "",
       role: updatedEmployee.role,
       accessLevel: (updatedEmployee.accessLevel as any) || "ATENDENTE",
-      tenantId: updatedEmployee.tenantId,
+      tenantId: updatedEmployee.tenantId || "default",
       isOwner: false,
       isMaster: false,
     });
@@ -77,10 +77,10 @@ export async function POST(req: NextRequest) {
     const userPayload = {
       id: updatedEmployee.id,
       name: updatedEmployee.name,
-      email: updatedEmployee.email,
+      email: updatedEmployee.email || "",
       role: updatedEmployee.role,
       accessLevel: updatedEmployee.accessLevel,
-      tenantId: updatedEmployee.tenantId,
+      tenantId: updatedEmployee.tenantId || "default",
       workshopName: employee.tenant?.name || "Torque ERP",
       isOwner: false,
       isMaster: false,
