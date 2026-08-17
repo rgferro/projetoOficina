@@ -22,8 +22,7 @@ import {
 } from "lucide-react";
 
 export default function LandingPage() {
-  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("annual");
-  const [activeTab, setActiveTab] = useState<"oficina" | "lavajato" | "gestao">("oficina");
+  const [activeTab, setActiveTab] = useState<"oficina" | "lavajato" | "pdv">("oficina");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showFloatingCta, setShowFloatingCta] = useState(false);
 
@@ -461,34 +460,6 @@ export default function LandingPage() {
           <p className="text-xs sm:text-sm text-slate-400">
             Comece 100% grátis hoje e só faça upgrade quando sua equipe crescer.
           </p>
-
-          <div className="inline-flex items-center gap-3 p-1.5 bg-slate-900 border border-slate-700 rounded-2xl mt-4">
-            <button
-              type="button"
-              onClick={() => setBillingPeriod("monthly")}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                billingPeriod === "monthly"
-                  ? "bg-white text-slate-950 shadow-sm"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              Mensal
-            </button>
-            <button
-              type="button"
-              onClick={() => setBillingPeriod("annual")}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                billingPeriod === "annual"
-                  ? "bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black shadow-sm"
-                  : "text-amber-400 hover:text-amber-300"
-              }`}
-            >
-              <span>Anual</span>
-              <span className="bg-slate-950 text-amber-300 text-[10px] px-2 py-0.5 rounded-full font-extrabold border border-amber-400/40">
-                20% OFF
-              </span>
-            </button>
-          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
@@ -533,11 +504,10 @@ export default function LandingPage() {
                 Plano Oficina Pro
               </div>
               <div className="text-4xl font-black text-white">
-                {billingPeriod === "annual" ? "R$ 55,90" : "R$ 69,90"}{" "}
-                <span className="text-xs font-normal text-slate-300">/mês</span>
+                R$ 69,90 <span className="text-xs font-normal text-slate-300">/mês</span>
               </div>
               <div className="text-xs text-amber-300 font-bold bg-amber-950/60 p-2 rounded-xl border border-amber-800">
-                🔥 Apenas R$ {billingPeriod === "annual" ? "1,86" : "2,33"}/dia (Menos que 1 cafezinho!)
+                🔥 Apenas R$ 2,33/dia (Menos que 1 cafezinho!)
               </div>
               <p className="text-xs text-slate-200">
                 Até 4 Usuários com controle de permissões por perfil.
@@ -566,8 +536,7 @@ export default function LandingPage() {
                 Plano Oficina Elite
               </div>
               <div className="text-3xl font-black text-white">
-                {billingPeriod === "annual" ? "R$ 99,90" : "R$ 129,90"}{" "}
-                <span className="text-xs font-normal text-slate-400">/mês</span>
+                R$ 129,90 <span className="text-xs font-normal text-slate-400">/mês</span>
               </div>
               <p className="text-xs text-slate-300">
                 Para centros automotivos e grandes frotas.

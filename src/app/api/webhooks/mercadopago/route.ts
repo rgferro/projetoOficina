@@ -23,28 +23,42 @@ export async function POST(req: NextRequest) {
         const nextExpiry = new Date();
         nextExpiry.setDate(nextExpiry.getDate() + 30);
 
-        // Identifica o plano com base no valor pago
-        let targetPlan = "PRO";
-        let targetMaxUsers = 4;
-
-        if (amount >= SAAS_PLANS.ELITE.price - 1) {
-          targetPlan = "ELITE";
-          targetMaxUsers = 8;
-        } else if (amount >= SAAS_PLANS.PRO.price - 1) {
-          targetPlan = "PRO";
-          targetMaxUsers = 4;
-        }
+        const recordedPayment = await prisma.subscriptionPayment.findFirst({
+          where: { paymentId: String(paymentId) },
+        });
 
         if (tenantId) {
-          await prisma.tenant.update({
-            where: { id: tenantId },
-            data: {
-              plan: targetPlan,
-              maxUsers: targetMaxUsers,
-              subscriptionStatus: "active",
-              subscriptionExpiresAt: nextExpiry,
-            },
-          });
+          if (recordedPayment && recordedPayment.plan === "EXTRA_SEAT") {
+            const extraSeatsCount = Math.round(amount / SAAS_PLANS.EXTRA_SEAT.price) || 1;
+            await prisma.tenant.update({
+              where: { id: tenantId },
+              data: {
+                maxUsers: { increment: extraSeatsCount },
+              },
+            });
+          } else {
+            // Identifica o plano com base no valor pago
+            let targetPlan = "PRO";
+            let targetMaxUsers = 4;
+
+            if (amount >= SAAS_PLANS.ELITE.price - 1) {
+              targetPlan = "ELITE";
+              targetMaxUsers = 8;
+            } else if (amount >= SAAS_PLANS.PRO.price - 1) {
+              targetPlan = "PRO";
+              targetMaxUsers = 4;
+            }
+
+            await prisma.tenant.update({
+              where: { id: tenantId },
+              data: {
+                plan: targetPlan,
+                maxUsers: targetMaxUsers,
+                subscriptionStatus: "active",
+                subscriptionExpiresAt: nextExpiry,
+              },
+            });
+          }
         }
 
         // Atualiza o registro de pagamento

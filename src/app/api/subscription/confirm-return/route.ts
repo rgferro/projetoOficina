@@ -55,6 +55,27 @@ export async function POST(req: NextRequest) {
       const nextExpiry = new Date();
       nextExpiry.setDate(nextExpiry.getDate() + 30);
 
+      if (paymentId) {
+        const recordedPayment = await prisma.subscriptionPayment.findFirst({
+          where: { paymentId: String(paymentId) },
+        });
+        if (recordedPayment && recordedPayment.plan === "EXTRA_SEAT") {
+          const extraSeatsCount = Math.round(amount / SAAS_PLANS.EXTRA_SEAT.price) || 1;
+          const updatedTenant = await prisma.tenant.update({
+            where: { id: targetTenantId },
+            data: {
+              maxUsers: { increment: extraSeatsCount },
+            },
+          });
+          return NextResponse.json({
+            success: true,
+            plan: updatedTenant.plan,
+            maxUsers: updatedTenant.maxUsers,
+            message: `+${extraSeatsCount} assento(s) de usuário adicionado(s) com sucesso!`,
+          });
+        }
+      }
+
       let targetPlan = "PRO";
       let targetMaxUsers = 4;
 
