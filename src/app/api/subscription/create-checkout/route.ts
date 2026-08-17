@@ -49,7 +49,8 @@ export async function POST(req: NextRequest) {
     }
 
     const plan = SAAS_PLANS[planId] || SAAS_PLANS.PRO;
-    const pref = await createMercadoPagoPreference(tenant, plan.price, plan.name);
+    const originUrl = req.nextUrl.origin || req.headers.get("origin") || undefined;
+    const pref = await createMercadoPagoPreference(tenant, plan.price, plan.name, originUrl);
 
     return NextResponse.json({
       success: true,

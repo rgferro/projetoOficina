@@ -137,18 +137,24 @@ export async function createMercadoPagoPixPayment(tenant: {
 /**
  * Cria assinatura recorrente no Cartão de Crédito via Mercado Pago (/preapproval)
  */
-export async function createMercadoPagoPreapproval(tenant: {
-  id: string;
-  name: string;
-  ownerEmail: string;
-}, amount: number, planName: string = "Plano Torque Pro") {
+export async function createMercadoPagoPreapproval(
+  tenant: {
+    id: string;
+    name: string;
+    ownerEmail: string;
+  },
+  amount: number,
+  planName: string = "Plano Torque Pro",
+  originUrl?: string
+) {
   return new Promise<{
     preapproval_id: string;
     init_point: string;
   }>((resolve, reject) => {
+    const baseUrl = originUrl || APP_URL;
     const postData = JSON.stringify({
       payer_email: tenant.ownerEmail,
-      back_url: `${APP_URL}/assinatura?status=sucesso`,
+      back_url: `${baseUrl}/assinatura?status=sucesso`,
       reason: `${planName} - Torque ERP`,
       auto_recurring: {
         frequency: 1,
@@ -200,17 +206,23 @@ export async function createMercadoPagoPreapproval(tenant: {
 /**
  * Cria Checkout Pro no Mercado Pago (/checkout/preferences)
  */
-export async function createMercadoPagoPreference(tenant: {
-  id: string;
-  name: string;
-  ownerEmail: string;
-}, amount: number, planName: string = "Plano Torque Pro") {
+export async function createMercadoPagoPreference(
+  tenant: {
+    id: string;
+    name: string;
+    ownerEmail: string;
+  },
+  amount: number,
+  planName: string = "Plano Torque Pro",
+  originUrl?: string
+) {
   return new Promise<{
     preference_id: string;
     init_point: string;
     sandbox_init_point: string;
   }>((resolve, reject) => {
     const isTest = MP_ACCESS_TOKEN.startsWith("TEST-");
+    const baseUrl = originUrl || APP_URL;
     const postData = JSON.stringify({
       items: [
         {
@@ -223,9 +235,9 @@ export async function createMercadoPagoPreference(tenant: {
       external_reference: tenant.id,
       notification_url: `${APP_URL}/api/webhooks/mercadopago`,
       back_urls: {
-        success: `${APP_URL}/assinatura?status=sucesso`,
-        failure: `${APP_URL}/assinatura?status=falha`,
-        pending: `${APP_URL}/assinatura?status=pendente`,
+        success: `${baseUrl}/assinatura?status=sucesso`,
+        failure: `${baseUrl}/assinatura?status=falha`,
+        pending: `${baseUrl}/assinatura?status=pendente`,
       },
       auto_return: "approved",
     });

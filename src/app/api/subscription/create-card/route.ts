@@ -49,7 +49,8 @@ export async function POST(req: NextRequest) {
     }
 
     const plan = SAAS_PLANS[planId] || SAAS_PLANS.PRO;
-    const preapproval = await createMercadoPagoPreapproval(tenant, plan.price, plan.name);
+    const originUrl = req.nextUrl.origin || req.headers.get("origin") || undefined;
+    const preapproval = await createMercadoPagoPreapproval(tenant, plan.price, plan.name, originUrl);
 
     await prisma.tenant.update({
       where: { id: tenant.id },
