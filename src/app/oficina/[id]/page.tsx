@@ -226,11 +226,16 @@ export default function DetalhesOrdemServicoPage({
   const discountNum = Number(discount) || 0;
   const grandTotal = Math.max(0, totalParts + totalServices - discountNum);
 
+  const [saving, setSaving] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [isSavedRecently, setIsSavedRecently] = useState(false);
+
   // Salvar Alterações
   const handleSave = async (e?: React.FormEvent, extraFields: any = {}) => {
     if (e) e.preventDefault();
     setSaving(true);
     setSuccessMessage("");
+    setIsSavedRecently(false);
 
     try {
       const payload = {
@@ -264,8 +269,12 @@ export default function DetalhesOrdemServicoPage({
 
       const updated = await res.json();
       setOrder(updated);
-      setSuccessMessage("Ordem de Serviço salva com sucesso!");
-      setTimeout(() => setSuccessMessage(""), 3500);
+      setSuccessMessage("✓ Ordem de Serviço salva com sucesso!");
+      setIsSavedRecently(true);
+      setTimeout(() => {
+        setSuccessMessage("");
+        setIsSavedRecently(false);
+      }, 4000);
     } catch (err: any) {
       alert(err.message || "Erro ao salvar");
     } finally {
@@ -832,16 +841,51 @@ export default function DetalhesOrdemServicoPage({
           <Trash2 className="w-4 h-4" /> Excluir OS
         </button>
 
-        <button
-          type="button"
-          disabled={saving}
-          onClick={handleSave}
-          className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 flex items-center gap-2 disabled:opacity-50"
-        >
-          <Save className="w-4 h-4" />
-          {saving ? "Salvando..." : "Salvar Alterações"}
-        </button>
+        <div className="flex items-center gap-3">
+          {successMessage && (
+            <span className="text-xs font-bold text-emerald-600 hidden sm:inline-flex items-center gap-1">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              {successMessage}
+            </span>
+          )}
+
+          <button
+            type="button"
+            disabled={saving}
+            onClick={handleSave}
+            className={`px-6 py-3 rounded-xl font-bold text-sm shadow-md flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 ${
+              isSavedRecently
+                ? "bg-emerald-600 text-white shadow-emerald-500/25"
+                : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20"
+            }`}
+          >
+            {saving ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+                <span>Salvando...</span>
+              </>
+            ) : isSavedRecently ? (
+              <>
+                <CheckCircle2 className="w-4 h-4" />
+                <span>✓ Alterações Salvas!</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                <span>Salvar Alterações</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* Toast Flutuante de Notificação */}
+      {successMessage && (
+        <div className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl bg-emerald-600 text-white font-bold text-sm shadow-2xl shadow-emerald-600/40 flex items-center gap-3 border border-emerald-400/30 animate-in fade-in slide-in-from-bottom-5 duration-300">
+          <CheckCircle2 className="w-5 h-5 text-white" />
+          <span>{successMessage}</span>
+        </div>
+      )}
 
       {/* Modal: Pagamento Parcial / Sinal */}
       {isPartialPaymentModalOpen && (
