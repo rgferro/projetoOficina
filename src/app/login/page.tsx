@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -19,6 +19,7 @@ import {
   X,
   Phone,
   FileText,
+  AlertTriangle,
 } from "lucide-react";
 import {
   maskDocument,
@@ -52,7 +53,13 @@ export default function LoginPage({ initialTab = "LOGIN" }: LoginPageProps) {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [infoMsg, setInfoMsg] = useState<string | null>(null);
+  const [emailSuccessMsg, setEmailSuccessMsg] = useState<string | null>(null);
+
+  // Referências para scroll automático até o erro
+  const docInputRef = useRef<HTMLInputElement>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const codeInputRef = useRef<HTMLInputElement>(null);
+  const passInputRef = useRef<HTMLInputElement>(null);
 
   // Form de Login
   const [loginForm, setLoginForm] = useState({
@@ -83,8 +90,13 @@ export default function LoginPage({ initialTab = "LOGIN" }: LoginPageProps) {
     verificationCode: "",
   });
 
-  // Força de senha
+  // Validações em tempo real
   const passStrength = validatePasswordStrength(registerForm.ownerPassword);
+
+  const cleanDoc = registerForm.document.replace(/\D/g, "");
+  const isDocValid =
+    !cleanDoc ||
+    (docType === "CPF" ? validateCPF(cleanDoc) : validateCNPJ(cleanDoc));
 
   // Busca automática de endereço no ViaCEP
   const handleCepChange = async (val: string) => {
@@ -118,12 +130,13 @@ export default function LoginPage({ initialTab = "LOGIN" }: LoginPageProps) {
   const handleSendCode = async () => {
     if (!registerForm.ownerEmail || !registerForm.ownerEmail.includes("@")) {
       setError("Digite um e-mail válido antes de solicitar o código de verificação.");
+      emailInputRef.current?.focus();
       return;
     }
 
     setSendingCode(true);
     setError(null);
-    setInfoMsg(null);
+    setEmailSuccessMsg(null);
 
     try {
       const res = await fetch("/api/auth/send-code", {
@@ -134,7 +147,8 @@ export default function LoginPage({ initialTab = "LOGIN" }: LoginPageProps) {
       const data = await res.json();
       if (data.success) {
         setCodeSent(true);
-        setInfoMsg(data.message);
+        setEmailSuccessMsg(data.message);
+        codeInputRef.current?.focus();
       } else {
         setError(data.error || "Erro ao enviar código.");
       }
@@ -181,28 +195,33 @@ export default function LoginPage({ initialTab = "LOGIN" }: LoginPageProps) {
     setLoading(true);
     setError(null);
 
-    // Validação de Senha Forte
+    // 1. Validação do Documento (CPF / CNPJ)
+    if (cleanDoc && !isDocValid) {
+      setError(
+        `O ${docType} digitado é inválido. Por favor, confira os números.`
+      );
+      docInputRef.current?.focus();
+      docInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setLoading(false);
+      return;
+    }
+
+    // 2. Validação do Código de E-mail
+    if (!registerForm.verificationCode || registerForm.verificationCode.length !== 6) {
+      setError(
+        "Por favor, clique em 'Enviar Código' e digite os 6 dígitos recebidos no seu e-mail."
+      );
+      codeInputRef.current?.focus();
+      codeInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setLoading(false);
+      return;
+    }
+
+    // 3. Validação de Senha Forte
     if (!passStrength.isValid) {
       setError(passStrength.message);
-      setLoading(false);
-      return;
-    }
-
-    // Validação do Documento (CPF / CNPJ)
-    const cleanDoc = registerForm.document.replace(/\D/g, "");
-    if (docType === "CPF" && cleanDoc && !validateCPF(cleanDoc)) {
-      setError("O CPF informado é inválido. Por favor, confira os números digitados.");
-      setLoading(false);
-      return;
-    }
-    if (docType === "CNPJ" && cleanDoc && !validateCNPJ(cleanDoc)) {
-      setError("O CNPJ informado é inválido. Por favor, confira os números digitados.");
-      setLoading(false);
-      return;
-    }
-
-    if (!registerForm.verificationCode) {
-      setError("Por favor, digite o código de 6 dígitos enviado para seu e-mail.");
+      passInputRef.current?.focus();
+      passInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       setLoading(false);
       return;
     }
@@ -258,7 +277,7 @@ export default function LoginPage({ initialTab = "LOGIN" }: LoginPageProps) {
             onClick={() => {
               setActiveTab("LOGIN");
               setError(null);
-              setInfoMsg(null);
+              setEmailSuccessMsg(null);
             }}
             className={`py-2.5 text-xs font-bold rounded-xl transition-all ${
               activeTab === "LOGIN"
@@ -273,7 +292,7 @@ export default function LoginPage({ initialTab = "LOGIN" }: LoginPageProps) {
             onClick={() => {
               setActiveTab("REGISTER");
               setError(null);
-              setInfoMsg(null);
+              setEmailSuccessMsg(null);
             }}
             className={`py-2.5 text-xs font-bold rounded-xl transition-all ${
               activeTab === "REGISTER"
@@ -285,23 +304,16 @@ export default function LoginPage({ initialTab = "LOGIN" }: LoginPageProps) {
           </button>
         </div>
 
-        {error && (
-          <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-2 animate-fadeIn">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {infoMsg && (
-          <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold flex items-center gap-2 animate-fadeIn">
-            <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
-            <span>{infoMsg}</span>
-          </div>
-        )}
-
         {/* Formulário: ENTRAR */}
         {activeTab === "LOGIN" && (
           <form onSubmit={handleLoginSubmit} className="space-y-4">
+            {error && (
+              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-2 animate-fadeIn">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700">E-mail ou Usuário</label>
               <div className="relative">
@@ -350,7 +362,7 @@ export default function LoginPage({ initialTab = "LOGIN" }: LoginPageProps) {
               🎁 <strong>Plano Starter Gratuito:</strong> Até 2 Usuários inclusos (Dono + 1 Operador), sem necessidade de cartão de crédito.
             </div>
 
-            {/* Dados da Oficina */}
+            {/* 1. DADOS DA OFICINA */}
             <div className="space-y-3 pt-1">
               <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                 <Building2 className="w-3.5 h-3.5 text-blue-600" />
@@ -380,8 +392,10 @@ export default function LoginPage({ initialTab = "LOGIN" }: LoginPageProps) {
                         setDocType("CNPJ");
                         setRegisterForm((p) => ({ ...p, document: "" }));
                       }}
-                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${
-                        docType === "CNPJ" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                        docType === "CNPJ"
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                       }`}
                     >
                       CNPJ (Pessoa Jurídica)
@@ -392,23 +406,56 @@ export default function LoginPage({ initialTab = "LOGIN" }: LoginPageProps) {
                         setDocType("CPF");
                         setRegisterForm((p) => ({ ...p, document: "" }));
                       }}
-                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${
-                        docType === "CPF" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                        docType === "CPF"
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                       }`}
                     >
                       CPF (Pessoa Física)
                     </button>
                   </div>
                 </div>
-                <input
-                  type="text"
-                  value={registerForm.document}
-                  onChange={(e) =>
-                    setRegisterForm({ ...registerForm, document: maskDocument(e.target.value) })
-                  }
-                  placeholder={docType === "CNPJ" ? "00.000.000/0001-00" : "000.000.000-00"}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500 font-mono"
-                />
+
+                <div className="relative">
+                  <input
+                    ref={docInputRef}
+                    type="text"
+                    value={registerForm.document}
+                    onChange={(e) =>
+                      setRegisterForm({
+                        ...registerForm,
+                        document: maskDocument(e.target.value),
+                      })
+                    }
+                    placeholder={docType === "CNPJ" ? "00.000.000/0001-00" : "000.000.000-00"}
+                    className={`w-full text-xs bg-slate-50 border rounded-xl p-2.5 text-slate-900 focus:outline-blue-500 font-mono ${
+                      cleanDoc && !isDocValid
+                        ? "border-rose-400 bg-rose-50/30 text-rose-900"
+                        : "border-slate-200"
+                    }`}
+                  />
+                  {cleanDoc && (
+                    <div className="absolute right-3 top-2.5 text-[11px] font-bold flex items-center gap-1">
+                      {isDocValid ? (
+                        <span className="text-emerald-600 flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5" /> Válido
+                        </span>
+                      ) : (
+                        <span className="text-rose-600 flex items-center gap-1">
+                          <X className="w-3.5 h-3.5" /> {docType} Inválido
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {cleanDoc && !isDocValid && (
+                  <p className="text-[11px] font-bold text-rose-600 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    O {docType} informado é inválido. Por favor, confira os números digitados.
+                  </p>
+                )}
               </div>
 
               {/* Endereço com Busca Automática de CEP */}
@@ -476,7 +523,7 @@ export default function LoginPage({ initialTab = "LOGIN" }: LoginPageProps) {
               </div>
             </div>
 
-            {/* Dados do Dono & Verificação de E-mail */}
+            {/* 2. DADOS DO DONO & CONFIRMAÇÃO DE E-MAIL */}
             <div className="space-y-3 pt-3 border-t border-slate-100">
               <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-emerald-600" />
@@ -516,6 +563,7 @@ export default function LoginPage({ initialTab = "LOGIN" }: LoginPageProps) {
                 <label className="text-xs font-bold text-slate-700">Seu E-mail de Acesso *</label>
                 <div className="flex gap-2">
                   <input
+                    ref={emailInputRef}
                     type="email"
                     required
                     value={registerForm.ownerEmail}
@@ -529,21 +577,34 @@ export default function LoginPage({ initialTab = "LOGIN" }: LoginPageProps) {
                     type="button"
                     onClick={handleSendCode}
                     disabled={sendingCode || !registerForm.ownerEmail}
-                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all flex-shrink-0 disabled:opacity-50"
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all flex-shrink-0 disabled:opacity-50 shadow-sm"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    {sendingCode ? "Enviando..." : codeSent ? "Reenviar" : "Enviar Código"}
+                    {sendingCode ? "Enviando..." : codeSent ? "Reenviar Código" : "Enviar Código"}
                   </button>
                 </div>
+
+                {/* Feedback Direto de E-mail Enviado */}
+                {emailSuccessMsg && (
+                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold flex items-center gap-2 mt-1.5 animate-fadeIn">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    <span>{emailSuccessMsg}</span>
+                  </div>
+                )}
               </div>
 
               {/* Campo de Digitar Código de 6 Dígitos */}
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
                   <span>Código de Confirmação do E-mail *</span>
-                  {codeSent && <span className="text-[10px] text-emerald-600 font-bold">✓ Código Enviado</span>}
+                  {codeSent && (
+                    <span className="text-[10px] text-emerald-600 font-extrabold flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Código Despachado
+                    </span>
+                  )}
                 </label>
                 <input
+                  ref={codeInputRef}
                   type="text"
                   required
                   maxLength={6}
@@ -555,7 +616,7 @@ export default function LoginPage({ initialTab = "LOGIN" }: LoginPageProps) {
                     })
                   }
                   placeholder="Digite os 6 dígitos recebidos no e-mail (ex: 123456)"
-                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500 font-mono tracking-widest text-center"
+                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500 font-mono tracking-widest text-center font-bold"
                 />
               </div>
 
@@ -563,6 +624,7 @@ export default function LoginPage({ initialTab = "LOGIN" }: LoginPageProps) {
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700">Crie sua Senha Forte *</label>
                 <input
+                  ref={passInputRef}
                   type="password"
                   required
                   value={registerForm.ownerPassword}
@@ -641,6 +703,14 @@ export default function LoginPage({ initialTab = "LOGIN" }: LoginPageProps) {
                 )}
               </div>
             </div>
+
+            {/* MENSAGEM DE ERRO VISÍVEL IMEDIATAMENTE ACIMA DO BOTÃO DE CLIQUE */}
+            {error && (
+              <div className="p-3.5 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-700 text-xs font-bold flex items-center gap-2.5 animate-bounce shadow-sm">
+                <AlertTriangle className="w-5 h-5 text-rose-600 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
 
             <button
               type="submit"
