@@ -28,6 +28,8 @@ export default function AssinaturaPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [extraSeats, setExtraSeats] = useState(1);
   const [returnSuccessMsg, setReturnSuccessMsg] = useState("");
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   const fetchSubscription = async () => {
     try {
@@ -146,6 +148,29 @@ export default function AssinaturaPage() {
     }
   };
 
+  const handleCancelSubscription = async () => {
+    setCancelLoading(true);
+    try {
+      const res = await fetch("/api/subscription/cancel", {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsCancelModalOpen(false);
+        setReturnSuccessMsg(
+          "Sua assinatura foi cancelada e revertida para o plano Starter gratuito. Seus funcionários foram desativados preventivamente sem perder dados nem histórico."
+        );
+        fetchSubscription();
+      } else {
+        alert(data.error || "Erro ao cancelar assinatura");
+      }
+    } catch (e: any) {
+      alert(e.message || "Erro de conexão ao cancelar assinatura");
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
   const copyPixCode = () => {
     if (!pixData?.qrCode) return;
     navigator.clipboard.writeText(pixData.qrCode);
@@ -206,16 +231,28 @@ export default function AssinaturaPage() {
           </p>
         </div>
 
-        <div className="bg-slate-800/80 border border-slate-700 p-4 rounded-2xl flex items-center gap-4 text-xs">
-          <div className="w-10 h-10 rounded-xl bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-blue-400">
-            <Users className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-slate-400 font-medium">Assentos da Equipe:</div>
-            <div className="text-base font-black text-white">
-              {currentUsers} / {maxUsers} Ativos
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="bg-slate-800/80 border border-slate-700 p-4 rounded-2xl flex items-center gap-4 text-xs">
+            <div className="w-10 h-10 rounded-xl bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-blue-400">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-slate-400 font-medium">Assentos da Equipe:</div>
+              <div className="text-base font-black text-white">
+                {currentUsers} / {maxUsers} Ativos
+              </div>
             </div>
           </div>
+
+          {currentPlan !== "STARTER" && (
+            <button
+              onClick={() => setIsCancelModalOpen(true)}
+              className="px-4 py-2.5 rounded-2xl bg-red-500/10 hover:bg-red-500/20 text-red-300 hover:text-red-200 border border-red-500/30 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+            >
+              <AlertCircle className="w-3.5 h-3.5" />
+              Cancelar Assinatura
+            </button>
+          )}
         </div>
       </div>
 
@@ -576,6 +613,55 @@ export default function AssinaturaPage() {
             >
               Fechar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Cancelamento de Assinatura */}
+      {isCancelModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 space-y-6 text-center">
+            <div className="w-14 h-14 rounded-3xl bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+              <AlertCircle className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold text-slate-900">
+                Tem certeza que deseja cancelar?
+              </h2>
+              <p className="text-xs text-slate-600 leading-relaxed text-left bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
+                <span className="block font-bold text-slate-800">
+                  Ao cancelar sua assinatura:
+                </span>
+                <span className="block text-slate-600">
+                  • Seu plano retornará ao <strong>Torque Starter gratuito</strong> (limite de 2 usuários: Dono + 1 operador).
+                </span>
+                <span className="block text-slate-600">
+                  • <strong>Nenhum funcionário ou histórico será excluído!</strong> Seus colaboradores ficarão inativos no sistema, e você poderá reativar 1 deles na aba Equipe.
+                </span>
+                <span className="block text-slate-600">
+                  • Ao renovar no futuro, todos os membros e configurações anteriores podem ser reativados com 1 clique.
+                </span>
+              </p>
+            </div>
+
+            <div className="space-y-2.5">
+              <button
+                onClick={handleCancelSubscription}
+                disabled={cancelLoading}
+                className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-2xl transition-all shadow-md shadow-red-500/20 active:scale-95 disabled:opacity-50"
+              >
+                {cancelLoading ? "Processando cancelamento..." : "Sim, Cancelar e Voltar para Starter"}
+              </button>
+
+              <button
+                onClick={() => setIsCancelModalOpen(false)}
+                disabled={cancelLoading}
+                className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-2xl transition-colors"
+              >
+                Manter Minha Assinatura
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -104,7 +104,22 @@ export async function POST(req: NextRequest) {
     if (tenantId) {
       tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
     } else {
-      tenant = await prisma.tenant.findFirst();
+      tenant = await prisma.tenant.findFirst({ where: { active: true }, orderBy: { createdAt: "desc" } });
+    }
+
+    if (tenant) {
+      const activeCount = await prisma.employee.count({
+        where: { tenantId: tenant.id, active: true },
+      });
+      const maxAllowedEmployees = Math.max(1, (tenant.maxUsers || 2) - 1);
+      if (activeCount >= maxAllowedEmployees) {
+        return NextResponse.json(
+          {
+            error: `Seu plano atual (${tenant.plan}) permite até ${tenant.maxUsers} usuários no total (1 Proprietário + ${maxAllowedEmployees} Funcionário ativo). Para ativar mais funcionários, faça upgrade para o Plano Pro.`,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Gera token de convite com validade de 48 horas
@@ -167,6 +182,28 @@ export async function PUT(req: NextRequest) {
 
     if (!id || !name || !role) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
+    }
+
+    const currentEmp = await prisma.employee.findUnique({ where: { id } });
+    if (currentEmp && !currentEmp.active && active === true) {
+      const tenant = currentEmp.tenantId
+        ? await prisma.tenant.findUnique({ where: { id: currentEmp.tenantId } })
+        : await prisma.tenant.findFirst({ where: { active: true }, orderBy: { createdAt: "desc" } });
+
+      if (tenant) {
+        const activeCount = await prisma.employee.count({
+          where: { tenantId: tenant.id, active: true },
+        });
+        const maxAllowedEmployees = Math.max(1, (tenant.maxUsers || 2) - 1);
+        if (activeCount >= maxAllowedEmployees) {
+          return NextResponse.json(
+            {
+              error: `Limite de usuários atingido! Seu plano atual (${tenant.plan}) permite no máximo ${maxAllowedEmployees} funcionário ativo (+ 1 Proprietário). Desative outro colaborador ou faça upgrade para o Plano Pro.`,
+            },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     const updateData: any = {

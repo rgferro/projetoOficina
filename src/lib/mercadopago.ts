@@ -151,7 +151,14 @@ export async function createMercadoPagoPreapproval(
     preapproval_id: string;
     init_point: string;
   }>((resolve, reject) => {
-    const baseUrl = originUrl && originUrl.startsWith("https://") ? originUrl : APP_URL;
+    // Prioriza o APP_URL de produção caso configurado; se originUrl for localhost:3001 interno da VM, força torquerp.com.br
+    const baseUrl =
+      process.env.APP_URL && !process.env.APP_URL.includes("localhost")
+        ? process.env.APP_URL
+        : originUrl && !originUrl.includes(":3001")
+        ? originUrl
+        : APP_URL;
+
     const postData = JSON.stringify({
       payer_email: tenant.ownerEmail,
       back_url: `${baseUrl}/assinatura?status=sucesso`,
@@ -163,7 +170,7 @@ export async function createMercadoPagoPreapproval(
         currency_id: "BRL",
       },
       external_reference: tenant.id,
-      notification_url: `${APP_URL}/api/webhooks/mercadopago`,
+      notification_url: `${baseUrl}/api/webhooks/mercadopago`,
     });
 
     const req = https.request(
@@ -222,7 +229,12 @@ export async function createMercadoPagoPreference(
     sandbox_init_point: string;
   }>((resolve, reject) => {
     const isTest = MP_ACCESS_TOKEN.startsWith("TEST-");
-    const baseUrl = originUrl || APP_URL;
+    const baseUrl =
+      process.env.APP_URL && !process.env.APP_URL.includes("localhost")
+        ? process.env.APP_URL
+        : originUrl && !originUrl.includes(":3001")
+        ? originUrl
+        : APP_URL;
     const isHttps = baseUrl.startsWith("https://");
 
     const payload: any = {
@@ -235,7 +247,7 @@ export async function createMercadoPagoPreference(
         },
       ],
       external_reference: tenant.id,
-      notification_url: `${APP_URL}/api/webhooks/mercadopago`,
+      notification_url: `${baseUrl}/api/webhooks/mercadopago`,
       back_urls: {
         success: `${baseUrl}/assinatura?status=approved`,
         failure: `${baseUrl}/assinatura?status=failure`,
