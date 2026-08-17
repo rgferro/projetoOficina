@@ -58,7 +58,40 @@ export async function GET(req: NextRequest) {
       take: 5,
     });
 
-    const planConfig = SAAS_PLANS[tenant.plan] || SAAS_PLANS.STARTER;
+    // Regra de Vigência Contratual: Se a assinatura foi cancelada ou está pendente,
+    // o usuário MANTÉM todos os benefícios do plano contratado até a data final de expiração (1 mês completo)
+    let effectivePlan = tenant.plan;
+    let effectiveMaxUsers = tenant.maxUsers;
+    let effectiveStatus = tenant.subscriptionStatus || "active";
+
+    if (tenant.subscriptionExpiresAt) {
+      const now = new Date();
+      const expiresAt = new Date(tenant.subscriptionExpiresAt);
+
+      if (now > expiresAt && tenant.plan !== "STARTER") {
+        // Expirou oficialmente: agora sim reverte para STARTER e 2 usuários
+        await prisma.tenant.update({
+          where: { id: tenant.id },
+          data: {
+            plan: "STARTER",
+            maxUsers: 2,
+            subscriptionStatus: "expired",
+          },
+        });
+
+        // Desativa excedentes preventivamente
+        await prisma.employee.updateMany({
+          where: { tenantId: tenant.id },
+          data: { active: false },
+        });
+
+        effectivePlan = "STARTER";
+        effectiveMaxUsers = 2;
+        effectiveStatus = "expired";
+      }
+    }
+
+    const planConfig = SAAS_PLANS[effectivePlan] || SAAS_PLANS.STARTER;
 
     return NextResponse.json({
       success: true,

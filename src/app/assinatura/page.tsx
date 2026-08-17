@@ -210,7 +210,8 @@ export default function AssinaturaPage() {
       if (data.success) {
         setIsCancelModalOpen(false);
         setReturnSuccessMsg(
-          "Sua assinatura foi cancelada e revertida para o plano Starter gratuito. Seus funcionários foram desativados preventivamente sem perder dados nem histórico."
+          data.message ||
+          "Sua assinatura foi cancelada. A renovação automática foi suspensa e seus recursos continuarão ativos até o final do período já pago."
         );
         fetchSubscription();
       } else {
@@ -748,22 +749,22 @@ export default function AssinaturaPage() {
 
             <div className="space-y-2">
               <h2 className="text-xl font-bold text-slate-900">
-                Tem certeza que deseja cancelar?
+                Cancelar Renovação Automática?
               </h2>
-              <p className="text-xs text-slate-600 leading-relaxed text-left bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
+              <div className="text-xs text-slate-600 leading-relaxed text-left bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
                 <span className="block font-bold text-slate-800">
-                  Ao cancelar sua assinatura:
+                  Como funciona o cancelamento:
                 </span>
                 <span className="block text-slate-600">
-                  • Seu plano retornará ao <strong>Torque Starter gratuito</strong> (limite de 2 usuários: Dono + 1 operador).
+                  • <strong>Acesso garantido até o fim do mês pago:</strong> Você continuará utilizando todos os recursos e equipe do seu plano atual até a data de expiração contratada.
                 </span>
                 <span className="block text-slate-600">
-                  • <strong>Nenhum funcionário ou histórico será excluído!</strong> Seus colaboradores ficarão inativos no sistema, e você poderá reativar 1 deles na aba Equipe.
+                  • <strong>Sem novas cobranças:</strong> A renovação automática no cartão/PIX será suspensa imediatamente.
                 </span>
                 <span className="block text-slate-600">
-                  • Ao renovar no futuro, todos os membros e configurações anteriores podem ser reativados com 1 clique.
+                  • <strong>Após o término do período:</strong> O plano retornará ao <em>Starter gratuito</em> (2 usuários) e seus colaboradores serão pausados sem nenhuma perda de histórico.
                 </span>
-              </p>
+              </div>
             </div>
 
             <div className="space-y-2.5">
@@ -772,7 +773,7 @@ export default function AssinaturaPage() {
                 disabled={cancelLoading}
                 className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-2xl transition-all shadow-md shadow-red-500/20 active:scale-95 disabled:opacity-50"
               >
-                {cancelLoading ? "Processando cancelamento..." : "Sim, Cancelar e Voltar para Starter"}
+                {cancelLoading ? "Processando..." : "Confirmar Cancelamento da Renovação"}
               </button>
 
               <button

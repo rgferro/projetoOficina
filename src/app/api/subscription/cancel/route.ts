@@ -31,30 +31,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Oficina não encontrada" }, { status: 404 });
     }
 
-    // 1. Reverte o plano para STARTER com limite de 2 usuários (Dono + 1 operador)
+    // 1. Marca o status como cancelado (não haverá novas cobranças automáticas no cartão/PIX),
+    // mas MANTÉM o plano atual e todos os recursos ativos até a data de expiração já paga (fim do ciclo de 1 mês).
+    const expiresAt = tenant.subscriptionExpiresAt || new Date();
+    const formattedExpiry = new Date(expiresAt).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+
     await prisma.tenant.update({
       where: { id: tenant.id },
       data: {
-        plan: "STARTER",
-        maxUsers: 2,
         subscriptionStatus: "cancelled",
-        subscriptionExpiresAt: new Date(),
-      },
-    });
-
-    // 2. Desativa todos os funcionários da equipe (SEM excluir seus dados ou histórico)
-    // O proprietário poderá acessar a aba Equipe e reativar apenas 1 funcionário compatível com o plano Starter
-    await prisma.employee.updateMany({
-      where: { tenantId: tenant.id },
-      data: {
-        active: false,
+        // A data de expiração permanece a mesma contratada (não zera no cancelamento)
       },
     });
 
     return NextResponse.json({
       success: true,
-      message:
-        "Assinatura cancelada com sucesso. O plano foi revertido para o Torque Starter gratuito. Os funcionários foram desativados preventivamente sem perder nenhum histórico, e você pode reativar até 1 funcionário na aba Equipe.",
+      expiresAt: tenant.subscriptionExpiresAt,
+      message: `Assinatura cancelada com sucesso. A renovação automática foi suspensa e o seu plano (${tenant.plan}) continuará totalmente ativo com todos os usuários até ${formattedExpiry}. Após essa data, o plano será revertido para o Torque Starter gratuito.`,
     });
   } catch (error: any) {
     console.error("Erro ao cancelar assinatura:", error);
