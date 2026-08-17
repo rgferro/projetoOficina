@@ -21,6 +21,8 @@ import {
   LogOut,
   Check,
   Info,
+  ExternalLink,
+  Trash2,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/formatters";
 
@@ -42,9 +44,16 @@ export default function ConfiguracoesPage() {
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Cloud Backup states
-  const [cloudStatus, setCloudStatus] = useState<any>(null);
-  const [syncing, setSyncing] = useState(false);
+  // Google Drive & Backup states
+  const [gdriveStatus, setGdriveStatus] = useState<any>(null);
+  const [isGdriveModalOpen, setIsGdriveModalOpen] = useState(false);
+  const [gdriveForm, setGdriveForm] = useState({
+    email: "",
+    folderId: "",
+    webhookUrl: "",
+  });
+  const [syncingGdrive, setSyncingGdrive] = useState(false);
+  const [savingGdrive, setSavingGdrive] = useState(false);
 
   // WhatsApp states
   const [waStatus, setWaStatus] = useState<any>(null);
@@ -70,7 +79,14 @@ export default function ConfiguracoesPage() {
       ]);
 
       setSettings(settingsData);
-      setCloudStatus(backupStatusData);
+      setGdriveStatus(backupStatusData);
+      if (backupStatusData) {
+        setGdriveForm({
+          email: backupStatusData.email || "",
+          folderId: backupStatusData.folderId || "",
+          webhookUrl: backupStatusData.webhookUrl || "",
+        });
+      }
       setWaStatus(waData);
     } catch (err) {
       console.error(err);
@@ -134,25 +150,86 @@ export default function ConfiguracoesPage() {
     }
   };
 
-  const handleTriggerCloudBackup = async () => {
-    setSyncing(true);
+  // Salvar configurações do Google Drive
+  const handleSaveGdriveConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingGdrive(true);
     try {
       const res = await fetch("/api/backup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_config",
+          enabled: true,
+          email: gdriveForm.email,
+          folderId: gdriveForm.folderId,
+          webhookUrl: gdriveForm.webhookUrl,
+        }),
       });
       const data = await res.json();
       if (res.ok) {
-        setCloudStatus(data.status);
-        setSuccessMessage("Backup na nuvem sincronizado com sucesso!");
-        setTimeout(() => setSuccessMessage(""), 3500);
+        setGdriveStatus(data.status);
+        setIsGdriveModalOpen(false);
+        setSuccessMessage("✓ Integração do Google Drive cadastrada com sucesso!");
+        setTimeout(() => setSuccessMessage(""), 4000);
       } else {
-        alert(data.error || "Erro ao sincronizar");
+        alert(data.error || "Erro ao salvar integração do Google Drive");
+      }
+    } catch (err: any) {
+      alert("Erro ao salvar: " + err.message);
+    } finally {
+      setSavingGdrive(false);
+    }
+  };
+
+  // Desconectar Google Drive
+  const handleDisconnectGdrive = async () => {
+    if (!confirm("Deseja desconectar a integração com o Google Drive?")) return;
+    try {
+      const res = await fetch("/api/backup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_config",
+          enabled: false,
+          email: "",
+          folderId: "",
+          webhookUrl: "",
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setGdriveStatus(data.status);
+        setGdriveForm({ email: "", folderId: "", webhookUrl: "" });
+        setSuccessMessage("Google Drive desconectado com sucesso.");
+        setTimeout(() => setSuccessMessage(""), 3500);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Sincronizar backup para o Google Drive
+  const handleSyncGdrive = async () => {
+    setSyncingGdrive(true);
+    try {
+      const res = await fetch("/api/backup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "sync" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setGdriveStatus(data.status);
+        setSuccessMessage("✓ Backup enviado com sucesso para o Google Drive!");
+        setTimeout(() => setSuccessMessage(""), 4000);
+      } else {
+        alert(data.error || "Erro ao enviar backup para o Google Drive");
       }
     } catch (err: any) {
       alert("Erro ao sincronizar: " + err.message);
     } finally {
-      setSyncing(false);
+      setSyncingGdrive(false);
     }
   };
 
@@ -227,6 +304,7 @@ export default function ConfiguracoesPage() {
   };
 
   const isConnected = waStatus?.status === "CONNECTED";
+  const isGdriveConnected = Boolean(gdriveStatus?.enabled);
 
   return (
     <div className="space-y-6">
@@ -237,7 +315,7 @@ export default function ConfiguracoesPage() {
           Configurações, Conexão WhatsApp & Backup
         </h1>
         <p className="text-sm text-slate-500">
-          Pareie o WhatsApp da oficina via QR Code para envio silencioso sem abrir abas, configure backup e dados da empresa.
+          Gerencie os dados da empresa, conexão do WhatsApp, downloads manuais e integração com Google Drive.
         </p>
       </div>
 
@@ -475,89 +553,238 @@ export default function ConfiguracoesPage() {
         </div>
       )}
 
-      {/* Seção 1: Backup em Nuvem 100% Automático */}
-      <div id="config-backup-card" className="bg-gradient-to-tr from-slate-900 via-slate-850 to-blue-950 rounded-2xl p-6 text-white shadow-xl space-y-5">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      {/* Seção 1: Central de Backup dos Dados */}
+      <div id="config-backup-card" className="bg-gradient-to-tr from-slate-900 via-slate-850 to-blue-950 rounded-2xl p-6 text-white shadow-xl space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
           <div className="flex items-center gap-3.5">
-            <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              <Cloud className="w-7 h-7" />
+            <div className="p-3 rounded-2xl bg-blue-500/20 text-blue-400 border border-blue-500/30">
+              <Database className="w-7 h-7" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-black text-white">
-                  Backup em Nuvem: 100% Automático
-                </h2>
-                <span className="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping"></span>
-                  ATIVO
-                </span>
-              </div>
+              <h2 className="text-lg font-black text-white flex items-center gap-2">
+                Central de Backup e Segurança dos Dados
+              </h2>
               <p className="text-xs text-slate-300 mt-0.5">
-                Nuvem Detectada: <strong className="text-emerald-300">{cloudStatus?.provider || "Google Drive / Nuvem"}</strong>
+                Exporte cópias manuais para o seu computador ou conecte sua conta do Google Drive para sincronização.
               </p>
             </div>
           </div>
 
-          <button
-            type="button"
-            disabled={syncing}
-            onClick={handleTriggerCloudBackup}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} />
-            {syncing ? "Sincronizando..." : "Sincronizar Agora"}
-          </button>
-        </div>
-
-        {/* Informações para o Usuário */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 text-xs">
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
-            <span className="text-slate-400 font-bold uppercase text-[10px] block">
-              Como funciona a segurança dos seus dados?
-            </span>
-            <p className="text-slate-200 leading-relaxed">
-              ✨ <strong>100% Automático e Criptografado!</strong> Todas as Ordens de Serviço, vendas, clientes e movimentações de caixa são salvas com criptografia AES-256 e redundância na nuvem.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
-            <span className="text-slate-400 font-bold uppercase text-[10px] block">
-              Status da Proteção de Dados
-            </span>
-            <p className="text-slate-200">
-              ☁️ <strong>Destino:</strong> <span className="font-semibold text-xs text-blue-300">Google Drive & Nuvem Privada Isolada</span>
-            </p>
-            <p className="text-[11px] text-slate-400 pt-1">
-              Último backup: <strong className="text-emerald-400">{cloudStatus?.lastBackupDate ? formatDateTime(cloudStatus.lastBackupDate) : "Hoje (Automático)"}</strong> • {cloudStatus?.totalBackups || 1} cópia(s) protegida(s).
-            </p>
+          {/* Garantia de Privacidade */}
+          <div className="px-3 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700 text-[11px] text-slate-300 flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>Controle 100% Manual • Sem leitura de pastas sem permissão</span>
           </div>
         </div>
 
-        {/* Opções de Download e Exportação Pessoal */}
-        <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-          <span className="text-slate-400">
-            Baixe uma cópia completa dos seus dados para o seu computador ou Google Drive:
-          </span>
-          <div className="flex gap-2">
-            <a
-              href="/api/backup?format=json"
-              download
-              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-colors"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Exportar Backup JSON
-            </a>
-            <a
-              href="/api/backup?format=db"
-              download
-              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 flex items-center gap-1.5 transition-colors"
-            >
-              <Download className="w-3.5 h-3.5 text-blue-400" />
-              Baixar Arquivo SQLite (.db)
-            </a>
+        {/* 2 Blocos: Downloads Manuais e Integração Google Drive */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Bloco 1: Downloads Manuais Imediatos */}
+          <div className="p-5 rounded-2xl bg-slate-800/60 border border-slate-700/80 space-y-3 flex flex-col justify-between">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-white font-bold text-sm">
+                <HardDrive className="w-4 h-4 text-emerald-400" />
+                <span>1. Download Manual Direto no Navegador</span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Baixe uma cópia instantânea de todas as Ordens de Serviço, clientes, vendas, produtos e caixa para guardar no seu computador ou pen-drive.
+              </p>
+            </div>
+
+            <div className="pt-2 flex flex-col sm:flex-row gap-2">
+              <a
+                href="/api/backup?format=json"
+                download
+                className="flex-1 px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all"
+              >
+                <Download className="w-4 h-4" />
+                <span>Exportar JSON Completo</span>
+              </a>
+              <a
+                href="/api/backup?format=db"
+                download
+                className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-650 text-slate-200 font-bold text-xs border border-slate-600 flex items-center justify-center gap-2 transition-all"
+              >
+                <Download className="w-4 h-4 text-blue-400" />
+                <span>Baixar Banco SQLite (.db)</span>
+              </a>
+            </div>
+          </div>
+
+          {/* Bloco 2: Google Drive (Opcional) */}
+          <div className="p-5 rounded-2xl bg-slate-800/60 border border-slate-700/80 space-y-3 flex flex-col justify-between">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-white font-bold text-sm">
+                  <Cloud className="w-4 h-4 text-blue-400" />
+                  <span>2. Google Drive (Opcional)</span>
+                </div>
+                {isGdriveConnected ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950">
+                    CONECTADO
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-slate-700 text-slate-300">
+                    DESCONECTADO
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                {isGdriveConnected ? (
+                  <>
+                    Conta vinculada: <strong className="text-blue-300">{gdriveStatus?.email || "Google Drive Ativo"}</strong>
+                    <br />
+                    Último envio: <span className="text-emerald-400">{gdriveStatus?.lastBackupDate ? formatDateTime(gdriveStatus.lastBackupDate) : "Nunca enviado"}</span>
+                  </>
+                ) : (
+                  "Cadastre seu Google Drive ou Webhook de armazenamento caso queira salvar cópias na sua nuvem pessoal."
+                )}
+              </p>
+            </div>
+
+            <div className="pt-2 flex items-center gap-2">
+              {isGdriveConnected ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={syncingGdrive}
+                    onClick={handleSyncGdrive}
+                    className="flex-1 px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${syncingGdrive ? "animate-spin" : ""}`} />
+                    <span>{syncingGdrive ? "Sincronizando..." : "Sincronizar Agora"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsGdriveModalOpen(true)}
+                    className="px-3 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-650 text-slate-200 text-xs font-bold transition-colors"
+                    title="Editar Configurações"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDisconnectGdrive}
+                    className="px-3 py-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold border border-rose-500/30 transition-colors"
+                    title="Desconectar Google Drive"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsGdriveModalOpen(true)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 transition-all"
+                >
+                  <Cloud className="w-4 h-4" />
+                  <span>Cadastrar / Conectar Google Drive</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Modal de Configuração do Google Drive */}
+      {isGdriveModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-100 space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-xl bg-blue-100 text-blue-700">
+                  <Cloud className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-900 text-base">Configurar Google Drive</h3>
+                  <p className="text-xs text-slate-500">Cadastre suas credenciais para sincronização</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsGdriveModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveGdriveConfig} className="space-y-4 text-xs">
+              <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-blue-900 space-y-1">
+                <p className="font-bold flex items-center gap-1.5">
+                  <Info className="w-4 h-4 text-blue-600" />
+                  Como funciona a integração:
+                </p>
+                <p className="text-[11px] leading-relaxed text-blue-800">
+                  Você pode informar seu e-mail do Google e a URL de um Webhook / Google Apps Script ou pasta compartilhada para receber os arquivos de backup automaticamente.
+                </p>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Seu E-mail do Google (Google Drive) *
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="exemplo@gmail.com"
+                  value={gdriveForm.email}
+                  onChange={(e) => setGdriveForm({ ...gdriveForm, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  ID da Pasta do Google Drive (Opcional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: 1a2B3c4D5e6F7g8H9..."
+                  value={gdriveForm.folderId}
+                  onChange={(e) => setGdriveForm({ ...gdriveForm, folderId: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono"
+                />
+                <span className="text-[10px] text-slate-400">
+                  O código que aparece no final da URL da pasta no seu Google Drive.
+                </span>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  URL do Webhook / Google Apps Script (Opcional)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://script.google.com/macros/s/.../exec"
+                  value={gdriveForm.webhookUrl}
+                  onChange={(e) => setGdriveForm({ ...gdriveForm, webhookUrl: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono"
+                />
+                <span className="text-[10px] text-slate-400">
+                  Caso utilize um script automatizado ou Zapier/Make para receber o backup em JSON.
+                </span>
+              </div>
+
+              <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsGdriveModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingGdrive}
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-600/20 disabled:opacity-50"
+                >
+                  {savingGdrive ? "Salvando..." : "Salvar Configurações"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Seção 2: Dados da Oficina */}
       {loading ? (

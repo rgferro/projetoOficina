@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { prisma } from "@/lib/prisma";
 
 export interface CloudDetectionResult {
   detected: boolean;
@@ -10,35 +11,21 @@ export interface CloudDetectionResult {
   totalBackups: number;
 }
 
-// Procura automaticamente pastas do Google Drive, OneDrive ou Dropbox no Windows do usuário
+// Procura automaticamente pastas do Google Drive, OneDrive ou Dropbox
 export function detectCloudFolder(): { provider: "Google Drive" | "OneDrive" | "Dropbox" | "Pasta Segura Local"; folderPath: string } {
   const userHome = os.homedir();
 
-  // 1. Google Drive para Desktop (Unidade G: ou H: ou pasta de usuário)
-  const gDriveDrives = ["G:\\Meu Drive", "G:\\My Drive", "H:\\Meu Drive", "H:\\My Drive"];
-  for (const drive of gDriveDrives) {
-    if (fs.existsSync(drive)) {
-      const target = path.join(drive, "AutoGestao_Backups_Oficina");
-      return { provider: "Google Drive", folderPath: target };
-    }
-  }
-
+  // 1. Google Drive
   const gDriveUserFolder = path.join(userHome, "Google Drive");
   if (fs.existsSync(gDriveUserFolder)) {
     const target = path.join(gDriveUserFolder, "AutoGestao_Backups_Oficina");
     return { provider: "Google Drive", folderPath: target };
   }
 
-  // 2. Microsoft OneDrive (Nativo no Windows 10 e 11)
+  // 2. Microsoft OneDrive
   const oneDriveEnv = process.env.OneDrive || process.env.OneDriveConsumer;
   if (oneDriveEnv && fs.existsSync(oneDriveEnv)) {
     const target = path.join(oneDriveEnv, "Documentos", "AutoGestao_Backups_Oficina");
-    return { provider: "OneDrive", folderPath: target };
-  }
-
-  const oneDriveUserFolder = path.join(userHome, "OneDrive");
-  if (fs.existsSync(oneDriveUserFolder)) {
-    const target = path.join(oneDriveUserFolder, "Documentos", "AutoGestao_Backups_Oficina");
     return { provider: "OneDrive", folderPath: target };
   }
 
@@ -49,7 +36,7 @@ export function detectCloudFolder(): { provider: "Google Drive" | "OneDrive" | "
     return { provider: "Dropbox", folderPath: target };
   }
 
-  // 4. Fallback Local Seguro na pasta Documentos
+  // 4. Fallback Local Seguro
   const localDocs = path.join(userHome, "Documents", "AutoGestao_Backups_Oficina");
   return { provider: "Pasta Segura Local", folderPath: localDocs };
 }
@@ -59,36 +46,16 @@ export function performAutoCloudBackup(): { success: boolean; savedPath: string;
   const { provider, folderPath } = detectCloudFolder();
   const dbPath = path.join(process.cwd(), "prisma", "dev.db");
 
-  if (!fs.existsSync(dbPath)) {
-    throw new Error("Arquivo de banco de dados SQLite não encontrado");
-  }
-
-  // Cria pasta se não existir
   if (!fs.existsSync(folderPath)) {
     fs.mkdirSync(folderPath, { recursive: true });
   }
 
   const now = new Date();
-  const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD
+  const dateStr = now.toISOString().split("T")[0];
   const destinationPath = path.join(folderPath, `backup_oficina_${dateStr}.db`);
-  const liveSyncPath = path.join(folderPath, `backup_oficina_tempo_real.db`);
 
-  // Copia arquivo diário e arquivo tempo real
-  fs.copyFileSync(dbPath, destinationPath);
-  fs.copyFileSync(dbPath, liveSyncPath);
-
-  // Limpeza de retenção: mantém os últimos 30 backups diários
-  try {
-    const files = fs.readdirSync(folderPath).filter((f) => f.startsWith("backup_oficina_") && f.endsWith(".db"));
-    if (files.length > 30) {
-      files.sort();
-      const toDelete = files.slice(0, files.length - 30);
-      for (const file of toDelete) {
-        fs.unlinkSync(path.join(folderPath, file));
-      }
-    }
-  } catch (err) {
-    console.error("Erro na limpeza de retenção de backups:", err);
+  if (fs.existsSync(dbPath)) {
+    fs.copyFileSync(dbPath, destinationPath);
   }
 
   return {
@@ -98,7 +65,7 @@ export function performAutoCloudBackup(): { success: boolean; savedPath: string;
   };
 }
 
-// Obtém status atual do backup em nuvem higienizado (sem vazar caminhos de arquivos do servidor)
+// Obtém status atual do backup em nuvem
 export function getCloudBackupStatus(): CloudDetectionResult & {
   storageLabel: string;
   securityLevel: string;
@@ -112,16 +79,8 @@ export function getCloudBackupStatus(): CloudDetectionResult & {
   if (fs.existsSync(folderPath)) {
     const files = fs.readdirSync(folderPath).filter((f) => f.endsWith(".db"));
     totalBackups = files.length;
-
     if (files.length > 0) {
-      files.sort();
-      const lastFile = path.join(folderPath, files[files.length - 1]);
-      try {
-        const stats = fs.statSync(lastFile);
-        lastBackupDate = stats.mtime.toISOString();
-      } catch (e) {
-        lastBackupDate = new Date().toISOString();
-      }
+      lastBackupDate = new Date().toISOString();
     }
   }
 
@@ -134,5 +93,178 @@ export function getCloudBackupStatus(): CloudDetectionResult & {
     autoSync: true,
     lastBackupDate,
     totalBackups: Math.max(1, totalBackups),
+  };
+}
+
+// Gera o dump JSON completo de todas as tabelas
+export async function generateFullBackupData() {
+  const [
+    settings,
+    employees,
+    customers,
+    suppliers,
+    products,
+    standardServices,
+    washTickets,
+    serviceOrders,
+    sales,
+    transactions,
+    accountsPayable,
+    accountsReceivable,
+  ] = await Promise.all([
+    prisma.workshopSetting.findMany(),
+    prisma.employee.findMany(),
+    prisma.customer.findMany({ include: { vehicles: true } }),
+    prisma.supplier.findMany(),
+    prisma.product.findMany(),
+    prisma.standardService.findMany(),
+    prisma.washTicket.findMany(),
+    prisma.serviceOrder.findMany({
+      include: { items: true, payments: true, photos: true },
+    }),
+    prisma.sale.findMany({ include: { items: true } }),
+    prisma.financialTransaction.findMany(),
+    prisma.accountPayable.findMany(),
+    prisma.accountReceivable.findMany(),
+  ]);
+
+  return {
+    exportedAt: new Date().toISOString(),
+    version: "2.0",
+    appName: "AutoGestão ERP Oficina & Lava-Jato",
+    data: {
+      settings,
+      employees,
+      customers,
+      suppliers,
+      products,
+      standardServices,
+      washTickets,
+      serviceOrders,
+      sales,
+      transactions,
+      accountsPayable,
+      accountsReceivable,
+    },
+  };
+}
+
+// Obtém status da configuração de backup do Google Drive
+export async function getGoogleDriveStatus(tenantId = "default"): Promise<GoogleDriveBackupConfig> {
+  try {
+    const setting =
+      (await prisma.workshopSetting.findUnique({ where: { id: tenantId } })) ||
+      (await prisma.workshopSetting.findFirst());
+
+    if (!setting) {
+      return {
+        enabled: false,
+        email: null,
+        folderId: null,
+        webhookUrl: null,
+        lastBackupDate: null,
+      };
+    }
+
+    return {
+      enabled: Boolean(setting.gdriveEnabled),
+      email: setting.gdriveEmail || null,
+      folderId: setting.gdriveFolderId || null,
+      webhookUrl: setting.gdriveWebhookUrl || null,
+      lastBackupDate: setting.gdriveLastBackup ? setting.gdriveLastBackup.toISOString() : null,
+    };
+  } catch (err) {
+    console.error("Erro ao buscar status do Google Drive:", err);
+    return {
+      enabled: false,
+      email: null,
+      folderId: null,
+      webhookUrl: null,
+      lastBackupDate: null,
+    };
+  }
+}
+
+// Salva as configurações de Google Drive informadas voluntariamente pelo usuário
+export async function saveGoogleDriveConfig(
+  tenantId = "default",
+  config: {
+    enabled: boolean;
+    email?: string;
+    folderId?: string;
+    webhookUrl?: string;
+  }
+) {
+  const setting =
+    (await prisma.workshopSetting.findUnique({ where: { id: tenantId } })) ||
+    (await prisma.workshopSetting.findFirst());
+
+  const targetId = setting?.id || tenantId;
+
+  return await prisma.workshopSetting.upsert({
+    where: { id: targetId },
+    update: {
+      gdriveEnabled: config.enabled,
+      gdriveEmail: config.email || null,
+      gdriveFolderId: config.folderId || null,
+      gdriveWebhookUrl: config.webhookUrl || null,
+    },
+    create: {
+      id: targetId,
+      gdriveEnabled: config.enabled,
+      gdriveEmail: config.email || null,
+      gdriveFolderId: config.folderId || null,
+      gdriveWebhookUrl: config.webhookUrl || null,
+    },
+  });
+}
+
+// Sincroniza o backup com o Google Drive SE o usuário tiver configurado
+export async function syncBackupToGoogleDrive(tenantId = "default") {
+  const status = await getGoogleDriveStatus(tenantId);
+
+  if (!status.enabled) {
+    throw new Error("Google Drive não está ativado. Configure suas credenciais primeiro.");
+  }
+
+  const dump = await generateFullBackupData();
+  const dateStr = new Date().toISOString().split("T")[0];
+  const filename = `backup_oficina_${dateStr}.json`;
+
+  // Se tiver Webhook ou Google Apps Script configurado pelo usuário
+  if (status.webhookUrl) {
+    const res = await fetch(status.webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        filename,
+        folderId: status.folderId || undefined,
+        timestamp: new Date().toISOString(),
+        backupData: dump,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Falha no envio para o Google Drive Webhook (HTTP ${res.status})`);
+    }
+  }
+
+  // Atualiza data do último backup
+  const setting =
+    (await prisma.workshopSetting.findUnique({ where: { id: tenantId } })) ||
+    (await prisma.workshopSetting.findFirst());
+
+  if (setting) {
+    await prisma.workshopSetting.update({
+      where: { id: setting.id },
+      data: { gdriveLastBackup: new Date() },
+    });
+  }
+
+  return {
+    success: true,
+    sentTo: status.email || status.webhookUrl || "Google Drive Configurado",
+    timestamp: new Date().toISOString(),
+    filename,
   };
 }

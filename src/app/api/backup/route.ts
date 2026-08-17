@@ -3,8 +3,10 @@ import { prisma } from "@/lib/prisma";
 import fs from "fs";
 import path from "path";
 import {
-  getCloudBackupStatus,
-  performAutoCloudBackup,
+  generateFullBackupData,
+  getGoogleDriveStatus,
+  saveGoogleDriveConfig,
+  syncBackupToGoogleDrive,
 } from "@/lib/cloudBackup";
 
 export const dynamic = "force-dynamic";
@@ -14,54 +16,22 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const format = searchParams.get("format"); // "db", "json" ou "status"
 
-    // 1. Status do Backup em Nuvem Automático
+    // 1. Status da Integração Google Drive & Backup
     if (format === "status") {
-      const status = getCloudBackupStatus();
-      return NextResponse.json(status);
+      const gdriveStatus = await getGoogleDriveStatus();
+      return NextResponse.json(gdriveStatus);
     }
 
     const dateStr = new Date().toISOString().replace(/:/g, "-").split(".")[0];
 
-    // 2. Exportação JSON
+    // 2. Exportação JSON Completa (Download direto para o navegador)
     if (format === "json") {
-      const customers = await prisma.customer.findMany({ include: { vehicles: true } });
-      const employees = await prisma.employee.findMany();
-      const suppliers = await prisma.supplier.findMany();
-      const products = await prisma.product.findMany();
-      const standardServices = await prisma.standardService.findMany();
-      const washTickets = await prisma.washTicket.findMany();
-      const serviceOrders = await prisma.serviceOrder.findMany({
-        include: { items: true, payments: true, photos: true },
-      });
-      const sales = await prisma.sale.findMany({ include: { items: true } });
-      const transactions = await prisma.financialTransaction.findMany();
-      const accountsPayable = await prisma.accountPayable.findMany();
-      const accountsReceivable = await prisma.accountReceivable.findMany();
-      const settings = await prisma.workshopSetting.findMany();
-
-      const dump = {
-        exportedAt: new Date().toISOString(),
-        version: "2.0",
-        data: {
-          settings,
-          employees,
-          customers,
-          suppliers,
-          products,
-          standardServices,
-          washTickets,
-          serviceOrders,
-          sales,
-          transactions,
-          accountsPayable,
-          accountsReceivable,
-        },
-      };
+      const dump = await generateFullBackupData();
 
       return new NextResponse(JSON.stringify(dump, null, 2), {
         headers: {
-          "Content-Type": "application/json",
-          "Content-Disposition": `attachment; filename="backup_autogestao_${dateStr}.json"`,
+          "Content-Type": "application/json; charset=utf-8",
+          "Content-Disposition": `attachment; filename="backup_oficina_${dateStr}.json"`,
         },
       });
     }
@@ -77,7 +47,7 @@ export async function GET(request: Request) {
     return new NextResponse(fileBuffer, {
       headers: {
         "Content-Type": "application/x-sqlite3",
-        "Content-Disposition": `attachment; filename="autogestao_backup_${dateStr}.db"`,
+        "Content-Disposition": `attachment; filename="autogestao_banco_${dateStr}.db"`,
       },
     });
   } catch (error: any) {
@@ -86,19 +56,40 @@ export async function GET(request: Request) {
   }
 }
 
+// POST: Executa envio para o Google Drive ou Salva Configurações do Google Drive
 export async function POST(request: Request) {
   try {
-    // Executa backup em nuvem automático
-    const result = performAutoCloudBackup();
-    const updatedStatus = getCloudBackupStatus();
+    const body = await request.json().catch(() => ({}));
+
+    // Se o payload for para salvar configurações do Google Drive
+    if (body.action === "save_config") {
+      const { enabled, email, folderId, webhookUrl } = body;
+      await saveGoogleDriveConfig("default", {
+        enabled: Boolean(enabled),
+        email,
+        folderId,
+        webhookUrl,
+      });
+
+      const updated = await getGoogleDriveStatus("default");
+      return NextResponse.json({
+        success: true,
+        message: enabled ? "Google Drive configurado com sucesso!" : "Google Drive desconectado.",
+        status: updated,
+      });
+    }
+
+    // Se for para sincronizar/enviar cópia para o Google Drive
+    const result = await syncBackupToGoogleDrive("default");
+    const updatedStatus = await getGoogleDriveStatus("default");
 
     return NextResponse.json({
       success: true,
-      message: `Backup em nuvem sincronizado com sucesso!`,
+      message: `Backup enviado para o Google Drive com sucesso!`,
       result,
       status: updatedStatus,
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Falha ao salvar cópia de backup" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Falha ao processar backup" }, { status: 400 });
   }
 }

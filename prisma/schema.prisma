@@ -381,6 +381,13 @@ model WorkshopSetting {
   whatsappWashReminderTemplate String  @default("Olá {nome}! Faz alguns dias que não vemos seu {veiculo} ({placa}) por aqui. Que tal deixá-lo brilhando hoje? Temos horários disponíveis! 🧼✨")
   whatsappBirthdayTemplate    String   @default("🎉 Parabéns {nome}! A equipe {oficina} deseja a você um feliz aniversário com muita saúde e sucesso! Como presente especial, ganhe 15% de desconto em qualquer serviço neste mês! 🎁🚗")
   
+  // Google Drive Backup (Opcional e Explícito)
+  gdriveEnabled               Boolean  @default(false)
+  gdriveEmail                 String?
+  gdriveFolderId              String?
+  gdriveWebhookUrl            String?
+  gdriveLastBackup            DateTime?
+
   updatedAt                   DateTime @updatedAt
 }
 

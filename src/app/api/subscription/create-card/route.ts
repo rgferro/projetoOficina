@@ -6,7 +6,7 @@ import { verifySessionToken } from "@/lib/auth";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { planId = "PRO", tenantId } = body;
+    const { planId = "PRO", tenantId, seatsCount = 0 } = body;
 
     const token = req.cookies.get("torque_token")?.value;
     const session = token ? verifySessionToken(token) : null;
@@ -47,8 +47,6 @@ export async function POST(req: NextRequest) {
         },
       });
     }
-
-    const { planId = "PRO", tenantId, seatsCount = 0 } = body;
 
     const plan = SAAS_PLANS[planId] || SAAS_PLANS.PRO;
     const amount = seatsCount > 0 ? SAAS_PLANS.EXTRA_SEAT.price * seatsCount : plan.price;
