@@ -130,7 +130,7 @@ export default function LandingPage() {
       </section>
 
       {/* 💰 TABELA DE PLANOS & PREÇOS */}
-      <section className="bg-slate-900 text-white p-8 sm:p-12 rounded-3xl shadow-2xl space-y-8 relative overflow-hidden">
+      <section id="planos" className="bg-slate-900 text-white p-8 sm:p-12 rounded-3xl shadow-2xl space-y-8 relative overflow-hidden">
         <div className="text-center space-y-2 max-w-2xl mx-auto">
           <span className="text-xs font-black uppercase tracking-widest text-amber-400">
             Planos & Preços Transparentes

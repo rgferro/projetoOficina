@@ -1,19 +1,39 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { Header } from "@/components/Header";
 import { AuthProvider } from "@/lib/authContext";
 import { AccessGuard } from "@/components/AccessGuard";
 import { ActivationGate } from "@/components/ActivationGate";
+import { PublicNavbar } from "@/components/PublicNavbar";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const pathname = usePathname();
 
+  // Rotas públicas institucionais (Site de apresentação, SEO e AdSense)
+  const publicRoutes = ["/", "/sobre", "/contato", "/termos", "/privacidade", "/login", "/cadastro"];
+  const isPublicPage = publicRoutes.includes(pathname);
+
+  // Se for página pública do site, renderiza layout limpo sem barra lateral ou menus internos
+  if (isPublicPage) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+        <PublicNavbar />
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {children}
+        </main>
+      </div>
+    );
+  }
+
+  // Layout Interno do Sistema Operacional (Painel, Oficina, Lava-Jato, Caixa, etc.)
   return (
     <ActivationGate>
       <AuthProvider>
-        <div className="min-h-screen bg-slate-50 flex">
+        <div className="min-h-screen bg-slate-50 flex font-sans">
           <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
           <div className="flex-1 flex flex-col lg:pl-72 min-w-0">
