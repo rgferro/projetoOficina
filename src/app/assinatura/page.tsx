@@ -308,22 +308,6 @@ export default function AssinaturaPage() {
         </div>
       </div>
 
-      {/* Banner de Homologação Sandbox */}
-      <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
-        <div className="flex items-center gap-2.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
-          <div>
-            <strong className="block font-bold">🧪 Modo de Teste Sandbox Ativo (Mercado Pago)</strong>
-            <span className="text-slate-600">
-              Cartão de Teste Aprovado: <strong className="font-mono text-slate-800">4235 4567 8901 2345</strong> • CVV: <strong className="font-mono text-slate-800">123</strong> • Validade: <strong className="font-mono text-slate-800">12/28</strong>
-            </span>
-          </div>
-        </div>
-        <div className="text-[11px] font-mono bg-amber-200/60 px-2.5 py-1 rounded-lg text-amber-950 font-bold">
-          Ambiente Sandbox
-        </div>
-      </div>
-
       {/* Grade de Planos */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Plano Starter */}
@@ -337,7 +321,7 @@ export default function AssinaturaPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black px-3 py-1 rounded-full bg-slate-100 text-slate-700">
-                Starter (Isca)
+                Starter
               </span>
               {currentPlan === "STARTER" && (
                 <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
@@ -379,7 +363,7 @@ export default function AssinaturaPage() {
             disabled
             className="w-full py-3 rounded-2xl bg-slate-100 text-slate-500 text-xs font-bold cursor-default"
           >
-            {currentPlan === "STARTER" ? "Plano em Uso" : "Incluído"}
+            {currentPlan === "STARTER" ? "Plano Atual Ativo" : "Plano Básico"}
           </button>
         </div>
 
@@ -387,7 +371,7 @@ export default function AssinaturaPage() {
         <div
           className={`bg-white rounded-3xl p-6 sm:p-8 border-2 transition-all space-y-6 flex flex-col justify-between relative shadow-xl ${
             currentPlan === "PRO"
-              ? "border-blue-600 shadow-blue-500/20"
+              ? "border-blue-600 shadow-blue-500/20 ring-2 ring-blue-600/20"
               : "border-blue-500 hover:border-blue-600"
           }`}
         >
@@ -401,8 +385,8 @@ export default function AssinaturaPage() {
                 Oficina Pro
               </span>
               {currentPlan === "PRO" && (
-                <span className="text-[11px] font-bold text-blue-600 flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Ativo
+                <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full flex items-center gap-1 border border-blue-200">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Seu Plano Ativo
                 </span>
               )}
             </div>
@@ -411,7 +395,7 @@ export default function AssinaturaPage() {
               <div className="text-3xl font-black text-slate-900">
                 R$ 69,90 <span className="text-xs font-bold text-slate-500">/ mês</span>
               </div>
-              <p className="text-xs text-slate-500 mt-1">Cobrança via PIX ou Cartão</p>
+              <p className="text-xs text-slate-500 mt-1">Cobrança via PIX ou Cartão de Crédito</p>
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
@@ -443,32 +427,42 @@ export default function AssinaturaPage() {
           </div>
 
           <div className="space-y-2">
-            <button
-              onClick={() => handleGeneratePix("PRO")}
-              disabled={actionLoading === "pix_PRO"}
-              className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 transition-all active:scale-95"
-            >
-              <QrCode className="w-4 h-4" />
-              {actionLoading === "pix_PRO" ? "Gerando..." : "Assinar com PIX (R$ 69,90)"}
-            </button>
+            {currentPlan === "PRO" ? (
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <div className="w-full py-3 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center justify-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  Assinatura Pro Ativa
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsCancelModalOpen(true)}
+                  className="w-full py-2.5 rounded-2xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  Cancelar Assinatura Pro
+                </button>
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={() => handleGeneratePix("PRO")}
+                  disabled={actionLoading === "pix_PRO"}
+                  className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 transition-all active:scale-95"
+                >
+                  <QrCode className="w-4 h-4" />
+                  {actionLoading === "pix_PRO" ? "Gerando..." : "Assinar com PIX (R$ 69,90)"}
+                </button>
 
-            <button
-              onClick={() => handleCardSubscription("PRO")}
-              disabled={actionLoading === "card_PRO"}
-              className="w-full py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm"
-            >
-              <CreditCard className="w-4 h-4 text-amber-400" />
-              Assinatura Recorrente no Cartão
-            </button>
-
-            <button
-              onClick={() => handleCheckoutPro("PRO")}
-              disabled={actionLoading === "checkout_PRO"}
-              className="w-full py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all"
-            >
-              <Zap className="w-3.5 h-3.5 text-blue-600" />
-              Abrir no Checkout Pro (Sandbox)
-            </button>
+                <button
+                  onClick={() => handleCardSubscription("PRO")}
+                  disabled={actionLoading === "card_PRO"}
+                  className="w-full py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm"
+                >
+                  <CreditCard className="w-4 h-4 text-amber-400" />
+                  Assinatura no Cartão de Crédito
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -476,7 +470,7 @@ export default function AssinaturaPage() {
         <div
           className={`bg-white rounded-3xl p-6 sm:p-8 border-2 transition-all space-y-6 flex flex-col justify-between ${
             currentPlan === "ELITE"
-              ? "border-purple-600 shadow-purple-500/20"
+              ? "border-purple-600 shadow-purple-500/20 ring-2 ring-purple-600/20"
               : "border-slate-200 hover:border-purple-300"
           }`}
         >
@@ -486,8 +480,8 @@ export default function AssinaturaPage() {
                 Oficina Elite
               </span>
               {currentPlan === "ELITE" && (
-                <span className="text-[11px] font-bold text-purple-600 flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Ativo
+                <span className="text-[11px] font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full flex items-center gap-1 border border-purple-200">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Seu Plano Ativo
                 </span>
               )}
             </div>
@@ -524,32 +518,42 @@ export default function AssinaturaPage() {
           </div>
 
           <div className="space-y-2">
-            <button
-              onClick={() => handleGeneratePix("ELITE")}
-              disabled={actionLoading === "pix_ELITE"}
-              className="w-full py-3 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black flex items-center justify-center gap-2 shadow-md shadow-purple-500/20 transition-all active:scale-95"
-            >
-              <QrCode className="w-4 h-4" />
-              {actionLoading === "pix_ELITE" ? "Gerando..." : "Assinar com PIX (R$ 129,90)"}
-            </button>
+            {currentPlan === "ELITE" ? (
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <div className="w-full py-3 rounded-2xl bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold flex items-center justify-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-purple-600" />
+                  Assinatura Elite Ativa
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsCancelModalOpen(true)}
+                  className="w-full py-2.5 rounded-2xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  Cancelar Assinatura Elite
+                </button>
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={() => handleGeneratePix("ELITE")}
+                  disabled={actionLoading === "pix_ELITE"}
+                  className="w-full py-3 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black flex items-center justify-center gap-2 shadow-md shadow-purple-500/20 transition-all active:scale-95"
+                >
+                  <QrCode className="w-4 h-4" />
+                  {actionLoading === "pix_ELITE" ? "Gerando..." : "Assinar com PIX (R$ 129,90)"}
+                </button>
 
-            <button
-              onClick={() => handleCardSubscription("ELITE")}
-              disabled={actionLoading === "card_ELITE"}
-              className="w-full py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm"
-            >
-              <CreditCard className="w-4 h-4 text-purple-400" />
-              Assinatura Recorrente no Cartão
-            </button>
-
-            <button
-              onClick={() => handleCheckoutPro("ELITE")}
-              disabled={actionLoading === "checkout_ELITE"}
-              className="w-full py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all"
-            >
-              <Zap className="w-3.5 h-3.5 text-purple-600" />
-              Abrir no Checkout Pro (Sandbox)
-            </button>
+                <button
+                  onClick={() => handleCardSubscription("ELITE")}
+                  disabled={actionLoading === "card_ELITE"}
+                  className="w-full py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm"
+                >
+                  <CreditCard className="w-4 h-4 text-purple-400" />
+                  Assinatura no Cartão de Crédito
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
