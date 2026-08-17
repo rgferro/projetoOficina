@@ -17,6 +17,7 @@ import {
   Banknote,
   QrCode,
   Send,
+  AlertTriangle,
 } from "lucide-react";
 import {
   formatCurrency,
