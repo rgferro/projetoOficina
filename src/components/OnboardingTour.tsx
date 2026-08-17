@@ -1,289 +1,159 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import {
-  Building,
-  Smartphone,
-  Wrench,
-  Users,
-  Package,
-  FileText,
-  Droplets,
-  CreditCard,
-  ChevronLeft,
-  ChevronRight,
-  X,
-  Sparkles,
-  ArrowRight,
-  CheckCircle2,
-} from "lucide-react";
-
-export interface TourStep {
-  id: string;
-  title: string;
-  category: string;
-  description: string;
-  tip?: string;
-  route: string;
-  icon: any;
-  actionText: string;
-}
-
-export const TOUR_STEPS: TourStep[] = [
-  {
-    id: "config_empresa",
-    category: "1. Identidade da Empresa",
-    title: "Verifique os Dados da sua Oficina",
-    description:
-      "Confira a Razão Social/Nome Fantasia, CNPJ/CPF, WhatsApp oficial e Endereço Completo da oficina. Esses dados são emitidos no topo das Ordens de Serviço (OS) e recibos impressos.",
-    tip: "Os dados preenchidos no cadastro já estão sincronizados aqui.",
-    route: "/configuracoes",
-    icon: Building,
-    actionText: "Acessar Ajustes da Oficina",
-  },
-  {
-    id: "config_whatsapp",
-    category: "2. Comunicação Automática",
-    title: "Conecte o WhatsApp Oficial (QR Code)",
-    description:
-      "Aponte a câmera do seu celular para escanear o QR Code oficial. Com o aparelho conectado, o sistema dispara avisos de 'Carro Pronto', 'Orçamento Aprovado' e 'Troca de Óleo' de forma 100% silenciosa e em segundo plano.",
-    tip: "Apenas 1 aparelho precisa ser pareado para atender toda a oficina.",
-    route: "/configuracoes",
-    icon: Smartphone,
-    actionText: "Ir para Conexão WhatsApp",
-  },
-  {
-    id: "tabela_servicos",
-    category: "3. Catálogo & Mão de Obra",
-    title: "Cadastre sua Tabela de Serviços",
-    description:
-      "Defina os serviços padronizados da sua oficina e do lava-jato (ex: Troca de Óleo + Filtro, Alinhamento & Balanceamento, Lavagem Completa + Cera) com valores sugeridos e tempo estimado.",
-    tip: "Esses serviços agilizam a abertura de OS e vendas no PDV em 1 clique.",
-    route: "/servicos-padrao",
-    icon: Wrench,
-    actionText: "Abrir Tabela de Serviços",
-  },
-  {
-    id: "equipe_usuarios",
-    category: "4. Equipe & Permissões",
-    title: "Convide Mecânicos, Lavadores & Atendentes",
-    description:
-      "Cadastre os membros da sua equipe informando Nome, Cargo e E-mail. Cada colaborador receberá um convite por e-mail para definir sua própria senha com controle de permissões por perfil.",
-    tip: "O dono não precisa criar senhas para terceiros, o fluxo é 100% seguro.",
-    route: "/equipe",
-    icon: Users,
-    actionText: "Gerenciar Equipe",
-  },
-  {
-    id: "estoque_pecas",
-    category: "5. Estoque & Compras",
-    title: "Cadastre Peças ou Importe XML da NF-e",
-    description:
-      "Cadastre filtros, óleos, pastilhas e insumos com preço de custo, margem de lucro e estoque mínimo. Você também pode importar a nota fiscal em XML do fornecedor para dar entrada automática em lote.",
-    tip: "O sistema avisa automaticamente quando um item atinge o estoque crítico.",
-    route: "/estoque",
-    icon: Package,
-    actionText: "Acessar Estoque & XML",
-  },
-  {
-    id: "oficina_os",
-    category: "6. Mecânica & Funilaria",
-    title: "Abra Ordens de Serviço (OS) com Checklist",
-    description:
-      "Crie ordens de serviço digitais com registro de placa, fotos de avarias no veículo, checklist de entrada, peças utilizadas e atribuição direta ao mecânico responsável.",
-    tip: "Ao aprovar o orçamento, envie o resumo pelo WhatsApp ao cliente.",
-    route: "/oficina",
-    icon: FileText,
-    actionText: "Acessar Módulo Oficina & OS",
-  },
-  {
-    id: "lavajato_patio",
-    category: "7. Estética & Lava-Jato",
-    title: "Controle a Esteira de Lavagens do Pátio",
-    description:
-      "Monitore o quadro Kanban de veículos [Aguardando ➔ Em Lavagem ➔ Pronto]. Ao concluir a lavagem, clique em 'Avisar no WhatsApp' para notificar o cliente na mesma hora.",
-    tip: "Entrada rápida com placa avulsa para clientes de passagem.",
-    route: "/lavajato",
-    icon: Droplets,
-    actionText: "Acessar Quadro de Pátio",
-  },
-  {
-    id: "pdv_caixa",
-    category: "8. Financeiro & Vendas",
-    title: "PDV Balcão, Fechamento de Caixa & DRE",
-    description:
-      "Realize vendas rápidas de balcão, receba pagamentos por PIX (com QR Code copia e cola), Cartão ou Dinheiro e acompanhe o fluxo de caixa diário e relatórios de lucratividade.",
-    tip: "O caixa controla sangrias, suprimentos e comissões por colaborador.",
-    route: "/pdv",
-    icon: CreditCard,
-    actionText: "Acessar PDV & Caixa",
-  },
-];
+import { useEffect, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { driver, DriveStep } from "driver.js";
+import "driver.js/dist/driver.css";
 
 export default function OnboardingTour() {
-  const router = useRouter();
   const pathname = usePathname();
+  const router = useRouter();
+  const driverObjRef = useRef<any>(null);
 
-  const [isOpen, setIsOpen] = useState(false);
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const startTour = () => {
+    // Configura os passos com seletores reais dos menus e módulos da tela
+    const steps: DriveStep[] = [
+      {
+        element: "#tour-nav-configuracoes",
+        popover: {
+          title: "1. Dados Oficiais & Ajustes da Oficina",
+          description:
+            "Comece conferindo os dados da sua empresa: Nome da Oficina, CNPJ/CPF, Telefone e Endereço Completo. Eles saem impressos nas OS, ordens de serviço e recibos térmicos.",
+          side: "right",
+          align: "start",
+        },
+      },
+      {
+        element: "#tour-nav-servicos",
+        popover: {
+          title: "2. Tabela de Serviços & Mão de Obra",
+          description:
+            "Cadastre seus serviços padronizados e lavagens (Troca de Óleo, Alinhamento, Lavagem Completa) com valores pré-definidos para agilizar a abertura de OS e vendas no PDV em 1 clique.",
+          side: "right",
+          align: "start",
+        },
+      },
+      {
+        element: "#tour-nav-equipe",
+        popover: {
+          title: "3. Equipe & Colaboradores",
+          description:
+            "Convide seus mecânicos, atendentes e lavadores por e-mail. Eles receberão um link seguro para cadastrar suas próprias senhas com controle de permissões por perfil.",
+          side: "right",
+          align: "start",
+        },
+      },
+      {
+        element: "#tour-nav-estoque",
+        popover: {
+          title: "4. Estoque & Importação de XML",
+          description:
+            "Cadastre peças e insumos com preço de custo e estoque mínimo, ou suba o arquivo XML da nota fiscal (NF-e) do fornecedor para dar entrada automática em todo o estoque.",
+          side: "right",
+          align: "start",
+        },
+      },
+      {
+        element: "#tour-nav-oficina",
+        popover: {
+          title: "5. Oficina Mecânica & Ordens de Serviço",
+          description:
+            "Abra e gerencie ordens de serviço com registro de placa, checklist digital de avarias, fotos do veículo, peças utilizadas e atribuição direta ao mecânico responsável.",
+          side: "right",
+          align: "start",
+        },
+      },
+      {
+        element: "#tour-nav-lavajato",
+        popover: {
+          title: "6. Estética Automotiva & Lava-Jato",
+          description:
+            "Acompanhe a esteira de lavagens do pátio em tempo real no Kanban [Aguardando ➔ Em Lavagem ➔ Pronto] e avise o cliente pelo WhatsApp com 1 clique.",
+          side: "right",
+          align: "start",
+        },
+      },
+      {
+        element: "#tour-nav-pdv",
+        popover: {
+          title: "7. PDV Balcão & Caixa",
+          description:
+            "Realize vendas rápidas no balcão, receba pagamentos por PIX automático, Cartão ou Dinheiro e faça o controle de sangrias, suprimentos e comissões.",
+          side: "right",
+          align: "start",
+        },
+      },
+      {
+        element: "#tour-nav-crm",
+        popover: {
+          title: "8. CRM & Lembretes no WhatsApp",
+          description:
+            "Monitore clientes inativos e envie lembretes preventivos de troca de óleo (6 meses) e lavagem com templates inteligentes.",
+          side: "right",
+          align: "start",
+        },
+      },
+      {
+        element: "#tour-btn-guia",
+        popover: {
+          title: "🚀 Pronto para Começar!",
+          description:
+            "Você pode reabrir este Guia Passo a Passo a qualquer momento clicando neste botão no topo da tela ou no menu lateral.",
+          side: "bottom",
+          align: "end",
+        },
+      },
+    ];
+
+    const driverInstance = driver({
+      showProgress: true,
+      animate: true,
+      allowClose: true,
+      overlayColor: "rgba(15, 23, 42, 0.75)",
+      stagePadding: 6,
+      stageRadius: 14,
+      popoverClass: "torque-driver-popover",
+      nextBtnText: "Próximo →",
+      prevBtnText: "← Anterior",
+      doneBtnText: "✓ Concluir Guia",
+      steps,
+      onDestroyed: () => {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("torque_onboarding_completed", "true");
+        }
+      },
+    });
+
+    driverObjRef.current = driverInstance;
+    driverInstance.drive();
+  };
 
   useEffect(() => {
-    // Verifica se o usuário já viu o tour ou se solicitou a reabertura
-    const hasSeenTour = localStorage.getItem("torque_onboarding_completed");
-    if (!hasSeenTour) {
-      // Abre automaticamente na primeira visita ao painel (se não estiver na landing page ou auth)
-      if (pathname !== "/" && pathname !== "/login" && pathname !== "/cadastro" && pathname !== "/convite") {
-        setIsOpen(true);
+    // Abre automaticamente no primeiro acesso ao painel
+    if (typeof window !== "undefined") {
+      const hasSeenTour = localStorage.getItem("torque_onboarding_completed");
+      const publicRoutes = ["/", "/login", "/cadastro", "/convite", "/sobre", "/termos", "/privacidade"];
+      if (!hasSeenTour && !publicRoutes.includes(pathname)) {
+        setTimeout(() => {
+          startTour();
+        }, 800);
       }
     }
 
-    // Listener para reabrir o tour quando solicitado pelo botão do cabeçalho
     const handleOpenTour = () => {
-      setCurrentStepIndex(0);
-      setIsOpen(true);
+      startTour();
     };
 
     window.addEventListener("torque:open-onboarding-tour", handleOpenTour);
     return () => {
       window.removeEventListener("torque:open-onboarding-tour", handleOpenTour);
+      if (driverObjRef.current) {
+        try {
+          driverObjRef.current.destroy();
+        } catch (e) {}
+      }
     };
   }, [pathname]);
 
-  if (!isOpen) return null;
-
-  const currentStep = TOUR_STEPS[currentStepIndex];
-  const StepIcon = currentStep.icon;
-  const isFirst = currentStepIndex === 0;
-  const isLast = currentStepIndex === TOUR_STEPS.length - 1;
-
-  const handleClose = () => {
-    localStorage.setItem("torque_onboarding_completed", "true");
-    setIsOpen(false);
-  };
-
-  const handleNext = () => {
-    if (isLast) {
-      handleClose();
-    } else {
-      setCurrentStepIndex((prev) => prev + 1);
-    }
-  };
-
-  const handlePrev = () => {
-    if (!isFirst) {
-      setCurrentStepIndex((prev) => prev - 1);
-    }
-  };
-
-  const handleNavigateToStep = () => {
-    if (pathname !== currentStep.route) {
-      router.push(currentStep.route);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
-      {/* Container do Tooltip estilo Onboarding Card */}
-      <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden relative transform transition-all duration-300 scale-100">
-        
-        {/* Barra de Progresso Superior */}
-        <div className="w-full bg-slate-100 h-1.5 flex">
-          {TOUR_STEPS.map((_, idx) => (
-            <div
-              key={idx}
-              className={`h-full flex-1 transition-all duration-300 ${
-                idx <= currentStepIndex ? "bg-blue-600" : "bg-slate-200"
-              }`}
-            />
-          ))}
-        </div>
-
-        {/* Top Header do Card */}
-        <div className="p-6 pb-4 flex items-start justify-between gap-4 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 shadow-sm flex-shrink-0">
-              <StepIcon className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="text-[11px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100 inline-block mb-1">
-                {currentStep.category}
-              </span>
-              <h3 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
-                {currentStep.title}
-              </h3>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors flex-shrink-0"
-            title="Fechar Tutorial"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Conteúdo Explicativo */}
-        <div className="p-6 space-y-4">
-          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-            {currentStep.description}
-          </p>
-
-          {currentStep.tip && (
-            <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-2xl flex items-start gap-2.5 text-xs text-amber-900">
-              <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <span>
-                <strong>Dica de Ouro:</strong> {currentStep.tip}
-              </span>
-            </div>
-          )}
-
-          {/* Botão de Ação Direta para a Tela */}
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={handleNavigateToStep}
-              className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
-            >
-              <span>{currentStep.actionText}</span>
-              <ArrowRight className="w-3.5 h-3.5 text-blue-400" />
-            </button>
-          </div>
-        </div>
-
-        {/* Rodapé com Navegação (Anterior, Contador, Próximo) */}
-        <div className="p-4 px-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-          <div className="text-xs font-bold text-slate-500">
-            Passo <strong className="text-slate-900">{currentStepIndex + 1}</strong> de {TOUR_STEPS.length}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handlePrev}
-              disabled={isFirst}
-              className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-              <span>Anterior</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleNext}
-              className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-md active:scale-95 ${
-                isLast
-                  ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20"
-                  : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20"
-              }`}
-            >
-              <span>{isLast ? "Concluir Guia" : "Próximo"}</span>
-              {isLast ? <CheckCircle2 className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return null;
 }

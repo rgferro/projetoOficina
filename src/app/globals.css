@@ -58,3 +58,87 @@ body {
     max-width: 100% !important;
   }
 }
+
+/* 🚀 Estilos Personalizados para o Tour Interativo (Driver.js) */
+.torque-driver-popover.driver-popover {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-radius: 1.25rem !important;
+  padding: 1.25rem 1.5rem !important;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(226, 232, 240, 0.8) !important;
+  max-width: 380px !important;
+  font-family: inherit !important;
+}
+
+.torque-driver-popover .driver-popover-title {
+  font-size: 1.05rem !important;
+  font-weight: 900 !important;
+  color: #0f172a !important;
+  margin-bottom: 0.5rem !important;
+  line-height: 1.3 !important;
+}
+
+.torque-driver-popover .driver-popover-description {
+  font-size: 0.8125rem !important;
+  line-height: 1.5 !important;
+  color: #475569 !important;
+  margin-bottom: 1rem !important;
+}
+
+.torque-driver-popover .driver-popover-progress-text {
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  color: #64748b !important;
+}
+
+.torque-driver-popover .driver-popover-footer {
+  margin-top: 0.75rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border-top: 1px solid #f1f5f9 !important;
+  padding-top: 0.75rem !important;
+}
+
+.torque-driver-popover .driver-popover-next-btn,
+.torque-driver-popover .driver-popover-prev-btn,
+.torque-driver-popover .driver-popover-close-btn {
+  border-radius: 0.75rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 800 !important;
+  padding: 0.45rem 0.85rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.torque-driver-popover .driver-popover-next-btn {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.25) !important;
+  text-shadow: none !important;
+}
+
+.torque-driver-popover .driver-popover-next-btn:hover {
+  background: #1d4ed8 !important;
+}
+
+.torque-driver-popover .driver-popover-prev-btn {
+  background: #f8fafc !important;
+  color: #475569 !important;
+  border: 1px solid #e2e8f0 !important;
+  text-shadow: none !important;
+}
+
+.torque-driver-popover .driver-popover-prev-btn:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.torque-driver-popover .driver-popover-close-btn {
+  color: #94a3b8 !important;
+}
+
+.torque-driver-popover .driver-popover-close-btn:hover {
+  color: #0f172a !important;
+}
+

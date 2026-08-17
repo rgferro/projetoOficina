@@ -98,6 +98,7 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Botão de Tour Interativo / Tutorial */}
           <button
+            id="tour-btn-guia"
             type="button"
             onClick={() => {
               window.dispatchEvent(new CustomEvent("torque:open-onboarding-tour"));
@@ -111,6 +112,7 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
 
           {/* Atalhos Rápidos */}
           <Link
+            id="tour-btn-lavajato-top"
             href="/lavajato"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-xs font-bold border border-cyan-200/80 transition-colors shadow-sm"
           >
@@ -119,6 +121,7 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
           </Link>
 
           <Link
+            id="tour-btn-nova-os"
             href="/oficina/nova"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm shadow-blue-600/20 transition-all"
           >

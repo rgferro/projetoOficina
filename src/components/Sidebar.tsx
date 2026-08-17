@@ -163,6 +163,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             return (
               <Link
                 key={item.name}
+                id={`tour-nav-${item.href.replace("/", "")}`}
                 href={item.href}
                 onClick={onClose}
                 className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
