@@ -198,6 +198,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               </Link>
             );
           })}
+        </div>
+
         {/* Botão Guia de Primeiros Passos no Sidebar */}
         <div className="p-3 border-t border-slate-800 bg-slate-900/60">
           <button
