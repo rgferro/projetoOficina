@@ -312,7 +312,7 @@ export default function FinanceiroPage() {
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
-            + Conta
+            <span>Nova Conta</span>
           </button>
         </div>
       </div>
