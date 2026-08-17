@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
           id: tenant.id,
           name: tenant.ownerName,
           email: tenant.ownerEmail,
-          phone: tenant.phone,
+          phone: tenant.ownerPhone || "",
           role: "Proprietário / Administrador",
           accessLevel: "ADMIN",
           workshopName: tenant.name,
@@ -143,7 +143,7 @@ export async function PUT(req: NextRequest) {
         where: { id: userId },
         data: {
           ownerName: name ? name.trim() : tenant.ownerName,
-          phone: phone ? phone.trim() : tenant.phone,
+          ownerPhone: phone ? phone.trim() : tenant.ownerPhone,
           ownerPassword:
             newPassword && newPassword.trim().length >= 6
               ? hashPassword(newPassword.trim())
@@ -158,7 +158,7 @@ export async function PUT(req: NextRequest) {
           id: updated.id,
           name: updated.ownerName,
           email: updated.ownerEmail,
-          phone: updated.phone,
+          phone: updated.ownerPhone,
           role: "Proprietário / Administrador",
           accessLevel: "ADMIN",
         },
