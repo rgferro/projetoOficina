@@ -45,6 +45,8 @@ export default function LavaJatoPage() {
   const [toastMsg, setToastMsg] = useState("");
   const [sendingWaId, setSendingWaId] = useState<string | null>(null);
 
+  const [standardServices, setStandardServices] = useState<any[]>([]);
+
   // Form states - Nova Lavagem
   const [isExpressRegister, setIsExpressRegister] = useState(false);
   const [formData, setFormData] = useState({
@@ -63,41 +65,72 @@ export default function LavaJatoPage() {
 
   const [saving, setSaving] = useState(false);
 
-  const washOptions = [
-    { name: "Lavagem Simples (Ducha + Aspiração)", defaultPrice: "50" },
-    { name: "Lavagem Completa", defaultPrice: "70" },
-    { name: "Lavagem Completa + Cera", defaultPrice: "90" },
-    { name: "Higienização Interna Completa", defaultPrice: "180" },
-    { name: "Lavagem de Motor + Chassi", defaultPrice: "120" },
-    { name: "Polimento Técnico e Cristalização", defaultPrice: "350" },
-  ];
+  const washOptions =
+    standardServices.length > 0
+      ? standardServices.map((s) => ({
+          name: s.name,
+          defaultPrice: String(s.defaultPrice),
+        }))
+      : [
+          { name: "Lavagem Simples (Ducha + Aspiração)", defaultPrice: "50" },
+          { name: "Lavagem Completa", defaultPrice: "70" },
+          { name: "Lavagem Completa + Cera", defaultPrice: "90" },
+          { name: "Higienização Interna Completa", defaultPrice: "180" },
+          { name: "Lavagem de Motor + Chassi", defaultPrice: "120" },
+          { name: "Polimento Técnico e Cristalização", defaultPrice: "350" },
+        ];
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [ticketsRes, empRes, vehRes, setRes] = await Promise.all([
+      const [ticketsRes, empRes, vehRes, setRes, servRes] = await Promise.all([
         fetch("/api/lavajato"),
         fetch("/api/equipe"),
         fetch("/api/veiculos"),
         fetch("/api/configuracoes"),
+        fetch("/api/servicos-padrao"),
       ]);
 
-      const [ticketsData, empData, vehData, setData] = await Promise.all([
+      const [ticketsData, empData, vehData, setData, servData] = await Promise.all([
         ticketsRes.json(),
         empRes.json(),
         vehRes.json(),
         setRes.json(),
+        servRes.json(),
       ]);
 
       setTickets(ticketsData);
       setEmployees(empData.filter((e: any) => e.active));
       setVehicles(vehData);
       setSettings(setData);
+      setStandardServices(Array.isArray(servData) ? servData : []);
     } catch (err) {
       console.error("Erro ao carregar dados do lava-jato:", err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenNewTicketModal = () => {
+    const defaultService =
+      standardServices.length > 0
+        ? standardServices[0]
+        : { name: "Lavagem Completa", defaultPrice: 70 };
+
+    setFormData({
+      vehicleId: "",
+      serviceType: defaultService.name,
+      price: String(defaultService.defaultPrice),
+      employeeId: "",
+      notes: "",
+      newPlate: "",
+      newCustomerName: "",
+      newCustomerPhone: "",
+      newVehicleModel: "",
+      newVehicleCategory: "Hatch / Sedan",
+    });
+    setIsExpressRegister(false);
+    setIsNewTicketModalOpen(true);
   };
 
   useEffect(() => {
@@ -266,13 +299,13 @@ export default function LavaJatoPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsNewTicketModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-sm shadow-md shadow-cyan-600/20 transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          Nova Entrada no Lava-Jato
-        </button>
+          <button
+            onClick={handleOpenNewTicketModal}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-sm shadow-md shadow-cyan-500/20 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            Nova Entrada
+          </button>
       </div>
 
       {toastMsg && (
