@@ -1,10 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import crypto from "crypto";
+import { sendEmployeeInviteEmail } from "@/lib/email";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const tenantId = searchParams.get("tenantId");
+
+    const whereClause: any = {};
+    if (tenantId) {
+      whereClause.tenantId = tenantId;
+    }
+
     const employees = await prisma.employee.findMany({
+      where: whereClause,
       include: {
+        tenant: true,
         washTickets: {
           where: { status: "ENTREGUE" },
           select: { price: true, enteredAt: true },
@@ -17,7 +29,6 @@ export async function GET() {
       orderBy: { name: "asc" },
     });
 
-    // Calcula resumo de produção e comissão estimada
     const enriched = employees.map((emp) => {
       const totalWashes = emp.washTickets.length;
       const washVolume = emp.washTickets.reduce((sum, w) => sum + w.price, 0);
@@ -28,12 +39,13 @@ export async function GET() {
         0
       );
 
-      // Comissão calculada sobre serviços e lavagens
       const totalEligibleVolume = washVolume + osServicesVolume;
       const estimatedCommission = (totalEligibleVolume * emp.commissionRate) / 100;
 
       return {
         ...emp,
+        hasPassword: !!emp.password,
+        hasPendingInvite: !!emp.inviteToken && (!emp.inviteExpiresAt || new Date() < new Date(emp.inviteExpiresAt)),
         stats: {
           totalWashes,
           washVolume,
@@ -51,10 +63,10 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
-    const { name, role, accessLevel, pinCode, email, phone, commissionRate } = body;
+    const body = await req.json();
+    const { name, role, accessLevel, email, phone, commissionRate, tenantId } = body;
 
     if (!name || !role) {
       return NextResponse.json(
@@ -63,29 +75,89 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!email || !email.includes("@")) {
+      return NextResponse.json(
+        { error: "Informe um e-mail válido para enviar o convite de criação de senha do funcionário." },
+        { status: 400 }
+      );
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Verifica se já existe um funcionário com este e-mail
+    const existing = await prisma.employee.findFirst({
+      where: { email: cleanEmail },
+    });
+
+    if (existing) {
+      return NextResponse.json(
+        { error: "Já existe um membro da equipe cadastrado com este e-mail." },
+        { status: 400 }
+      );
+    }
+
+    // Busca dados da oficina
+    let tenant: any = null;
+    if (tenantId) {
+      tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    } else {
+      tenant = await prisma.tenant.findFirst();
+    }
+
+    // Gera token de convite com validade de 48 horas
+    const inviteToken = crypto.randomBytes(24).toString("hex");
+    const inviteExpiresAt = new Date();
+    inviteExpiresAt.setHours(inviteExpiresAt.getHours() + 48);
+
     const employee = await prisma.employee.create({
       data: {
-        name,
-        role,
+        tenantId: tenant?.id || null,
+        name: name.trim(),
+        role: role.trim(),
         accessLevel: accessLevel || "MECANICO",
-        pinCode: pinCode || "1234",
-        email: email || null,
-        phone: phone || null,
+        email: cleanEmail,
+        phone: phone ? phone.trim() : null,
         commissionRate: Number(commissionRate) || 0,
+        inviteToken,
+        inviteExpiresAt,
         active: true,
       },
     });
 
-    return NextResponse.json(employee, { status: 201 });
+    // Constrói o link de convite
+    const host = req.headers.get("host") || "localhost:3000";
+    const protocol = host.includes("localhost") ? "http" : "https";
+    const inviteLink = `${protocol}://${host}/convite?token=${inviteToken}`;
+
+    // Dispara e-mail de convite via Brevo REST API v3
+    await sendEmployeeInviteEmail({
+      employeeName: employee.name,
+      employeeEmail: cleanEmail,
+      role: employee.role,
+      workshopName: tenant?.name || "Torque ERP",
+      ownerName: tenant?.ownerName || "Administração",
+      inviteLink,
+    }).catch((err) => console.error("Erro ao enviar e-mail de convite:", err));
+
+    return NextResponse.json(
+      {
+        success: true,
+        employee,
+        message: `Convite enviado com sucesso para ${cleanEmail}! O funcionário receberá um link para criar sua senha de acesso.`,
+        inviteLink,
+      },
+      { status: 201 }
+    );
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Erro ao criar funcionário" }, { status: 500 });
+    console.error("Erro ao cadastrar funcionário:", error);
+    return NextResponse.json({ error: error.message || "Erro ao cadastrar funcionário" }, { status: 500 });
   }
 }
 
-export async function PUT(request: Request) {
+export async function PUT(req: NextRequest) {
   try {
-    const body = await request.json();
-    const { id, name, role, accessLevel, pinCode, email, phone, commissionRate, active } = body;
+    const body = await req.json();
+    const { id, name, role, accessLevel, email, phone, commissionRate, active } = body;
 
     if (!id) {
       return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
@@ -97,11 +169,10 @@ export async function PUT(request: Request) {
         name,
         role,
         accessLevel: accessLevel !== undefined ? accessLevel : undefined,
-        pinCode: pinCode !== undefined ? pinCode : undefined,
         email: email !== undefined ? email : undefined,
-        phone,
-        commissionRate: Number(commissionRate) || 0,
-        active: active !== undefined ? active : true,
+        phone: phone !== undefined ? phone : undefined,
+        commissionRate: commissionRate !== undefined ? Number(commissionRate) : undefined,
+        active: active !== undefined ? active : undefined,
       },
     });
 
@@ -111,9 +182,9 @@ export async function PUT(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE(req: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
     if (!id) {
@@ -126,6 +197,6 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Erro ao excluir funcionário" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Erro ao remover funcionário" }, { status: 500 });
   }
 }

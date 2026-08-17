@@ -23,17 +23,14 @@ interface AuthContextType {
   setRolePermissions: (role: AccessLevel, routes: string[]) => void;
   resetPermissions: () => void;
   canAccess: (path: string) => boolean;
-  switchEmployee: (employee: EmployeeUser) => void;
   reloadEmployees: () => Promise<void>;
-  loginWithPin: (employeeId: string, pin: string) => { success: boolean; message?: string };
 }
 
 const DEFAULT_ADMIN: EmployeeUser = {
   id: "admin-master",
-  name: "Administrador Geral",
-  role: "Diretoria",
+  name: "Proprietário",
+  role: "Administrador",
   accessLevel: "ADMIN",
-  pinCode: "1234",
   active: true,
 };
 
@@ -47,15 +44,12 @@ const AuthContext = createContext<AuthContextType>({
   setRolePermissions: () => {},
   resetPermissions: () => {},
   canAccess: () => true,
-  switchEmployee: () => {},
   reloadEmployees: async () => {},
-  loginWithPin: () => ({ success: true }),
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentEmployee, setCurrentEmployee] = useState<EmployeeUser | null>(DEFAULT_ADMIN);
   const [employees, setEmployees] = useState<EmployeeUser[]>([]);
-  // Modo de restrição ativado por padrão conforme solicitado pelo usuário
   const [isEnforced, setIsEnforced] = useState<boolean>(true);
   const [permissionsMap, setPermissionsMap] = useState<Record<AccessLevel, string[]>>(
     DEFAULT_PERMISSIONS_MAP
@@ -66,14 +60,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch("/api/equipe");
       if (res.ok) {
         const data = await res.json();
-        setEmployees(data);
-
-        // Se o usuário atual for o placeholder ou não estiver definido, seleciona o admin da lista
-        if (!currentEmployee || currentEmployee.id === "admin-master") {
-          const firstAdmin = data.find((e: EmployeeUser) => e.accessLevel === "ADMIN" && e.active);
-          if (firstAdmin) {
-            setCurrentEmployee(firstAdmin);
-          }
+        if (Array.isArray(data)) {
+          setEmployees(data);
         }
       }
     } catch (err) {
@@ -83,19 +71,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const savedEmp = localStorage.getItem("autogestao_current_employee");
-      if (savedEmp) {
-        try {
-          setCurrentEmployee(JSON.parse(savedEmp));
-        } catch (e) {}
-      }
-
-      const savedEnforced = localStorage.getItem("autogestao_is_enforced");
-      if (savedEnforced !== null) {
-        setIsEnforced(savedEnforced === "true");
-      } else {
-        setIsEnforced(true); // Padrão: ativado
-      }
+      // 1. Carrega dados do usuário autenticado real
+      try {
+        const savedUser = localStorage.getItem("torque_user");
+        if (savedUser) {
+          const u = JSON.parse(savedUser);
+          setCurrentEmployee({
+            id: u.id || "admin-owner",
+            name: u.name || "Dono da Oficina",
+            role: u.role || (u.isOwner ? "Proprietário" : "Administrador"),
+            accessLevel: (u.accessLevel as AccessLevel) || (u.isOwner ? "ADMIN" : "MECANICO"),
+            email: u.email,
+            phone: u.phone,
+            active: true,
+          });
+        }
+      } catch (e) {}
 
       const savedPerms = localStorage.getItem("autogestao_permissions_map");
       if (savedPerms) {
@@ -107,20 +98,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     reloadEmployees();
   }, []);
-
-  const switchEmployee = (employee: EmployeeUser) => {
-    setCurrentEmployee(employee);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("autogestao_current_employee", JSON.stringify(employee));
-    }
-  };
-
-  const updateEnforced = (val: boolean) => {
-    setIsEnforced(val);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("autogestao_is_enforced", String(val));
-    }
-  };
 
   const savePermissions = (newMap: Record<AccessLevel, string[]>) => {
     setPermissionsMap(newMap);
@@ -166,19 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (currentEmployee.accessLevel === "ADMIN") return true;
 
     const allowed = permissionsMap[currentEmployee.accessLevel] || [];
-    return allowed.some((p) => (p === "/" ? path === "/" : path.startsWith(p)));
-  };
-
-  const loginWithPin = (employeeId: string, pin: string) => {
-    const target = employees.find((e) => e.id === employeeId);
-    if (!target) return { success: false, message: "Funcionário não encontrado." };
-
-    if (target.pinCode && target.pinCode !== pin) {
-      return { success: false, message: "PIN / Senha incorreta." };
-    }
-
-    switchEmployee(target);
-    return { success: true };
+    return allowed.some((p) => (p === "/dashboard" ? path === "/dashboard" : path.startsWith(p)));
   };
 
   return (
@@ -187,15 +152,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         currentEmployee,
         employees,
         isEnforced,
-        setIsEnforced: updateEnforced,
+        setIsEnforced,
         permissionsMap,
         togglePermission,
         setRolePermissions,
         resetPermissions,
         canAccess,
-        switchEmployee,
         reloadEmployees,
-        loginWithPin,
       }}
     >
       {children}

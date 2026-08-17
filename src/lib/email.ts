@@ -105,6 +105,58 @@ export async function sendVerificationEmail(targetEmail: string, code: string) {
 }
 
 /**
+ * Envia convite por e-mail para um novo colaborador criar sua senha
+ */
+export async function sendEmployeeInviteEmail(data: {
+  employeeName: string;
+  employeeEmail: string;
+  role: string;
+  workshopName: string;
+  ownerName: string;
+  inviteLink: string;
+}) {
+  console.log(`📧 [Torque ERP] Despachando convite para funcionário [${data.employeeEmail}] via Brevo...`);
+
+  return sendBrevoEmail({
+    to: [{ email: data.employeeEmail, name: data.employeeName }],
+    subject: `Convite de Acesso: Equipe ${data.workshopName} - Torque ERP`,
+    htmlContent: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 30px; color: #1e293b; max-width: 540px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 20px; background: #ffffff;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <div style="display: inline-block; width: 48px; height: 48px; line-height: 48px; background: linear-gradient(135deg, #2563eb, #4f46e5); color: #ffffff; font-size: 24px; font-weight: bold; border-radius: 14px;">⚡</div>
+          <h2 style="color: #0f172a; margin: 12px 0 0 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;">Torque ERP</h2>
+          <p style="color: #64748b; font-size: 12px; margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Convite de Equipe</p>
+        </div>
+        
+        <h3 style="color: #1e293b; font-size: 16px; margin-bottom: 8px;">Olá, ${data.employeeName}!</h3>
+        <p style="font-size: 14px; line-height: 1.6; color: #475569;">
+          Você foi adicionado por <strong>${data.ownerName}</strong> para fazer parte da equipe da <strong>${data.workshopName}</strong> no cargo de <strong>${data.role}</strong>.
+        </p>
+        
+        <p style="font-size: 14px; line-height: 1.6; color: #475569;">
+          Para começar a usar o sistema e acessar suas ordens de serviço e atendimentos, basta criar sua senha pessoal de acesso clicando no botão abaixo:
+        </p>
+        
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${data.inviteLink}" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; padding: 14px 28px; font-size: 14px; font-weight: bold; text-decoration: none; border-radius: 12px; display: inline-block; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);">
+            Criar Minha Senha de Acesso →
+          </a>
+        </div>
+        
+        <p style="font-size: 12px; color: #94a3b8; text-align: center; line-height: 1.5;">
+          ⏱️ Este link de convite é válido por <strong>48 horas</strong>.<br/>
+          Caso o botão não abra, copie e cole o link no seu navegador:<br/>
+          <a href="${data.inviteLink}" style="color: #2563eb; word-break: break-all;">${data.inviteLink}</a>
+        </p>
+        
+        <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 28px 0 20px 0;" />
+        <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">Torque ERP • Gestão Automotiva Inteligente</p>
+      </div>
+    `,
+  });
+}
+
+/**
  * Despacha mensagens recebidas do formulário de contato para seu e-mail
  */
 export async function sendContactEmail(data: {

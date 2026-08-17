@@ -56,7 +56,9 @@ model Employee {
   email          String?
   phone          String?
   commissionRate Float               @default(0.0) // % de comissão padrão
-  password       String?             // Senha para login online (opcional)
+  password       String?             // Senha para login online (PBKDF2)
+  inviteToken    String?             @unique // Token para criacao de senha pelo funcionario
+  inviteExpiresAt DateTime?           // Expiracao do link de convite (48 horas)
   active         Boolean             @default(true)
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
