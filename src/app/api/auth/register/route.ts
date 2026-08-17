@@ -127,7 +127,47 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 5. Cria o Dono como Primeiro Colaborador / Administrador da Oficina
+    // 5. Formata o endereço completo da oficina
+    const formattedAddress = [
+      street && number ? `${street}, ${number}` : street,
+      complement,
+      neighborhood,
+      city && state ? `${city}/${state}` : city,
+      cep ? `CEP ${cep}` : null,
+    ]
+      .filter(Boolean)
+      .join(" - ");
+
+    // Cria as configurações iniciais da oficina com os dados reais do cadastro
+    await prisma.workshopSetting.upsert({
+      where: { id: tenant.id },
+      update: {
+        workshopName: tenant.name,
+        cnpj: tenant.document || "",
+        phone: tenant.ownerPhone || "",
+        address: formattedAddress,
+        email: cleanEmail,
+      },
+      create: {
+        id: tenant.id,
+        workshopName: tenant.name,
+        cnpj: tenant.document || "",
+        phone: tenant.ownerPhone || "",
+        address: formattedAddress,
+        email: cleanEmail,
+        warrantyDays: 90,
+        whatsappWashReadyTemplate:
+          "Olá {nome}! Seu {veiculo} ({placa}) já está limpo e pronto para retirada no {oficina}! 🚗✨\nValor: {valor}\nPode retirar a qualquer momento!",
+        whatsappOilReminderTemplate:
+          "Olá {nome}! Notamos que faz 6 meses da última revisão/troca de óleo do seu {veiculo} ({placa}). Agende sua revisão preventiva com a gente no {oficina}! 🛠️",
+        whatsappWashReminderTemplate:
+          "Olá {nome}! Faz {dias} dias que seu {veiculo} ({placa}) não toma aquele banho especial no {oficina}. Que tal agendar uma lavagem hoje? 🧼✨",
+        whatsappBirthdayTemplate:
+          "🎉 Parabéns {nome}! A equipe do {oficina} deseja a você um feliz aniversário com muita saúde e sucesso! Venha comemorar conosco e ganhe 15% de desconto em qualquer serviço neste mês! 🎁🚗",
+      },
+    }).catch(() => {});
+
+    // 6. Cria o Dono como Primeiro Colaborador / Administrador da Oficina
     const employee = await prisma.employee.create({
       data: {
         tenantId: tenant.id,
@@ -145,7 +185,7 @@ export async function POST(req: NextRequest) {
     // Limpa o código de verificação utilizado
     await prisma.emailVerification.delete({ where: { email: cleanEmail } }).catch(() => {});
 
-    // 6. Cria token de sessão
+    // 7. Cria token de sessão
     const sessionToken = createSessionToken({
       userId: employee.id,
       tenantId: tenant.id,
