@@ -1,7 +1,7 @@
 import https from "https";
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
-const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "rafael.gielow@gmail.com";
+const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "contato@torquerp.com.br";
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "Torque ERP";
 
 /**
