@@ -1,5 +1,5 @@
 /**
- * Validação Oficial de CPF (Cadastro de Pessoas Físicas)
+ * Validação Oficial de CPF (Cadastro de Pessoas Físicas - Receita Federal)
  */
 export function validateCPF(cpf: string): boolean {
   const clean = cpf.replace(/\D/g, "");
@@ -28,16 +28,17 @@ export function validateCPF(cpf: string): boolean {
 }
 
 /**
- * Validação Oficial de CNPJ (Cadastro Nacional da Pessoa Jurídica)
+ * Validação Oficial de CNPJ (Cadastro Nacional da Pessoa Jurídica - Receita Federal)
  */
 export function validateCNPJ(cnpj: string): boolean {
   const clean = cnpj.replace(/\D/g, "");
   if (clean.length !== 14) return false;
 
-  // Rejeita sequências repetidas
+  // Rejeita sequências repetidas (ex: 00.000.000/0000-00, 11.111.111/1111-11)
   if (/^(\d)\1{13}$/.test(clean)) return false;
 
-  let length = clean.length - 2;
+  // Validação do 1º Dígito Verificador
+  let length = 12;
   let numbers = clean.substring(0, length);
   const digits = clean.substring(length);
   let sum = 0;
@@ -51,7 +52,8 @@ export function validateCNPJ(cnpj: string): boolean {
   let result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
   if (result !== parseInt(digits.charAt(0))) return false;
 
-  length = length + 1;
+  // Validação do 2º Dígito Verificador
+  length = 13;
   numbers = clean.substring(0, length);
   sum = 0;
   pos = length - 7;
@@ -65,6 +67,41 @@ export function validateCNPJ(cnpj: string): boolean {
   if (result !== parseInt(digits.charAt(1))) return false;
 
   return true;
+}
+
+/**
+ * Validação de Padrão de Segurança de Senha Forte
+ * - Mínimo 8 caracteres
+ * - Ao menos 1 letra maiúscula
+ * - Ao menos 1 letra minúscula
+ * - Ao menos 1 número
+ * - Ao menos 1 caractere especial (@$!%*?&#^()_+-=.,)
+ */
+export function validatePasswordStrength(password: string) {
+  const checks = {
+    length: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number: /[0-9]/.test(password),
+    special: /[@$!%*?&#^()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
+  };
+
+  const score = Object.values(checks).filter(Boolean).length;
+  const isValid = score === 5;
+
+  let message = "";
+  if (!checks.length) message = "A senha deve ter no mínimo 8 caracteres.";
+  else if (!checks.uppercase) message = "Inclua pelo menos 1 letra maiúscula.";
+  else if (!checks.lowercase) message = "Inclua pelo menos 1 letra minúscula.";
+  else if (!checks.number) message = "Inclua pelo menos 1 número.";
+  else if (!checks.special) message = "Inclua pelo menos 1 caractere especial (ex: @, #, !, $).";
+
+  return {
+    isValid,
+    score, // 0 a 5
+    message,
+    checks,
+  };
 }
 
 /**

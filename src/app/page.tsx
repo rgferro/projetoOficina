@@ -39,7 +39,7 @@ export default function LandingPage() {
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
           <Link
-            href="/login"
+            href="/cadastro"
             className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-sm shadow-xl shadow-blue-500/25 flex items-center justify-center gap-2 transition-all active:scale-95"
           >
             <Sparkles className="w-4 h-4 text-yellow-300" />

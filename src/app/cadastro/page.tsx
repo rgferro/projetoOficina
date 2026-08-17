@@ -3,5 +3,5 @@
 import LoginPage from "../login/page";
 
 export default function CadastroPage() {
-  return <LoginPage />;
+  return <LoginPage initialTab="REGISTER" />;
 }

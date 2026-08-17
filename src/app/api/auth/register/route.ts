@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, createSessionToken } from "@/lib/auth";
-import { validateCPF, validateCNPJ } from "@/lib/validation";
+import { validateCPF, validateCNPJ, validatePasswordStrength } from "@/lib/validation";
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,7 +33,16 @@ export async function POST(req: NextRequest) {
 
     const cleanEmail = ownerEmail.trim().toLowerCase();
 
-    // 1. Validação de CPF ou CNPJ
+    // 1. Validação de Segurança da Senha (Padrão Forte)
+    const passCheck = validatePasswordStrength(ownerPassword);
+    if (!passCheck.isValid) {
+      return NextResponse.json(
+        { success: false, error: passCheck.message },
+        { status: 400 }
+      );
+    }
+
+    // 2. Validação de CPF ou CNPJ (Receita Federal)
     if (document) {
       const cleanDoc = document.replace(/\D/g, "");
       if (documentType === "CPF" || cleanDoc.length === 11) {

@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Zap,
   Lock,
@@ -16,14 +16,40 @@ import {
   MapPin,
   Send,
   Check,
+  X,
   Phone,
   FileText,
 } from "lucide-react";
-import { maskDocument, maskPhone, maskCEP, validateCPF, validateCNPJ } from "@/lib/validation";
+import {
+  maskDocument,
+  maskPhone,
+  maskCEP,
+  validateCPF,
+  validateCNPJ,
+  validatePasswordStrength,
+} from "@/lib/validation";
 
-export default function LoginPage() {
+interface LoginPageProps {
+  initialTab?: "LOGIN" | "REGISTER";
+}
+
+export default function LoginPage({ initialTab = "LOGIN" }: LoginPageProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"LOGIN" | "REGISTER">("LOGIN");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams?.get("tab");
+
+  const [activeTab, setActiveTab] = useState<"LOGIN" | "REGISTER">(
+    tabParam === "register" ? "REGISTER" : initialTab
+  );
+
+  useEffect(() => {
+    if (tabParam === "register") {
+      setActiveTab("REGISTER");
+    } else if (tabParam === "login") {
+      setActiveTab("LOGIN");
+    }
+  }, [tabParam]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
@@ -56,6 +82,9 @@ export default function LoginPage() {
     state: "",
     verificationCode: "",
   });
+
+  // Força de senha
+  const passStrength = validatePasswordStrength(registerForm.ownerPassword);
 
   // Busca automática de endereço no ViaCEP
   const handleCepChange = async (val: string) => {
@@ -152,7 +181,14 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
-    // Validação do Documento antes de enviar
+    // Validação de Senha Forte
+    if (!passStrength.isValid) {
+      setError(passStrength.message);
+      setLoading(false);
+      return;
+    }
+
+    // Validação do Documento (CPF / CNPJ)
     const cleanDoc = registerForm.document.replace(/\D/g, "");
     if (docType === "CPF" && cleanDoc && !validateCPF(cleanDoc)) {
       setError("O CPF informado é inválido. Por favor, confira os números digitados.");
@@ -274,7 +310,7 @@ export default function LoginPage() {
                   required
                   value={loginForm.login}
                   onChange={(e) => setLoginForm({ ...loginForm, login: e.target.value })}
-                  placeholder="seuemail@exemplo.com ou rafael.gielow@gmail.com"
+                  placeholder="seuemail@exemplo.com ou usuario"
                   className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 pl-10 text-slate-900 focus:outline-blue-500"
                 />
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
@@ -502,41 +538,107 @@ export default function LoginPage() {
               </div>
 
               {/* Campo de Digitar Código de 6 Dígitos */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                    <span>Código do E-mail *</span>
-                    {codeSent && <span className="text-[10px] text-emerald-600 font-bold">✓ Enviado</span>}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={6}
-                    value={registerForm.verificationCode}
-                    onChange={(e) =>
-                      setRegisterForm({
-                        ...registerForm,
-                        verificationCode: e.target.value.replace(/\D/g, ""),
-                      })
-                    }
-                    placeholder="6 dígitos (ex: 123456)"
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500 font-mono tracking-widest text-center"
-                  />
-                </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                  <span>Código de Confirmação do E-mail *</span>
+                  {codeSent && <span className="text-[10px] text-emerald-600 font-bold">✓ Código Enviado</span>}
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={6}
+                  value={registerForm.verificationCode}
+                  onChange={(e) =>
+                    setRegisterForm({
+                      ...registerForm,
+                      verificationCode: e.target.value.replace(/\D/g, ""),
+                    })
+                  }
+                  placeholder="Digite os 6 dígitos recebidos no e-mail (ex: 123456)"
+                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500 font-mono tracking-widest text-center"
+                />
+              </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700">Crie sua Senha *</label>
-                  <input
-                    type="password"
-                    required
-                    value={registerForm.ownerPassword}
-                    onChange={(e) =>
-                      setRegisterForm({ ...registerForm, ownerPassword: e.target.value })
-                    }
-                    placeholder="Mínimo 6 caracteres"
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500"
-                  />
-                </div>
+              {/* Campo de Senha com Medidor de Segurança Forte */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Crie sua Senha Forte *</label>
+                <input
+                  type="password"
+                  required
+                  value={registerForm.ownerPassword}
+                  onChange={(e) =>
+                    setRegisterForm({ ...registerForm, ownerPassword: e.target.value })
+                  }
+                  placeholder="Mínimo 8 caracteres (maiúscula, minúscula, número e símbolo)"
+                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-blue-500"
+                />
+
+                {/* Checklist Visual de Segurança da Senha */}
+                {registerForm.ownerPassword && (
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-[10px]">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-600">Padrão de Segurança:</span>
+                      <span
+                        className={`font-bold ${
+                          passStrength.score <= 2
+                            ? "text-rose-600"
+                            : passStrength.score <= 4
+                            ? "text-amber-600"
+                            : "text-emerald-600"
+                        }`}
+                      >
+                        {passStrength.score <= 2
+                          ? "Fraca"
+                          : passStrength.score <= 4
+                          ? "Média"
+                          : "Excelente (Segura)"}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-1 text-slate-600">
+                      <div className="flex items-center gap-1">
+                        {passStrength.checks.length ? (
+                          <Check className="w-3 h-3 text-emerald-600" />
+                        ) : (
+                          <X className="w-3 h-3 text-rose-500" />
+                        )}
+                        <span>8+ Caracteres</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {passStrength.checks.uppercase ? (
+                          <Check className="w-3 h-3 text-emerald-600" />
+                        ) : (
+                          <X className="w-3 h-3 text-rose-500" />
+                        )}
+                        <span>Letra Maiúscula</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {passStrength.checks.lowercase ? (
+                          <Check className="w-3 h-3 text-emerald-600" />
+                        ) : (
+                          <X className="w-3 h-3 text-rose-500" />
+                        )}
+                        <span>Letra Minúscula</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {passStrength.checks.number ? (
+                          <Check className="w-3 h-3 text-emerald-600" />
+                        ) : (
+                          <X className="w-3 h-3 text-rose-500" />
+                        )}
+                        <span>Número (0-9)</span>
+                      </div>
+                      <div className="flex items-center gap-1 col-span-2">
+                        {passStrength.checks.special ? (
+                          <Check className="w-3 h-3 text-emerald-600" />
+                        ) : (
+                          <X className="w-3 h-3 text-rose-500" />
+                        )}
+                        <span>Símbolo Especial (@, #, !, $, %, *)</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
