@@ -9,13 +9,24 @@ import { AccessGuard } from "@/components/AccessGuard";
 import { ActivationGate } from "@/components/ActivationGate";
 import { PublicNavbar } from "@/components/PublicNavbar";
 import OnboardingTour from "@/components/OnboardingTour";
+import { CookieConsent } from "@/components/CookieConsent";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
 
   // Rotas públicas institucionais (Site de apresentação, SEO e AdSense)
-  const publicRoutes = ["/", "/sobre", "/contato", "/termos", "/privacidade", "/login", "/cadastro"];
+  const publicRoutes = [
+    "/",
+    "/sistema-para-oficina-mecanica",
+    "/sistema-para-lava-jato",
+    "/sobre",
+    "/contato",
+    "/termos",
+    "/privacidade",
+    "/login",
+    "/cadastro",
+  ];
   const isPublicPage = publicRoutes.includes(pathname);
 
   // Se for página pública do site, renderiza layout limpo sem barra lateral ou menus internos
@@ -26,6 +37,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}
         </main>
+        <CookieConsent />
       </div>
     );
   }

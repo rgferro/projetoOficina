@@ -60,7 +60,6 @@ export default function LandingPage() {
           Controle ordens de serviço com fotos de avarias, gerencie o pátio em Kanban e envie{" "}
           <strong className="text-slate-900 font-bold">avisos automáticos no WhatsApp</strong> do cliente. Sem instalação, sem complexidade e sem precisar de cartão de crédito.
         </p>
-
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
           <Link
             href="/cadastro"
@@ -72,7 +71,7 @@ export default function LandingPage() {
           </Link>
 
           <Link
-            href="#recursos"
+            href="#como-funciona"
             className="w-full sm:w-auto px-7 py-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-extrabold text-sm border border-slate-300 shadow-sm flex items-center justify-center gap-2 transition-all hover:border-slate-400"
           >
             <span>Ver Como Funciona</span>
@@ -83,19 +82,15 @@ export default function LandingPage() {
         <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 pt-2 text-xs font-bold text-slate-600">
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>Sem cartão de crédito</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             <span>Configuração em 2 minutos</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>Acesso no Celular & PC</span>
+            <ShieldCheck className="w-4 h-4 text-blue-600" />
+            <span>Conexão SSL 256-bit</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>Suporte Humanizado</span>
+            <CheckCircle2 className="w-4 h-4 text-purple-600" />
+            <span>Backups em Nuvem (Google Drive)</span>
           </div>
         </div>
 
@@ -227,6 +222,53 @@ export default function LandingPage() {
             <div className="text-xs text-slate-500 font-semibold">
               Dados protegidos e backups diários
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 🛠️ COMO FUNCIONA EM 3 PASSOS */}
+      <section id="como-funciona" className="max-w-5xl mx-auto space-y-8 scroll-mt-24">
+        <div className="text-center space-y-2 max-w-2xl mx-auto">
+          <span className="text-[11px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
+            Simplicidade & Velocidade
+          </span>
+          <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
+            Como funciona em 3 passos simples
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-600">
+            Sem treinamentos chatos ou sistemas complicados. Você e sua equipe começam a usar no primeiro minuto.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4 relative">
+            <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-lg shadow-md shadow-blue-500/20">
+              1
+            </div>
+            <h3 className="text-base font-bold text-slate-900">Cadastre sua oficina em menos de 2 minutos</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Crie sua conta 100% grátis no Plano Starter, sem pedir cartão de crédito. Acesse imediatamente pelo celular, tablet ou PC.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4 relative">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-black text-lg shadow-md shadow-indigo-500/20">
+              2
+            </div>
+            <h3 className="text-base font-bold text-slate-900">Abra ordens de serviço e fotos pelo celular</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Fotografe avarias do veículo na recepção, selecione os serviços e peças com 1 toque e acompanhe o pátio em tempo real.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4 relative">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black text-lg shadow-md shadow-emerald-500/20">
+              3
+            </div>
+            <h3 className="text-base font-bold text-slate-900">Envie avisos automáticos no WhatsApp</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Seu cliente recebe o orçamento em PDF e atualizações instantâneas de "Veículo Pronto" direto no WhatsApp.
+            </p>
           </div>
         </div>
       </section>

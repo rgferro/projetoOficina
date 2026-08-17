@@ -4,6 +4,8 @@ export async function GET() {
   const baseUrl = "https://torquerp.com.br";
   const pages = [
     "",
+    "/sistema-para-oficina-mecanica",
+    "/sistema-para-lava-jato",
     "/sobre",
     "/contato",
     "/assinatura",

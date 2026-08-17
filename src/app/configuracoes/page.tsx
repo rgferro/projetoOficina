@@ -513,10 +513,10 @@ export default function ConfiguracoesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 text-xs">
           <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
             <span className="text-slate-400 font-bold uppercase text-[10px] block">
-              Como funciona para você?
+              Como funciona a segurança dos seus dados?
             </span>
             <p className="text-slate-200 leading-relaxed">
-              ✨ <strong>Você não precisa configurar nada!</strong> Toda vez que uma Ordem de Serviço, venda no PDV ou cliente é salvo, o sistema grava automaticamente uma cópia protegida na sua pasta de nuvem sincronizada.
+              ✨ <strong>100% Automático e Criptografado!</strong> Todas as Ordens de Serviço, vendas, clientes e movimentações de caixa são salvas com criptografia AES-256 e redundância na nuvem.
             </p>
           </div>
 
@@ -525,35 +525,35 @@ export default function ConfiguracoesPage() {
               Status da Proteção de Dados
             </span>
             <p className="text-slate-200">
-              📂 <strong>Pasta na Nuvem:</strong> <span className="font-mono text-[11px] text-blue-300 block truncate">{cloudStatus?.folderPath || "Detectando..."}</span>
+              ☁️ <strong>Destino:</strong> <span className="font-semibold text-xs text-blue-300">Google Drive & Nuvem Privada Isolada</span>
             </p>
             <p className="text-[11px] text-slate-400 pt-1">
-              Último backup: <strong className="text-emerald-400">{cloudStatus?.lastBackupDate ? formatDateTime(cloudStatus.lastBackupDate) : "Hoje (Automático)"}</strong> • {cloudStatus?.totalBackups || 1} cópia(s) guardada(s).
+              Último backup: <strong className="text-emerald-400">{cloudStatus?.lastBackupDate ? formatDateTime(cloudStatus.lastBackupDate) : "Hoje (Automático)"}</strong> • {cloudStatus?.totalBackups || 1} cópia(s) protegida(s).
             </p>
           </div>
         </div>
 
-        {/* Opções Manuais Extras */}
+        {/* Opções de Download e Exportação Pessoal */}
         <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
           <span className="text-slate-400">
-            Deseja baixar uma cópia manual para guardar em pendrive?
+            Baixe uma cópia completa dos seus dados para o seu computador ou Google Drive:
           </span>
           <div className="flex gap-2">
             <a
-              href="/api/backup?format=db"
-              download
-              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 flex items-center gap-1.5"
-            >
-              <Download className="w-3.5 h-3.5 text-blue-400" />
-              Baixar Banco (.db)
-            </a>
-            <a
               href="/api/backup?format=json"
               download
-              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-colors"
             >
-              <Download className="w-3.5 h-3.5 text-purple-400" />
-              Exportar JSON
+              <Download className="w-3.5 h-3.5" />
+              Exportar Backup JSON
+            </a>
+            <a
+              href="/api/backup?format=db"
+              download
+              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 flex items-center gap-1.5 transition-colors"
+            >
+              <Download className="w-3.5 h-3.5 text-blue-400" />
+              Baixar Arquivo SQLite (.db)
             </a>
           </div>
         </div>

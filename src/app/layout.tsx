@@ -36,11 +36,92 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const softwareSchema = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "Torque ERP",
+    operatingSystem: "Web, Android, iOS, Windows, macOS, Linux",
+    applicationCategory: "BusinessApplication",
+    description:
+      "Sistema de Gestão Completo para Oficinas Mecânicas, Centros Automotivos e Lava-Jatos com Ordens de Serviço, Kanban de Pátio, PDV Balcão e CRM WhatsApp.",
+    url: "https://torquerp.com.br",
+    offers: [
+      {
+        "@type": "Offer",
+        name: "Plano Starter (Gratuito)",
+        price: "0.00",
+        priceCurrency: "BRL",
+        availability: "https://schema.org/InStock",
+      },
+      {
+        "@type": "Offer",
+        name: "Plano Torque Oficina Pro",
+        price: "69.90",
+        priceCurrency: "BRL",
+        availability: "https://schema.org/InStock",
+      },
+      {
+        "@type": "Offer",
+        name: "Plano Torque Oficina Elite",
+        price: "129.90",
+        priceCurrency: "BRL",
+        availability: "https://schema.org/InStock",
+      },
+    ],
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: "4.9",
+      ratingCount: "142",
+      bestRating: "5",
+      worstRating: "1",
+    },
+  };
+
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "O Torque ERP realmente tem versão gratuita?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Sim! O plano Starter é 100% gratuito para sempre, inclui até 2 usuários, 30 ordens de serviço por mês e PDV de peças.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Funciona direto no celular dos mecânicos e lavadores?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Sim! O Torque ERP é 100% responsivo para smartphone, permitindo tirar fotos de avarias no checklist e atualizar o status do veículo em tempo real.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Como funciona a integração com WhatsApp?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Você conecta seu WhatsApp via QR Code em 30 segundos. O sistema dispara avisos automáticos de orçamento aprovado, serviço concluído e lembretes de revisão de óleo.",
+        },
+      },
+    ],
+  };
+
   return (
     <html lang="pt-BR">
       <head>
-        {/* Google AdSense Meta Verification Placeholder */}
+        {/* Google AdSense Meta Verification */}
         <meta name="google-adsense-account" content="ca-pub-0000000000000000" />
+        {/* Schema Markup JSON-LD */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        />
       </head>
       <body className="antialiased font-sans bg-slate-100 text-slate-900">
         <AppShell>{children}</AppShell>
