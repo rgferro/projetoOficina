@@ -30,8 +30,22 @@ import {
   generateWhatsappLink,
   buildWashReadyMessage,
 } from "@/lib/whatsapp";
+import { useAuth } from "@/lib/authContext";
 
 export default function LavaJatoPage() {
+  const { currentEmployee } = useAuth();
+  const canCreateTicket =
+    !currentEmployee ||
+    currentEmployee.accessLevel === "ADMIN" ||
+    currentEmployee.accessLevel === "GERENTE" ||
+    currentEmployee.accessLevel === "ATENDENTE";
+
+  const canSeePrice =
+    !currentEmployee ||
+    currentEmployee.accessLevel === "ADMIN" ||
+    currentEmployee.accessLevel === "GERENTE" ||
+    currentEmployee.accessLevel === "ATENDENTE";
+
   const [tickets, setTickets] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -315,6 +329,7 @@ export default function LavaJatoPage() {
           </p>
         </div>
 
+        {canCreateTicket && (
           <button
             id="lavajato-new-btn"
             onClick={handleOpenNewTicketModal}
@@ -323,6 +338,7 @@ export default function LavaJatoPage() {
             <Plus className="w-4 h-4" />
             Nova Entrada
           </button>
+        )}
       </div>
 
       {toastMsg && (
@@ -389,8 +405,8 @@ export default function LavaJatoPage() {
                     <p className="text-xs text-slate-500">{formatPhone(ticket.vehicle.customer.phone)}</p>
 
                     <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
-                      <span className="text-slate-500">{ticket.serviceType}</span>
-                      <span className="font-bold text-slate-900">{formatCurrency(ticket.price)}</span>
+                      <span className="text-slate-500 font-semibold">{ticket.serviceType}</span>
+                      {canSeePrice && <span className="font-bold text-slate-900">{formatCurrency(ticket.price)}</span>}
                     </div>
 
                     {ticket.notes && (
@@ -465,8 +481,8 @@ export default function LavaJatoPage() {
                     )}
 
                     <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
-                      <span className="text-slate-500">{ticket.serviceType}</span>
-                      <span className="font-bold text-slate-900">{formatCurrency(ticket.price)}</span>
+                      <span className="text-slate-500 font-semibold">{ticket.serviceType}</span>
+                      {canSeePrice && <span className="font-bold text-slate-900">{formatCurrency(ticket.price)}</span>}
                     </div>
                   </div>
 
@@ -518,10 +534,6 @@ export default function LavaJatoPage() {
                   workshopName: settings?.workshopName,
                   customTemplate: settings?.whatsappWashReadyTemplate,
                 });
-                const whatsappUrl = generateWhatsappLink(
-                  ticket.vehicle.customer.phone,
-                  whatsappMsg
-                );
 
                 return (
                   <div
@@ -545,8 +557,12 @@ export default function LavaJatoPage() {
                       <p className="text-xs text-slate-500">{formatPhone(ticket.vehicle.customer.phone)}</p>
 
                       <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
-                        <span className="text-slate-500">{ticket.serviceType}</span>
-                        <span className="font-black text-emerald-700 text-sm">{formatCurrency(ticket.price)}</span>
+                        <span className="text-slate-500 font-semibold">{ticket.serviceType}</span>
+                        {canSeePrice && (
+                          <span className="font-black text-emerald-700 text-sm">
+                            {formatCurrency(ticket.price)}
+                          </span>
+                        )}
                       </div>
 
                       {/* Botão de Disparo WhatsApp Silencioso Interno */}
@@ -570,17 +586,27 @@ export default function LavaJatoPage() {
                         Voltar
                       </button>
 
-                      <button
-                        id="lavajato-deliver-action"
-                        onClick={() => {
-                          setSelectedTicketForPayment(ticket);
-                          setIsPaymentModalOpen(true);
-                        }}
-                        className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
-                      >
-                        <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Entregar & Receber</span>
-                      </button>
+                      {canSeePrice ? (
+                        <button
+                          id="lavajato-deliver-action"
+                          onClick={() => {
+                            setSelectedTicketForPayment(ticket);
+                            setIsPaymentModalOpen(true);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Entregar & Receber</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleUpdateStatus(ticket.id, "ENTREGUE")}
+                          className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Marcar Entregue</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -616,7 +642,7 @@ export default function LavaJatoPage() {
                       {formatPlate(ticket.vehicle.plate)}
                     </span>
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                      Pago ({ticket.paymentMethod || "PIX"})
+                      Entregue {ticket.paymentMethod ? `(${ticket.paymentMethod})` : ""}
                     </span>
                   </div>
                   <div className="text-slate-800 font-semibold truncate">
@@ -624,7 +650,9 @@ export default function LavaJatoPage() {
                   </div>
                   <div className="flex items-center justify-between text-slate-500 text-[11px] pt-1 border-t border-slate-100">
                     <span>{formatDateTime(ticket.deliveredAt)}</span>
-                    <span className="font-bold text-slate-900">{formatCurrency(ticket.price)}</span>
+                    {canSeePrice && (
+                      <span className="font-bold text-slate-900">{formatCurrency(ticket.price)}</span>
+                    )}
                   </div>
                 </div>
               ))}

@@ -13,8 +13,21 @@ import {
   Wrench,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
+import { useAuth } from "@/lib/authContext";
 
 export default function ServicosPage() {
+  const { currentEmployee } = useAuth();
+  const canManage =
+    !currentEmployee ||
+    currentEmployee.accessLevel === "ADMIN" ||
+    currentEmployee.accessLevel === "GERENTE";
+
+  const canSeePrice =
+    !currentEmployee ||
+    currentEmployee.accessLevel === "ADMIN" ||
+    currentEmployee.accessLevel === "GERENTE" ||
+    currentEmployee.accessLevel === "ATENDENTE";
+
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -142,14 +155,16 @@ export default function ServicosPage() {
           </p>
         </div>
 
-        <button
-          id="servicos-new-btn"
-          onClick={handleOpenNew}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          Novo Serviço
-        </button>
+        {canManage && (
+          <button
+            id="servicos-new-btn"
+            onClick={handleOpenNew}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            Novo Serviço
+          </button>
+        )}
       </div>
 
       {/* Barra de Busca */}
@@ -160,13 +175,13 @@ export default function ServicosPage() {
           placeholder="Buscar por nome do serviço ou categoria..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm"
+          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-blue-500"
         />
       </div>
 
       {/* Grade de Serviços */}
       {loading ? (
-        <div className="text-center py-16 text-slate-400">Carregando tabela de serviços...</div>
+        <div className="text-center py-16 text-slate-400">Carregando serviços...</div>
       ) : services.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 p-8">
           <Wrench className="w-12 h-12 text-slate-300 mx-auto mb-3" />
@@ -184,20 +199,22 @@ export default function ServicosPage() {
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-100">
                     {s.category}
                   </span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleOpenEdit(s)}
-                      className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(s.id, s.name)}
-                      className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  {canManage && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleOpenEdit(s)}
+                        className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(s.id, s.name)}
+                        className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <h3 className="font-bold text-sm text-slate-900 mt-2">{s.name}</h3>
@@ -207,13 +224,19 @@ export default function ServicosPage() {
               </div>
 
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-xs text-slate-500 flex items-center gap-1">
+                <span className="text-xs text-slate-500 flex items-center gap-1 font-medium">
                   <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  {s.estimatedMinutes} min
+                  Tempo estimado: {s.estimatedMinutes} min
                 </span>
-                <span className="font-black text-slate-900 text-base">
-                  {formatCurrency(s.defaultPrice)}
-                </span>
+                {canSeePrice ? (
+                  <span className="font-black text-slate-900 text-base font-mono">
+                    {formatCurrency(s.defaultPrice)}
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    Mão de Obra
+                  </span>
+                )}
               </div>
             </div>
           ))}

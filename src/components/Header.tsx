@@ -80,6 +80,12 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
     ? "Proprietário"
     : loggedUser?.role || currentEmployee?.role || "Colaborador";
 
+  const canCreateDirectly =
+    !currentEmployee ||
+    currentEmployee.accessLevel === "ADMIN" ||
+    currentEmployee.accessLevel === "GERENTE" ||
+    currentEmployee.accessLevel === "ATENDENTE";
+
   const activeUserForModal = {
     id: loggedUser?.id || currentEmployee?.id,
     name: displayName,
@@ -127,8 +133,8 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
             <span>Guia do Fluxo</span>
           </button>
 
-          {/* Atalhos Rápidos (Condicionados à Permissão) */}
-          {canAccess("/lavajato") && (
+          {/* Atalhos Rápidos (Condicionados à Permissão de Criação) */}
+          {canAccess("/lavajato") && canCreateDirectly && (
             <Link
               id="tour-btn-lavajato-top"
               href="/lavajato"
@@ -139,7 +145,7 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
             </Link>
           )}
 
-          {canAccess("/oficina") && (
+          {canAccess("/oficina") && canCreateDirectly && (
             <Link
               id="tour-btn-nova-os"
               href="/oficina/nova"

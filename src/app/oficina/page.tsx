@@ -20,8 +20,22 @@ import {
   formatPhone,
   formatDateTime,
 } from "@/lib/formatters";
+import { useAuth } from "@/lib/authContext";
 
 export default function OficinaPage() {
+  const { currentEmployee } = useAuth();
+  const canCreateOS =
+    !currentEmployee ||
+    currentEmployee.accessLevel === "ADMIN" ||
+    currentEmployee.accessLevel === "GERENTE" ||
+    currentEmployee.accessLevel === "ATENDENTE";
+
+  const canSeePrice =
+    !currentEmployee ||
+    currentEmployee.accessLevel === "ADMIN" ||
+    currentEmployee.accessLevel === "GERENTE" ||
+    currentEmployee.accessLevel === "ATENDENTE";
+
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("TODOS");
@@ -71,14 +85,16 @@ export default function OficinaPage() {
           </p>
         </div>
 
-        <Link
-          id="oficina-new-os-btn"
-          href="/oficina/nova"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          Nova Ordem de Serviço
-        </Link>
+        {canCreateOS && (
+          <Link
+            id="oficina-new-os-btn"
+            href="/oficina/nova"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            Nova Ordem de Serviço
+          </Link>
+        )}
       </div>
 
       {/* Barra de Filtros e Busca */}
@@ -140,7 +156,7 @@ export default function OficinaPage() {
                   <th className="py-3.5 px-4">Cliente</th>
                   <th className="py-3.5 px-4">Mecânico</th>
                   <th className="py-3.5 px-4">Status</th>
-                  <th className="py-3.5 px-4">Total</th>
+                  {canSeePrice && <th className="py-3.5 px-4">Total</th>}
                   <th className="py-3.5 px-4 text-right">Ações</th>
                 </tr>
               </thead>
@@ -175,14 +191,16 @@ export default function OficinaPage() {
                           {badge.label}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4">
-                        <div className="font-black text-slate-900 text-sm">
-                          {formatCurrency(os.grandTotal)}
-                        </div>
-                        <div className="text-[10px] text-slate-400">
-                          Peças: {formatCurrency(os.totalParts)} | Mão de obra: {formatCurrency(os.totalServices)}
-                        </div>
-                      </td>
+                      {canSeePrice && (
+                        <td className="py-3.5 px-4">
+                          <div className="font-black text-slate-900 text-sm">
+                            {formatCurrency(os.grandTotal)}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            Peças: {formatCurrency(os.totalParts)} | Mão de obra: {formatCurrency(os.totalServices)}
+                          </div>
+                        </td>
+                      )}
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <Link

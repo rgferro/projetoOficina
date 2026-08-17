@@ -28,6 +28,7 @@ import {
   formatPhone,
   formatDateTime,
 } from "@/lib/formatters";
+import { useAuth } from "@/lib/authContext";
 
 interface OSItem {
   id: string;
@@ -47,6 +48,13 @@ export default function DetalhesOrdemServicoPage({
   params: { id: string };
 }) {
   const router = useRouter();
+  const { currentEmployee } = useAuth();
+  const canSeeFinancials =
+    !currentEmployee ||
+    currentEmployee.accessLevel === "ADMIN" ||
+    currentEmployee.accessLevel === "GERENTE" ||
+    currentEmployee.accessLevel === "ATENDENTE";
+
   const [order, setOrder] = useState<any>(null);
   const [employees, setEmployees] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -387,18 +395,22 @@ export default function DetalhesOrdemServicoPage({
               <h1 className="text-2xl font-black text-slate-900">
                 Ordem de Serviço #{order.osNumber}
               </h1>
-              {order.paymentStatus === "PAGO" ? (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
-                  ✓ TOTALMENTE PAGO
-                </span>
-              ) : order.paidAmount > 0 ? (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-blue-100 text-blue-800 border border-blue-300">
-                  PAGO PARCIAL ({formatCurrency(order.paidAmount)} / Resta {formatCurrency(remainingBalance)})
-                </span>
-              ) : (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
-                  PAGAMENTO PENDENTE
-                </span>
+              {canSeeFinancials && (
+                <>
+                  {order.paymentStatus === "PAGO" ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      ✓ TOTALMENTE PAGO
+                    </span>
+                  ) : order.paidAmount > 0 ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-blue-100 text-blue-800 border border-blue-300">
+                      PAGO PARCIAL ({formatCurrency(order.paidAmount)} / Resta {formatCurrency(remainingBalance)})
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
+                      PAGAMENTO PENDENTE
+                    </span>
+                  )}
+                </>
               )}
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -417,7 +429,7 @@ export default function DetalhesOrdemServicoPage({
             Imprimir Comprovante
           </Link>
 
-          {remainingBalance > 0 && (
+          {canSeeFinancials && remainingBalance > 0 && (
             <>
               <button
                 type="button"
@@ -567,7 +579,7 @@ export default function DetalhesOrdemServicoPage({
               </option>
               {products.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} - {formatCurrency(p.salePrice)}
+                  {p.name} {canSeeFinancials ? `- ${formatCurrency(p.salePrice)}` : ""}
                 </option>
               ))}
             </select>
@@ -582,7 +594,7 @@ export default function DetalhesOrdemServicoPage({
               </option>
               {standardServices.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.name} - {formatCurrency(s.defaultPrice)}
+                  {s.name} {canSeeFinancials ? `- ${formatCurrency(s.defaultPrice)}` : ""}
                 </option>
               ))}
             </select>
@@ -604,8 +616,8 @@ export default function DetalhesOrdemServicoPage({
                 <th className="py-2 px-3 w-28">Tipo</th>
                 <th className="py-2 px-3">Descrição</th>
                 <th className="py-2 px-3 w-20 text-center">Qtd.</th>
-                <th className="py-2 px-3 w-28 text-right">Valor Unit.</th>
-                <th className="py-2 px-3 w-28 text-right">Total</th>
+                {canSeeFinancials && <th className="py-2 px-3 w-28 text-right">Valor Unit.</th>}
+                {canSeeFinancials && <th className="py-2 px-3 w-28 text-right">Total</th>}
                 <th className="py-2 px-3 w-36">Mecânico</th>
                 <th className="py-2 px-3 w-10"></th>
               </tr>
@@ -629,7 +641,7 @@ export default function DetalhesOrdemServicoPage({
                       type="text"
                       value={item.name}
                       onChange={(e) => handleUpdateItem(item.id, "name", e.target.value)}
-                      className="w-full p-1.5 border border-slate-200 rounded text-xs"
+                      className="w-full p-1.5 border border-slate-200 rounded text-xs font-semibold"
                     />
                   </td>
                   <td className="py-2 px-3">
@@ -642,20 +654,24 @@ export default function DetalhesOrdemServicoPage({
                       className="w-full p-1.5 border border-slate-200 rounded text-xs text-center font-bold"
                     />
                   </td>
-                  <td className="py-2 px-3">
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={item.unitPrice}
-                      onChange={(e) =>
-                        handleUpdateItem(item.id, "unitPrice", Number(e.target.value))
-                      }
-                      className="w-full p-1.5 border border-slate-200 rounded text-xs text-right font-bold"
-                    />
-                  </td>
-                  <td className="py-2 px-3 text-right font-black text-slate-900">
-                    {formatCurrency(item.totalPrice)}
-                  </td>
+                  {canSeeFinancials && (
+                    <td className="py-2 px-3">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={item.unitPrice}
+                        onChange={(e) =>
+                          handleUpdateItem(item.id, "unitPrice", Number(e.target.value))
+                        }
+                        className="w-full p-1.5 border border-slate-200 rounded text-xs text-right font-bold"
+                      />
+                    </td>
+                  )}
+                  {canSeeFinancials && (
+                    <td className="py-2 px-3 text-right font-black text-slate-900">
+                      {formatCurrency(item.totalPrice)}
+                    </td>
+                  )}
                   <td className="py-2 px-3">
                     <select
                       value={item.employeeId || ""}
@@ -685,65 +701,68 @@ export default function DetalhesOrdemServicoPage({
           </table>
         </div>
 
-        {/* Totais e Saldos */}
-        <div className="pt-4 border-t border-slate-200 bg-slate-50 p-4 rounded-xl text-xs space-y-3">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex gap-4">
-              <div>
-                <span className="text-slate-500 block">Peças:</span>
-                <strong className="text-slate-800 text-sm font-mono">{formatCurrency(totalParts)}</strong>
+        {/* Totais e Saldos (Apenas para Administrador / Gerente / Atendente) */}
+        {canSeeFinancials && (
+          <div className="pt-4 border-t border-slate-200 bg-slate-50 p-4 rounded-xl text-xs space-y-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex gap-4">
+                <div>
+                  <span className="text-slate-500 block">Peças:</span>
+                  <strong className="text-slate-800 text-sm font-mono">{formatCurrency(totalParts)}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500 block">Serviços:</span>
+                  <strong className="text-slate-800 text-sm font-mono">{formatCurrency(totalServices)}</strong>
+                </div>
               </div>
-              <div>
-                <span className="text-slate-500 block">Serviços:</span>
-                <strong className="text-slate-800 text-sm font-mono">{formatCurrency(totalServices)}</strong>
+
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <label className="font-bold text-slate-700">Desconto:</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={discount}
+                    onChange={(e) => setDiscount(e.target.value)}
+                    className="w-24 p-1.5 border border-slate-200 rounded-lg text-xs font-bold text-right bg-white"
+                  />
+                </div>
+
+                <div className="text-right">
+                  <span className="text-slate-500 block text-[11px]">Total da OS:</span>
+                  <span className="text-2xl font-black text-blue-600 font-mono">
+                    {formatCurrency(grandTotal)}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <label className="font-bold text-slate-700">Desconto:</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={discount}
-                  onChange={(e) => setDiscount(e.target.value)}
-                  className="w-24 p-1.5 border border-slate-200 rounded-lg text-xs font-bold text-right bg-white"
-                />
+            {/* Histórico de Pagamentos Parciais */}
+            <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-4">
+                <div>
+                  <span className="text-slate-500 text-[11px]">Total Pago:</span>
+                  <span className="font-black text-emerald-600 text-sm ml-1">
+                    {formatCurrency(order.paidAmount || 0)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 text-[11px]">Saldo Devedor:</span>
+                  <span className="font-black text-red-600 text-sm ml-1">
+                    {formatCurrency(remainingBalance)}
+                  </span>
+                </div>
               </div>
 
-              <div className="text-right">
-                <span className="text-slate-500 block text-[11px]">Total da OS:</span>
-                <span className="text-2xl font-black text-blue-600 font-mono">
-                  {formatCurrency(grandTotal)}
-                </span>
-              </div>
+              {order.payments?.length > 0 && (
+                <div className="text-[11px] text-slate-500">
+                  {order.payments.length} pagamento(s) registrado(s)
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Histórico de Pagamentos Parciais */}
-          <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <div className="flex items-center gap-4">
-              <div>
-                <span className="text-slate-500 text-[11px]">Total Pago:</span>
-                <span className="font-black text-emerald-600 text-sm ml-1">
-                  {formatCurrency(order.paidAmount || 0)}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-500 text-[11px]">Saldo Devedor:</span>
-                <span className="font-black text-red-600 text-sm ml-1">
-                  {formatCurrency(remainingBalance)}
-                </span>
-              </div>
-            </div>
-
-            {order.payments?.length > 0 && (
-              <div className="text-[11px] text-slate-500">
-                {order.payments.length} pagamento(s) registrado(s)
-              </div>
-            )}
-          </div>
-        </div>
+        )}
+      </div>
       </div>
 
       {/* Galeria de Fotos Anexadas */}
