@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 
 export default function LandingPage() {
-  const [activeTab, setActiveTab] = useState<"oficina" | "lavajato" | "pdv">("oficina");
+  const [activeTab, setActiveTab] = useState<"oficina" | "lavajato" | "gestao">("oficina");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showFloatingCta, setShowFloatingCta] = useState(false);
 
