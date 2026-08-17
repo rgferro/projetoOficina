@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendContactEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,19 +14,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Salva a mensagem de contato no banco de dados para o Master Admin
+    const cleanSubject = subject || "Dúvida Comercial / Suporte Torque ERP";
+
+    // 1. Salva a mensagem de contato no banco de dados para o Master Admin
     const contactMsg = await prisma.contactMessage.create({
       data: {
         name,
         email,
         phone: phone || "",
-        subject: subject || "Dúvida Comercial / Suporte Torque ERP",
+        subject: cleanSubject,
         message,
         status: "UNREAD",
       },
     });
 
-    console.log(`📩 [Fale Conosco] Nova mensagem de ${name} (${email}): ${subject}`);
+    // 2. Despacha e-mail para rafael.gielow@gmail.com via Brevo REST API
+    await sendContactEmail({
+      name,
+      senderEmail: email,
+      phone: phone || "",
+      subject: cleanSubject,
+      message,
+    }).catch((err) => {
+      console.warn("Aviso ao despachar e-mail do Fale Conosco:", err);
+    });
+
+    console.log(`📩 [Fale Conosco] Nova mensagem de ${name} (${email}): ${cleanSubject}`);
 
     return NextResponse.json({
       success: true,
@@ -33,9 +47,9 @@ export async function POST(req: NextRequest) {
       id: contactMsg.id,
     });
   } catch (error: any) {
-    console.error("Erro ao enviar mensagem de contato:", error);
+    console.error("Erro ao processar mensagem de contato:", error);
     return NextResponse.json(
-      { success: false, error: "Erro ao enviar mensagem. Tente novamente mais tarde." },
+      { success: false, error: "Erro ao processar mensagem. Tente novamente mais tarde." },
       { status: 500 }
     );
   }
