@@ -177,21 +177,83 @@ export async function createMercadoPagoPreapproval(tenant: {
           try {
             const data = JSON.parse(body);
             if (data.id && data.init_point) {
-              const isTest = MP_ACCESS_TOKEN.startsWith("TEST-");
-              let checkoutUrl = data.init_point;
-              if (isTest && checkoutUrl) {
-                checkoutUrl = checkoutUrl.replace(
-                  "www.mercadopago.com.br",
-                  "sandbox.mercadopago.com.br"
-                );
-              }
-
               resolve({
                 preapproval_id: data.id,
-                init_point: checkoutUrl,
+                init_point: data.init_point,
               });
             } else {
               reject(new Error(data.message || "Erro ao criar assinatura recorrente no Mercado Pago"));
+            }
+          } catch (e) {
+            reject(e);
+          }
+        });
+      }
+    );
+
+    req.on("error", reject);
+    req.write(postData);
+    req.end();
+  });
+}
+
+/**
+ * Cria Checkout Pro no Mercado Pago (/checkout/preferences)
+ */
+export async function createMercadoPagoPreference(tenant: {
+  id: string;
+  name: string;
+  ownerEmail: string;
+}, amount: number, planName: string = "Plano Torque Pro") {
+  return new Promise<{
+    preference_id: string;
+    init_point: string;
+    sandbox_init_point: string;
+  }>((resolve, reject) => {
+    const isTest = MP_ACCESS_TOKEN.startsWith("TEST-");
+    const postData = JSON.stringify({
+      items: [
+        {
+          title: `${planName} - Torque ERP`,
+          quantity: 1,
+          currency_id: "BRL",
+          unit_price: Number(amount),
+        },
+      ],
+      external_reference: tenant.id,
+      notification_url: `${APP_URL}/api/webhooks/mercadopago`,
+      back_urls: {
+        success: `${APP_URL}/assinatura?status=sucesso`,
+        failure: `${APP_URL}/assinatura?status=falha`,
+        pending: `${APP_URL}/assinatura?status=pendente`,
+      },
+      auto_return: "approved",
+    });
+
+    const req = https.request(
+      {
+        hostname: "api.mercadopago.com",
+        path: "/checkout/preferences",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${MP_ACCESS_TOKEN}`,
+        },
+      },
+      (res) => {
+        let body = "";
+        res.on("data", (chunk) => (body += chunk));
+        res.on("end", () => {
+          try {
+            const data = JSON.parse(body);
+            if (data.id) {
+              resolve({
+                preference_id: data.id,
+                init_point: isTest && data.sandbox_init_point ? data.sandbox_init_point : data.init_point,
+                sandbox_init_point: data.sandbox_init_point || data.init_point,
+              });
+            } else {
+              reject(new Error(data.message || "Erro ao criar preferência no Mercado Pago"));
             }
           } catch (e) {
             reject(e);

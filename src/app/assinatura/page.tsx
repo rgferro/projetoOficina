@@ -89,6 +89,27 @@ export default function AssinaturaPage() {
     }
   };
 
+  const handleCheckoutPro = async (planId: string) => {
+    setActionLoading(`checkout_${planId}`);
+    try {
+      const res = await fetch("/api/subscription/create-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId }),
+      });
+      const data = await res.json();
+      if (data.success && data.initPoint) {
+        window.location.href = data.initPoint;
+      } else {
+        alert(data.error || "Erro ao iniciar Checkout Pro");
+      }
+    } catch (e: any) {
+      alert(e.message || "Erro de conexão com Mercado Pago");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const copyPixCode = () => {
     if (!pixData?.qrCode) return;
     navigator.clipboard.writeText(pixData.qrCode);
@@ -286,10 +307,19 @@ export default function AssinaturaPage() {
             <button
               onClick={() => handleCardSubscription("PRO")}
               disabled={actionLoading === "card_PRO"}
-              className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center justify-center gap-2 transition-all"
+              className="w-full py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm"
             >
-              <CreditCard className="w-4 h-4 text-slate-600" />
+              <CreditCard className="w-4 h-4 text-amber-400" />
               Assinatura Recorrente no Cartão
+            </button>
+
+            <button
+              onClick={() => handleCheckoutPro("PRO")}
+              disabled={actionLoading === "checkout_PRO"}
+              className="w-full py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all"
+            >
+              <Zap className="w-3.5 h-3.5 text-blue-600" />
+              Abrir no Checkout Pro (Sandbox)
             </button>
           </div>
         </div>
@@ -358,10 +388,19 @@ export default function AssinaturaPage() {
             <button
               onClick={() => handleCardSubscription("ELITE")}
               disabled={actionLoading === "card_ELITE"}
-              className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center justify-center gap-2 transition-all"
+              className="w-full py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm"
             >
-              <CreditCard className="w-4 h-4 text-slate-600" />
-              Cartão Recorrente
+              <CreditCard className="w-4 h-4 text-purple-400" />
+              Assinatura Recorrente no Cartão
+            </button>
+
+            <button
+              onClick={() => handleCheckoutPro("ELITE")}
+              disabled={actionLoading === "checkout_ELITE"}
+              className="w-full py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all"
+            >
+              <Zap className="w-3.5 h-3.5 text-purple-600" />
+              Abrir no Checkout Pro (Sandbox)
             </button>
           </div>
         </div>
