@@ -27,6 +27,7 @@ export default function AssinaturaPage() {
   const [pixCopied, setPixCopied] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [extraSeats, setExtraSeats] = useState(1);
+  const [returnSuccessMsg, setReturnSuccessMsg] = useState("");
 
   const fetchSubscription = async () => {
     try {
@@ -44,6 +45,41 @@ export default function AssinaturaPage() {
 
   useEffect(() => {
     fetchSubscription();
+
+    async function checkReturn() {
+      if (typeof window === "undefined") return;
+      const urlParams = new URLSearchParams(window.location.search);
+      const status = urlParams.get("status") || urlParams.get("collection_status");
+      const paymentId = urlParams.get("payment_id") || urlParams.get("collection_id");
+      const extRef = urlParams.get("external_reference");
+
+      if (status === "approved" || status === "sucesso") {
+        try {
+          const res = await fetch("/api/subscription/confirm-return", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              paymentId,
+              status: "approved",
+              externalReference: extRef,
+            }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            setReturnSuccessMsg(
+              `🎉 Pagamento Aprovado com Sucesso! Seu plano foi atualizado para ${
+                data.plan === "ELITE" ? "Torque Oficina Elite" : "Torque Oficina Pro"
+              }!`
+            );
+            fetchSubscription();
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        } catch (err) {
+          console.error("Erro ao confirmar retorno:", err);
+        }
+      }
+    }
+    checkReturn();
   }, []);
 
   const handleGeneratePix = async (planId: string, seats: number = 0) => {
@@ -132,6 +168,29 @@ export default function AssinaturaPage() {
 
   return (
     <div className="space-y-8 pb-12 max-w-6xl mx-auto">
+      {/* Notificação de Sucesso de Retorno do Pagamento */}
+      {returnSuccessMsg && (
+        <div className="p-5 rounded-3xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xl shadow-emerald-600/30 flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center font-black text-xl">
+              ✓
+            </div>
+            <div>
+              <h3 className="font-extrabold text-base sm:text-lg">{returnSuccessMsg}</h3>
+              <p className="text-xs text-white/90">
+                Seus novos recursos e assentos de usuários foram desbloqueados imediatamente.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setReturnSuccessMsg("")}
+            className="text-white/80 hover:text-white font-bold text-sm px-3 py-1 bg-white/10 rounded-xl"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Top Banner de Status da Assinatura */}
       <div className="bg-slate-900 rounded-3xl p-6 sm:p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xl relative overflow-hidden">
         <div className="space-y-2 max-w-2xl">
