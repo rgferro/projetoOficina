@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
     const sessionToken = createSessionToken({
       userId: updatedEmployee.id,
       name: updatedEmployee.name,
-      email: updatedEmployee.email,
+      email: updatedEmployee.email || "",
       role: updatedEmployee.role,
       accessLevel: updatedEmployee.accessLevel,
       tenantId: updatedEmployee.tenantId,
