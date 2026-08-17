@@ -98,11 +98,12 @@ export default function PageTourButton({
     <button
       type="button"
       onClick={handleStartTour}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300/80 text-xs font-black shadow-sm transition-all active:scale-95 group ${className}`}
-      title="Clique para ver o passo a passo detalhado dos recursos desta tela"
+      className={`inline-flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300/80 text-xs font-black shadow-sm transition-all active:scale-95 group flex-shrink-0 ${className}`}
+      title="Como Usar Esta Tela (Tutorial interativo)"
+      aria-label="Como Usar Esta Tela"
     >
-      <Lightbulb className="w-4 h-4 text-amber-600 group-hover:rotate-12 transition-transform" />
-      <span>Como Usar Esta Tela</span>
+      <Lightbulb className="w-4 h-4 text-amber-600 group-hover:rotate-12 transition-transform flex-shrink-0" />
+      <span className="hidden md:inline whitespace-nowrap">Como Usar</span>
     </button>
   );
 }

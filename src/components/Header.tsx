@@ -99,23 +99,23 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
   return (
     <>
       <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between no-print">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             onClick={onOpenSidebar}
-            className="lg:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            className="lg:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors flex-shrink-0"
             aria-label="Abrir menu"
           >
             <Menu className="w-6 h-6" />
           </button>
-          <div>
-            <h2 className="text-sm font-semibold text-slate-800 hidden sm:block">
+          <div className="hidden sm:block truncate">
+            <h2 className="text-sm font-semibold text-slate-800">
               Painel Operacional
             </h2>
-            <p className="text-xs text-slate-500 font-medium">{currentDate}</p>
+            <p className="text-xs text-slate-500 font-medium truncate">{currentDate}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
           {/* Botão Contextual de Tutorial da Tela Atual */}
           <PageTourButton />
 
@@ -138,10 +138,11 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
             <Link
               id="tour-btn-lavajato-top"
               href="/lavajato"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-xs font-bold border border-cyan-200/80 transition-colors shadow-sm"
+              className="inline-flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-xs font-bold border border-cyan-200/80 transition-colors shadow-sm flex-shrink-0"
+              title="Entrada no Lava-Jato"
             >
-              <Droplets className="w-3.5 h-3.5 text-cyan-600" />
-              <span className="hidden md:inline">Entrada</span> Lava-Jato
+              <Droplets className="w-4 h-4 text-cyan-600 flex-shrink-0" />
+              <span className="hidden lg:inline">Lava-Jato</span>
             </Link>
           )}
 
@@ -149,10 +150,11 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
             <Link
               id="tour-btn-nova-os"
               href="/oficina/nova"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm shadow-blue-600/20 transition-all"
+              className="inline-flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm shadow-blue-600/20 transition-all flex-shrink-0"
+              title="Criar Nova Ordem de Serviço"
             >
-              <Wrench className="w-3.5 h-3.5" />
-              <span>Nova OS</span>
+              <Wrench className="w-4 h-4 flex-shrink-0" />
+              <span className="hidden sm:inline">Nova OS</span>
             </Link>
           )}
 
