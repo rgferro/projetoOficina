@@ -151,7 +151,7 @@ export async function createMercadoPagoPreapproval(
     preapproval_id: string;
     init_point: string;
   }>((resolve, reject) => {
-    const baseUrl = originUrl || APP_URL;
+    const baseUrl = originUrl && originUrl.startsWith("https://") ? originUrl : APP_URL;
     const postData = JSON.stringify({
       payer_email: tenant.ownerEmail,
       back_url: `${baseUrl}/assinatura?status=sucesso`,
@@ -223,7 +223,9 @@ export async function createMercadoPagoPreference(
   }>((resolve, reject) => {
     const isTest = MP_ACCESS_TOKEN.startsWith("TEST-");
     const baseUrl = originUrl || APP_URL;
-    const postData = JSON.stringify({
+    const isHttps = baseUrl.startsWith("https://");
+
+    const payload: any = {
       items: [
         {
           title: `${planName} - Torque ERP`,
@@ -235,12 +237,18 @@ export async function createMercadoPagoPreference(
       external_reference: tenant.id,
       notification_url: `${APP_URL}/api/webhooks/mercadopago`,
       back_urls: {
-        success: `${baseUrl}/assinatura?status=sucesso`,
-        failure: `${baseUrl}/assinatura?status=falha`,
-        pending: `${baseUrl}/assinatura?status=pendente`,
+        success: `${baseUrl}/assinatura?status=approved`,
+        failure: `${baseUrl}/assinatura?status=failure`,
+        pending: `${baseUrl}/assinatura?status=pending`,
       },
-      auto_return: "approved",
-    });
+    };
+
+    // O Mercado Pago só aceita auto_return se a URL for HTTPS e não for localhost
+    if (isHttps && !baseUrl.includes("localhost")) {
+      payload.auto_return = "approved";
+    }
+
+    const postData = JSON.stringify(payload);
 
     const req = https.request(
       {
