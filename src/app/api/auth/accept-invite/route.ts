@@ -70,6 +70,8 @@ export async function POST(req: NextRequest) {
       role: updatedEmployee.role,
       accessLevel: (updatedEmployee.accessLevel as any) || "ATENDENTE",
       tenantId: updatedEmployee.tenantId || "default",
+      workshopName: employee.tenant?.name || "Torque ERP",
+      plan: employee.tenant?.plan || "PRO",
       isOwner: false,
       isMaster: false,
     });

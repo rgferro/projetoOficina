@@ -35,6 +35,7 @@ export interface UserSessionPayload {
   isMaster: boolean;
   workshopName: string;
   plan: string;
+  isOwner?: boolean;
 }
 
 /**
