@@ -9,18 +9,18 @@ import {
   UserPlus,
   User,
   Shield,
-  Check,
   ChevronDown,
-  X,
   Lock,
   LogOut,
   Sparkles,
+  Settings,
+  KeyRound,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { useAuth, ROLE_CONFIG } from "@/lib/authContext";
+import { useAuth } from "@/lib/authContext";
 import { InteractiveTourModal } from "@/components/InteractiveTour";
-
 import PageTourButton from "@/components/PageTourButton";
+import { UserProfileModal } from "@/components/UserProfileModal";
 
 interface HeaderProps {
   onOpenSidebar: () => void;
@@ -31,10 +31,11 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
   const [currentDate, setCurrentDate] = useState("");
   const [isTourOpen, setIsTourOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [loggedUser, setLoggedUser] = useState<any>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const { currentEmployee } = useAuth();
+  const { currentEmployee, canAccess } = useAuth();
 
   useEffect(() => {
     const d = new Date();
@@ -69,6 +70,7 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
       localStorage.removeItem("torque_user");
       localStorage.removeItem("autogestao_current_employee");
       document.cookie = "torque_session=; Max-Age=0; path=/;";
+      document.cookie = "torque_token=; Max-Age=0; path=/;";
     }
     router.push("/login");
   };
@@ -76,7 +78,17 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
   const displayName = loggedUser?.name || currentEmployee?.name || "Usuário";
   const displayRole = loggedUser?.isOwner
     ? "Proprietário"
-    : loggedUser?.role || currentEmployee?.role || "Administrador";
+    : loggedUser?.role || currentEmployee?.role || "Colaborador";
+
+  const activeUserForModal = {
+    id: loggedUser?.id || currentEmployee?.id,
+    name: displayName,
+    email: loggedUser?.email || currentEmployee?.email,
+    phone: loggedUser?.phone || currentEmployee?.phone,
+    role: displayRole,
+    accessLevel: currentEmployee?.accessLevel || loggedUser?.accessLevel || "MECANICO",
+    workshopName: loggedUser?.workshopName || "Torque ERP",
+  };
 
   return (
     <>
@@ -109,30 +121,34 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
               window.dispatchEvent(new CustomEvent("torque:open-onboarding-tour"));
             }}
             className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition-all active:scale-95"
-            title="Clique para abrir o Guia de Primeiros Passos do Administrador"
+            title="Clique para abrir o Guia Passo a Passo"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             <span>Guia do Fluxo</span>
           </button>
 
-          {/* Atalhos Rápidos */}
-          <Link
-            id="tour-btn-lavajato-top"
-            href="/lavajato"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-xs font-bold border border-cyan-200/80 transition-colors shadow-sm"
-          >
-            <Droplets className="w-3.5 h-3.5 text-cyan-600" />
-            <span className="hidden md:inline">Entrada</span> Lava-Jato
-          </Link>
+          {/* Atalhos Rápidos (Condicionados à Permissão) */}
+          {canAccess("/lavajato") && (
+            <Link
+              id="tour-btn-lavajato-top"
+              href="/lavajato"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-xs font-bold border border-cyan-200/80 transition-colors shadow-sm"
+            >
+              <Droplets className="w-3.5 h-3.5 text-cyan-600" />
+              <span className="hidden md:inline">Entrada</span> Lava-Jato
+            </Link>
+          )}
 
-          <Link
-            id="tour-btn-nova-os"
-            href="/oficina/nova"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm shadow-blue-600/20 transition-all"
-          >
-            <Wrench className="w-3.5 h-3.5" />
-            <span>Nova OS</span>
-          </Link>
+          {canAccess("/oficina") && (
+            <Link
+              id="tour-btn-nova-os"
+              href="/oficina/nova"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm shadow-blue-600/20 transition-all"
+            >
+              <Wrench className="w-3.5 h-3.5" />
+              <span>Nova OS</span>
+            </Link>
+          )}
 
           {/* Usuário Logado & Menu de Logout */}
           <div className="relative" ref={menuRef}>
@@ -158,7 +174,7 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
 
             {/* Dropdown Menu do Usuário */}
             {isUserMenuOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl border border-slate-200 shadow-xl p-2 z-50 animate-fadeIn space-y-1">
+              <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl border border-slate-200 shadow-xl p-2 z-50 animate-fadeIn space-y-1">
                 <div className="px-3 py-2 border-b border-slate-100">
                   <p className="text-xs font-black text-slate-900 truncate">{displayName}</p>
                   <p className="text-[10px] text-slate-400 font-mono truncate">{loggedUser?.email || ""}</p>
@@ -167,23 +183,41 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
                   </span>
                 </div>
 
-                <Link
-                  href="/equipe"
-                  onClick={() => setIsUserMenuOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl transition-colors"
+                {/* Opção para Qualquer Usuário: Meus Dados & Senha */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    setIsProfileOpen(true);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-800 hover:bg-blue-50 hover:text-blue-700 rounded-xl transition-colors text-left"
                 >
-                  <UserPlus className="w-4 h-4 text-blue-600" />
-                  <span>Gerenciar Equipe</span>
-                </Link>
+                  <KeyRound className="w-4 h-4 text-blue-600" />
+                  <span>Meus Dados & Senha</span>
+                </button>
 
-                <Link
-                  href="/configuracoes"
-                  onClick={() => setIsUserMenuOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl transition-colors"
-                >
-                  <Shield className="w-4 h-4 text-slate-400" />
-                  <span>Ajustes da Oficina</span>
-                </Link>
+                {/* Opções Restritas por Cargo */}
+                {canAccess("/equipe") && (
+                  <Link
+                    href="/equipe"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl transition-colors"
+                  >
+                    <UserPlus className="w-4 h-4 text-slate-500" />
+                    <span>Gerenciar Equipe</span>
+                  </Link>
+                )}
+
+                {canAccess("/configuracoes") && (
+                  <Link
+                    href="/configuracoes"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl transition-colors"
+                  >
+                    <Settings className="w-4 h-4 text-slate-500" />
+                    <span>Ajustes da Oficina</span>
+                  </Link>
+                )}
 
                 <button
                   type="button"
@@ -198,6 +232,23 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
           </div>
         </div>
       </header>
+
+      {/* Modal: Meus Dados & Senha */}
+      <UserProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        user={activeUserForModal}
+        onUserUpdated={(updated) => {
+          setLoggedUser((prev: any) => ({ ...prev, ...updated }));
+          if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("torque_user");
+            if (saved) {
+              const current = JSON.parse(saved);
+              localStorage.setItem("torque_user", JSON.stringify({ ...current, ...updated }));
+            }
+          }
+        }}
+      />
 
       {/* Modal de Tour Guiado */}
       <InteractiveTourModal
