@@ -83,37 +83,30 @@ export default function ConfiguracoesPage() {
     loadData();
   }, []);
 
-  // Polling automático para atualizar QR Code e detectar pareamento do celular
+  // Polling automático para atualizar QR Code e detectar pareamento do celular continuamente
   useEffect(() => {
-    let interval: any = null;
-
-    if (isQrModalOpen) {
-      fetch("/api/whatsapp/status")
-        .then((r) => r.json())
-        .then((data) => setWaStatus(data))
-        .catch(() => {});
-
-      interval = setInterval(async () => {
-        try {
-          const res = await fetch("/api/whatsapp/status");
-          if (res.ok) {
-            const data = await res.json();
-            setWaStatus(data);
-            if (data.status === "CONNECTED") {
-              setIsQrModalOpen(false);
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/whatsapp/status");
+        if (res.ok) {
+          const data = await res.json();
+          setWaStatus((prev: any) => {
+            if (prev?.status !== "CONNECTED" && data.status === "CONNECTED") {
               setSuccessMessage("✓ WhatsApp conectado com sucesso pelo celular!");
               setTimeout(() => setSuccessMessage(""), 4000);
             }
+            return data;
+          });
+          if (data.status === "CONNECTED" && isQrModalOpen) {
+            setIsQrModalOpen(false);
           }
-        } catch (err) {
-          // silencioso
         }
-      }, 1500);
-    }
+      } catch (err) {
+        // silencioso
+      }
+    }, 2000);
 
-    return () => {
-      if (interval) clearInterval(interval);
-    };
+    return () => clearInterval(pollInterval);
   }, [isQrModalOpen]);
 
   const handleSaveSettings = async (e: React.FormEvent) => {
