@@ -4,7 +4,7 @@ import os from "os";
 
 export interface CloudDetectionResult {
   detected: boolean;
-  provider: "Google Drive" | "OneDrive" | "Dropbox" | "Pasta Segura Local";
+  provider: "Google Drive" | "OneDrive" | "Dropbox" | "Pasta Segura Local" | "Google Drive / Nuvem Privada";
   folderPath: string;
   lastBackupDate: string | null;
   totalBackups: number;
