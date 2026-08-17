@@ -23,6 +23,7 @@ import {
   BookOpen,
   Zap,
   Lock,
+  Sparkles,
 } from "lucide-react";
 import { useAuth, ROLE_CONFIG } from "@/lib/authContext";
 
@@ -196,6 +197,19 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               </Link>
             );
           })}
+        {/* Botão Guia de Primeiros Passos no Sidebar */}
+        <div className="p-3 border-t border-slate-800 bg-slate-900/60">
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent("torque:open-onboarding-tour"));
+              if (onClose) onClose();
+            }}
+            className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition-all active:scale-95 border border-blue-400/30"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>Guia Passo a Passo</span>
+          </button>
         </div>
 
         {/* Footer info */}

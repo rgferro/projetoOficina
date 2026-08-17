@@ -8,6 +8,7 @@ import { AuthProvider } from "@/lib/authContext";
 import { AccessGuard } from "@/components/AccessGuard";
 import { ActivationGate } from "@/components/ActivationGate";
 import { PublicNavbar } from "@/components/PublicNavbar";
+import OnboardingTour from "@/components/OnboardingTour";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -43,6 +44,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </main>
           </div>
         </div>
+        <OnboardingTour />
       </AuthProvider>
     </ActivationGate>
   );

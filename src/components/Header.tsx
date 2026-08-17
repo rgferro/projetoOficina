@@ -99,12 +99,14 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
           {/* Botão de Tour Interativo / Tutorial */}
           <button
             type="button"
-            onClick={() => setIsTourOpen(true)}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold shadow-sm shadow-orange-500/20 transition-all active:scale-95"
-            title="Clique para reproduzir o Tour Interativo a qualquer momento"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent("torque:open-onboarding-tour"));
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black shadow-md shadow-blue-600/20 transition-all active:scale-95 border border-blue-400/30"
+            title="Clique para abrir o Guia de Primeiros Passos do Administrador"
           >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Tour do Sistema</span>
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>Guia Passo a Passo</span>
           </button>
 
           {/* Atalhos Rápidos */}

@@ -20,7 +20,10 @@ export function sanitizeWhatsAppNumber(phone: string): string {
 // Obtém status em tempo real do microserviço Baileys na porta 3005
 export async function getWhatsAppSession(): Promise<WhatsAppSession> {
   try {
-    const res = await fetch(`${DAEMON_URL}/status`, { cache: "no-store" });
+    const res = await fetch(`${DAEMON_URL}/status`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(1000),
+    });
     if (res.ok) {
       return await res.json();
     }
@@ -48,7 +51,10 @@ export function connectWhatsAppSession(phoneNumber: string): WhatsAppSession {
 // Desconectar sessão e forçar novo QR Code
 export async function disconnectWhatsAppSession(): Promise<WhatsAppSession> {
   try {
-    const res = await fetch(`${DAEMON_URL}/logout`, { method: "POST" });
+    const res = await fetch(`${DAEMON_URL}/logout`, {
+      method: "POST",
+      signal: AbortSignal.timeout(1000),
+    });
     if (res.ok) {
       return await getWhatsAppSession();
     }
@@ -89,6 +95,7 @@ export async function sendSilentWhatsAppMessage(params: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone: formattedPhone, message }),
+      signal: AbortSignal.timeout(1000),
     });
 
     if (res.ok) {
@@ -101,7 +108,7 @@ export async function sendSilentWhatsAppMessage(params: {
       };
     }
   } catch (err) {
-    console.error("Erro no envio pelo daemon:", err);
+    // Daemon offline ou em fallback
   }
 
   // Fallback simulado
