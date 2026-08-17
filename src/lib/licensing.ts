@@ -5,7 +5,7 @@ import { getFormattedHardwareId, PROJECT_PREFIX } from "./hardwareId";
 
 // Segredo Criptográfico exclusivo DESTE PROJETO (Oficina ERP)
 export const PROJECT_ID = "AUTOGESTAO_OFICINA";
-export const PROJECT_SECRET = "OFICINA_SECRET_2026_AG_PROD_KEY_9981";
+export const PROJECT_SECRET = process.env.PROJECT_SECRET || "OFICINA_SECRET_2026_AG_PROD_KEY_9981";
 
 export interface LicenseFileContent {
   hardwareId: string;
@@ -14,6 +14,8 @@ export interface LicenseFileContent {
   type: "LIFETIME" | "ANNUAL";
   issuedTo?: string;
   activatedAt: string;
+  lastCheckedAt?: string;
+  gracePeriodExpiresAt?: string;
   signature: string;
 }
 
@@ -24,11 +26,15 @@ export interface LicenseStatus {
   licenseType?: "LIFETIME" | "ANNUAL";
   issuedTo?: string;
   activatedAt?: string;
+  inGracePeriod?: boolean;
+  gracePeriodDaysLeft?: number;
   reason?: string;
 }
 
 const LICENSE_FILE_PATH =
   process.env.LICENSE_FILE_PATH || path.join(process.cwd(), ".license");
+
+const GRACE_PERIOD_DAYS = 7;
 
 /**
  * Gera o hash de validação interna da chave a partir do HWID e Segredo do Projeto.
@@ -159,11 +165,33 @@ export function checkLicenseStatus(): LicenseStatus {
   );
 
   if (!isValid) {
+    // Modo Graceful Degradation / Grace Period de 7 dias se a chave foi previamente ativada
+    if (fileData.activatedAt) {
+      const activatedDate = new Date(fileData.activatedAt);
+      const now = new Date();
+      const diffDays = Math.floor((now.getTime() - activatedDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (diffDays <= GRACE_PERIOD_DAYS) {
+        const daysLeft = Math.max(1, GRACE_PERIOD_DAYS - diffDays);
+        return {
+          isLicensed: true,
+          hardwareId: currentHardwareId,
+          projectId: PROJECT_ID,
+          licenseType: fileData.type,
+          issuedTo: fileData.issuedTo,
+          activatedAt: fileData.activatedAt,
+          inGracePeriod: true,
+          gracePeriodDaysLeft: daysLeft,
+          reason: `Operando em Período de Carência (Grace Period). Restam ${daysLeft} dia(s).`,
+        };
+      }
+    }
+
     return {
       isLicensed: false,
       hardwareId: currentHardwareId,
       projectId: PROJECT_ID,
-      reason: "Chave de licença inválida para este software.",
+      reason: "Chave de licença inválida ou período de carência expirado.",
     };
   }
 

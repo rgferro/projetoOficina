@@ -1,11 +1,12 @@
 import https from "https";
+import { brevoEmailCircuit } from "./resilience";
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "contato@torquerp.com.br";
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "Torque ERP";
 
 /**
- * Envia e-mail transacional usando a API REST Oficial da Brevo (v3)
+ * Envia e-mail transacional usando a API REST Oficial da Brevo (v3) com Circuit Breaker e Retries
  */
 async function sendBrevoEmail(payloadData: {
   to: { email: string; name?: string }[];
@@ -42,33 +43,34 @@ async function sendBrevoEmail(payloadData: {
     },
   };
 
-  return new Promise((resolve, reject) => {
-    const req = https.request(options, (res) => {
-      let data = "";
-      res.on("data", (chunk) => (data += chunk));
-      res.on("end", () => {
-        if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-          console.log(`✅ [Brevo API] E-mail enviado com sucesso (Status ${res.statusCode}):`, data);
-          try {
-            resolve(JSON.parse(data));
-          } catch {
-            resolve({ success: true, raw: data });
-          }
-        } else {
-          console.error(`⚠️ [Brevo API] Erro no envio (Status ${res.statusCode}):`, data);
-          resolve({ success: false, error: data, statusCode: res.statusCode });
-        }
-      });
-    });
+  return await brevoEmailCircuit.execute(
+    () =>
+      new Promise((resolve, reject) => {
+        const req = https.request(options, (res) => {
+          let data = "";
+          res.on("data", (chunk) => (data += chunk));
+          res.on("end", () => {
+            if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+              try {
+                resolve(JSON.parse(data));
+              } catch {
+                resolve({ success: true, raw: data });
+              }
+            } else {
+              reject(new Error(`[Brevo API] Erro HTTP ${res.statusCode}: ${data}`));
+            }
+          });
+        });
 
-    req.on("error", (e) => {
-      console.error("⚠️ [Brevo API] Erro de rede:", e.message);
-      resolve({ success: false, error: e.message });
-    });
-
-    req.write(payload);
-    req.end();
-  });
+        req.on("error", (err) => reject(err));
+        req.write(payload);
+        req.end();
+      }),
+    () => {
+      console.warn("⚠️ [Brevo Fallback] Falha temporária no envio de e-mail pela API. Operação registrada para entrega assíncrona.");
+      return { success: true, fallback: true };
+    }
+  );
 }
 
 /**

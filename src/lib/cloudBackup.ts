@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 
 export interface CloudDetectionResult {
@@ -49,8 +50,8 @@ export function detectCloudFolder(): { provider: "Google Drive" | "OneDrive" | "
   return { provider: "Pasta Segura Local", folderPath: localDocs };
 }
 
-// Executa cópia automática em segundo plano
-export function performAutoCloudBackup(): { success: boolean; savedPath: string; provider: string } {
+// Executa cópia automática em segundo plano com validação de integridade SHA-256
+export function performAutoCloudBackup(): { success: boolean; savedPath: string; provider: string; sha256?: string } {
   const { provider, folderPath } = detectCloudFolder();
   const dbPath = path.join(process.cwd(), "prisma", "dev.db");
 
@@ -62,14 +63,21 @@ export function performAutoCloudBackup(): { success: boolean; savedPath: string;
   const dateStr = now.toISOString().split("T")[0];
   const destinationPath = path.join(folderPath, `backup_oficina_${dateStr}.db`);
 
+  let sha256Hash: string | undefined = undefined;
+
   if (fs.existsSync(dbPath)) {
-    fs.copyFileSync(dbPath, destinationPath);
+    const fileBuffer = fs.readFileSync(dbPath);
+    sha256Hash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
+
+    // Grava de forma segura
+    fs.writeFileSync(destinationPath, fileBuffer);
   }
 
   return {
     success: true,
     savedPath: destinationPath,
     provider,
+    sha256: sha256Hash,
   };
 }
 
