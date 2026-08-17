@@ -1,58 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
-import { sendEmployeeInviteEmail } from "@/lib/email";
+import { sendEmployeeInviteEmail } from "@/lib/brevo";
+import { hashPassword } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const tenantId = searchParams.get("tenantId");
-
-    const whereClause: any = {};
-    if (tenantId) {
-      whereClause.tenantId = tenantId;
-    }
-
     const employees = await prisma.employee.findMany({
-      where: whereClause,
+      orderBy: { createdAt: "desc" },
       include: {
-        tenant: true,
         washTickets: {
-          where: { status: "ENTREGUE" },
-          select: { price: true, enteredAt: true },
+          where: {
+            createdAt: {
+              gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+            },
+          },
         },
-        serviceOrders: {
-          where: { status: "CONCLUIDO" },
-          select: { grandTotal: true, totalServices: true, createdAt: true },
+        orderItems: {
+          where: {
+            order: {
+              status: "CONCLUIDO",
+              createdAt: {
+                gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+              },
+            },
+          },
+          include: {
+            order: true,
+          },
         },
       },
-      orderBy: { name: "asc" },
     });
 
+    // Calcula faturamento mensal gerado por cada colaborador e comissão estimada
     const enriched = employees.map((emp) => {
-      const totalWashes = emp.washTickets.length;
       const washVolume = emp.washTickets.reduce((sum, w) => sum + w.price, 0);
-
-      const totalOS = emp.serviceOrders.length;
-      const osServicesVolume = emp.serviceOrders.reduce(
-        (sum, os) => sum + os.totalServices,
-        0
-      );
-
-      const totalEligibleVolume = washVolume + osServicesVolume;
-      const estimatedCommission = (totalEligibleVolume * emp.commissionRate) / 100;
+      const osServicesVolume = emp.orderItems
+        .filter((item) => item.serviceId !== null)
+        .reduce((sum, item) => sum + item.totalPrice, 0);
+      const totalVolume = washVolume + osServicesVolume;
+      const estimatedCommission = totalVolume * (emp.commissionRate / 100);
 
       return {
-        ...emp,
+        id: emp.id,
+        name: emp.name,
+        role: emp.role,
+        accessLevel: emp.accessLevel,
+        email: emp.email,
+        phone: emp.phone,
+        commissionRate: emp.commissionRate,
+        inviteToken: emp.inviteToken,
         hasPassword: !!emp.password,
-        hasPendingInvite: !!emp.inviteToken && (!emp.inviteExpiresAt || new Date() < new Date(emp.inviteExpiresAt)),
-        stats: {
-          totalWashes,
-          washVolume,
-          totalOS,
-          osServicesVolume,
-          estimatedCommission,
-        },
+        active: emp.active,
+        createdAt: emp.createdAt,
+        totalServicesThisMonth: emp.washTickets.length + emp.orderItems.length,
+        totalVolumeThisMonth: totalVolume,
+        estimatedCommissionThisMonth: estimatedCommission,
       };
     });
 
@@ -66,7 +69,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, role, accessLevel, email, phone, commissionRate, tenantId } = body;
+    const { name, role, accessLevel, email, phone, commissionRate, password, tenantId } = body;
 
     if (!name || !role) {
       return NextResponse.json(
@@ -77,7 +80,7 @@ export async function POST(req: NextRequest) {
 
     if (!email || !email.includes("@")) {
       return NextResponse.json(
-        { error: "Informe um e-mail válido para enviar o convite de criação de senha do funcionário." },
+        { error: "Informe um e-mail válido para o funcionário." },
         { status: 400 }
       );
     }
@@ -118,6 +121,7 @@ export async function POST(req: NextRequest) {
         email: cleanEmail,
         phone: phone ? phone.trim() : null,
         commissionRate: Number(commissionRate) || 0,
+        password: password ? hashPassword(password) : null,
         inviteToken,
         inviteExpiresAt,
         active: true,
@@ -143,7 +147,9 @@ export async function POST(req: NextRequest) {
       {
         success: true,
         employee,
-        message: `Convite enviado com sucesso para ${cleanEmail}! O funcionário receberá um link para criar sua senha de acesso.`,
+        message: password
+          ? `Funcionário ${employee.name} cadastrado com sucesso! Já pode realizar login.`
+          : `Convite enviado com sucesso para ${cleanEmail}! O funcionário receberá um link para criar sua senha de acesso.`,
         inviteLink,
       },
       { status: 201 }
@@ -157,27 +163,38 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
-    const { id, name, role, accessLevel, email, phone, commissionRate, active } = body;
+    const { id, name, role, accessLevel, email, phone, commissionRate, password, active } = body;
 
-    if (!id) {
-      return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
+    if (!id || !name || !role) {
+      return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
     }
 
-    const updated = await prisma.employee.update({
+    const updateData: any = {
+      name: name.trim(),
+      role: role.trim(),
+      accessLevel,
+      email: email ? email.trim().toLowerCase() : null,
+      phone: phone ? phone.trim() : null,
+      commissionRate: Number(commissionRate) || 0,
+      active: active !== undefined ? active : true,
+    };
+
+    if (password && password.trim().length > 0) {
+      updateData.password = hashPassword(password.trim());
+    }
+
+    const employee = await prisma.employee.update({
       where: { id },
-      data: {
-        name,
-        role,
-        accessLevel: accessLevel !== undefined ? accessLevel : undefined,
-        email: email !== undefined ? email : undefined,
-        phone: phone !== undefined ? phone : undefined,
-        commissionRate: commissionRate !== undefined ? Number(commissionRate) : undefined,
-        active: active !== undefined ? active : undefined,
-      },
+      data: updateData,
     });
 
-    return NextResponse.json(updated);
+    return NextResponse.json({
+      success: true,
+      employee,
+      message: "Dados do funcionário atualizados com sucesso!",
+    });
   } catch (error: any) {
+    console.error("Erro ao atualizar funcionário:", error);
     return NextResponse.json({ error: error.message || "Erro ao atualizar funcionário" }, { status: 500 });
   }
 }
@@ -188,7 +205,7 @@ export async function DELETE(req: NextRequest) {
     const id = searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
+      return NextResponse.json({ error: "ID não fornecido" }, { status: 400 });
     }
 
     await prisma.employee.delete({
@@ -197,6 +214,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    console.error("Erro ao remover funcionário:", error);
     return NextResponse.json({ error: error.message || "Erro ao remover funcionário" }, { status: 500 });
   }
 }

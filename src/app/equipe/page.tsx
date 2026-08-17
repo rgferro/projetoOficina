@@ -112,6 +112,7 @@ export default function EquipePage() {
       accessLevel: "MECANICO",
       email: "",
       phone: "",
+      password: "",
       commissionRate: "10",
       active: true,
     });
@@ -127,6 +128,7 @@ export default function EquipePage() {
       accessLevel: emp.accessLevel,
       email: emp.email || "",
       phone: emp.phone || "",
+      password: "",
       commissionRate: String(emp.commissionRate || 0),
       active: emp.active,
     });
@@ -606,6 +608,25 @@ export default function EquipePage() {
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-blue-500"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  {editingEmployee
+                    ? "Alterar Senha de Acesso (Opcional - deixe em branco para manter)"
+                    : "Senha de Acesso do Funcionário (Opcional)"}
+                </label>
+                <input
+                  type="password"
+                  placeholder={
+                    editingEmployee
+                      ? "Digite nova senha para alterar ou deixe em branco"
+                      : "Defina a senha agora ou deixe em branco para ele criar via convite"
+                  }
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-blue-500"
+                />
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">

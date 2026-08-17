@@ -18,8 +18,21 @@ import {
   Building,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
+import { useAuth } from "@/lib/authContext";
 
 export default function EstoquePage() {
+  const { currentEmployee } = useAuth();
+  const isFinancialPrivileged =
+    !currentEmployee ||
+    currentEmployee.accessLevel === "ADMIN" ||
+    currentEmployee.accessLevel === "GERENTE" ||
+    currentEmployee.accessLevel === "ATENDENTE";
+
+  const isCostPrivileged =
+    !currentEmployee ||
+    currentEmployee.accessLevel === "ADMIN" ||
+    currentEmployee.accessLevel === "GERENTE";
+
   const [products, setProducts] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -292,7 +305,7 @@ export default function EstoquePage() {
       </div>
 
       {/* Cards de Métricas do Estoque */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${isCostPrivileged ? "lg:grid-cols-4" : "lg:grid-cols-2"} gap-4`}>
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
@@ -306,37 +319,41 @@ export default function EstoquePage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
-              Valor Imobilizado (Custo)
-            </span>
-            <span className="text-2xl font-black text-slate-800">
-              {formatCurrency(totalCostValue)}
-            </span>
-            <p className="text-xs text-slate-500 mt-1">Capital investido em estoque</p>
+        {isCostPrivileged && (
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                Valor Imobilizado (Custo)
+              </span>
+              <span className="text-2xl font-black text-slate-800">
+                {formatCurrency(totalCostValue)}
+              </span>
+              <p className="text-xs text-slate-500 mt-1">Capital investido em estoque</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
+              <DollarSign className="w-5 h-5" />
+            </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
-            <DollarSign className="w-5 h-5" />
-          </div>
-        </div>
+        )}
 
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
-              Valor Potencial de Venda
-            </span>
-            <span className="text-2xl font-black text-emerald-600">
-              {formatCurrency(totalSaleValue)}
-            </span>
-            <p className="text-xs text-emerald-700 font-semibold mt-1">
-              Lucro Estimado: {formatCurrency(totalSaleValue - totalCostValue)}
-            </p>
+        {isCostPrivileged && (
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                Valor Potencial de Venda
+              </span>
+              <span className="text-2xl font-black text-emerald-600">
+                {formatCurrency(totalSaleValue)}
+              </span>
+              <p className="text-xs text-emerald-700 font-semibold mt-1">
+                Lucro Estimado: {formatCurrency(totalSaleValue - totalCostValue)}
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <TrendingUp className="w-5 h-5" />
+            </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-            <TrendingUp className="w-5 h-5" />
-          </div>
-        </div>
+        )}
 
         <div
           id="estoque-critical-alert"
@@ -411,8 +428,8 @@ export default function EstoquePage() {
                   <th className="py-3 px-4">Código / SKU</th>
                   <th className="py-3 px-4">Categoria / Marca</th>
                   <th className="py-3 px-4 text-center">Estoque Atual</th>
-                  <th className="py-3 px-4 text-right">Preço Custo</th>
-                  <th className="py-3 px-4 text-right">Preço Venda</th>
+                  {isCostPrivileged && <th className="py-3 px-4 text-right">Preço Custo</th>}
+                  {isFinancialPrivileged && <th className="py-3 px-4 text-right">Preço Venda</th>}
                   <th className="py-3 px-4 text-right">Ações</th>
                 </tr>
               </thead>
@@ -455,15 +472,21 @@ export default function EstoquePage() {
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-right text-slate-600 font-mono">
-                        {formatCurrency(p.costPrice)}
-                      </td>
-                      <td className="py-3 px-4 text-right font-black text-slate-900 text-sm font-mono">
-                        {formatCurrency(p.salePrice)}
-                        <span className="block text-[9px] text-emerald-600 font-bold">
-                          +{p.profitMargin}% margem
-                        </span>
-                      </td>
+                      {isCostPrivileged && (
+                        <td className="py-3 px-4 text-right text-slate-600 font-mono">
+                          {formatCurrency(p.costPrice)}
+                        </td>
+                      )}
+                      {isFinancialPrivileged && (
+                        <td className="py-3 px-4 text-right font-black text-slate-900 text-sm font-mono">
+                          {formatCurrency(p.salePrice)}
+                          {isCostPrivileged && (
+                            <span className="block text-[9px] text-emerald-600 font-bold">
+                              +{p.profitMargin}% margem
+                            </span>
+                          )}
+                        </td>
+                      )}
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button
