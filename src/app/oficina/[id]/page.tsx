@@ -763,7 +763,6 @@ export default function DetalhesOrdemServicoPage({
           </div>
         )}
       </div>
-      </div>
 
       {/* Galeria de Fotos Anexadas */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
