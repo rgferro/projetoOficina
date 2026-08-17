@@ -48,9 +48,28 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const { planId = "PRO", tenantId, seatsCount = 0 } = body;
+
     const plan = SAAS_PLANS[planId] || SAAS_PLANS.PRO;
+    const amount = seatsCount > 0 ? SAAS_PLANS.EXTRA_SEAT.price * seatsCount : plan.price;
+    const planName =
+      seatsCount > 0 ? `+${seatsCount} Usuário(s) Extra(s) - Torque ERP` : plan.name;
     const originUrl = req.nextUrl.origin || req.headers.get("origin") || undefined;
-    const pref = await createMercadoPagoPreference(tenant, plan.price, plan.name, originUrl);
+    const pref = await createMercadoPagoPreference(tenant, amount, planName, originUrl);
+
+    // Registra pagamento pendente se for assento extra
+    if (seatsCount > 0) {
+      await prisma.subscriptionPayment.create({
+        data: {
+          tenantId: tenant.id,
+          paymentId: pref.preference_id,
+          amount,
+          status: "pending",
+          method: "checkout_pro",
+          plan: "EXTRA_SEAT",
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,

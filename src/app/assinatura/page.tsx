@@ -16,6 +16,8 @@ import {
   Clock,
   ChevronRight,
   TrendingUp,
+  Lock,
+  X,
 } from "lucide-react";
 import { SAAS_PLANS } from "@/lib/mercadopago";
 
@@ -53,7 +55,11 @@ export default function AssinaturaPage() {
       const urlParams = new URLSearchParams(window.location.search);
       const status = urlParams.get("status") || urlParams.get("collection_status");
       const paymentId = urlParams.get("payment_id") || urlParams.get("collection_id");
-      const extRef = urlParams.get("external_reference");
+      const rawExtRef = urlParams.get("external_reference");
+      const extRef =
+        rawExtRef && rawExtRef !== "null" && rawExtRef !== "undefined" && rawExtRef.trim().length > 5
+          ? rawExtRef.trim()
+          : undefined;
 
       if (status === "approved" || status === "sucesso") {
         try {
@@ -122,6 +128,52 @@ export default function AssinaturaPage() {
       }
     } catch (e: any) {
       alert(e.message || "Erro de conexão com Mercado Pago");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleCardExtraSeats = async (seats: number) => {
+    setActionLoading("card_extra");
+    try {
+      const res = await fetch("/api/subscription/create-card", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId: "EXTRA_SEAT", seatsCount: seats }),
+      });
+      const data = await res.json();
+      if (data.success && data.initPoint) {
+        window.location.href = data.initPoint;
+      } else {
+        alert(data.error || "Erro ao iniciar assinatura de assentos no cartão");
+      }
+    } catch (e: any) {
+      alert(e.message || "Erro de conexão com Mercado Pago");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRemoveSeats = async (seats: number = 1) => {
+    if (!confirm(`Deseja realmente remover ${seats} assento(s) adicional(is)? Se o número de funcionários ativos exceder a nova cota, os funcionários extras serão desativados preventivamente sem perda de dados.`)) {
+      return;
+    }
+    setActionLoading("remove_seats");
+    try {
+      const res = await fetch("/api/subscription/remove-seats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seatsCount: seats }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setReturnSuccessMsg(data.message || "Assentos reduzidos com sucesso!");
+        fetchSubscription();
+      } else {
+        alert(data.error || "Erro ao remover assentos");
+      }
+    } catch (e: any) {
+      alert(e.message || "Erro de conexão com o servidor");
     } finally {
       setActionLoading(null);
     }
@@ -503,48 +555,113 @@ export default function AssinaturaPage() {
       </div>
 
       {/* Pacote de Usuários Adicionais */}
-      <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div className="space-y-2 max-w-xl">
-          <span className="text-[11px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-            Expansão de Equipe
-          </span>
-          <h3 className="text-xl font-bold text-slate-900">
-            Precisa de mais usuários além do seu plano?
-          </h3>
-          <p className="text-xs text-slate-600 leading-relaxed">
-            Adicione assentos extras para mecânicos, atendentes ou lavadores por apenas <strong>R$ 14,90 / mês</strong> cada.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200 w-full md:w-auto">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setExtraSeats((prev) => Math.max(1, prev - 1))}
-              className="w-8 h-8 rounded-xl bg-white border border-slate-300 font-bold text-sm text-slate-700 flex items-center justify-center hover:bg-slate-100"
-            >
-              -
-            </button>
-            <span className="w-8 text-center font-black text-sm text-slate-900">
-              {extraSeats}
+      {currentPlan === "STARTER" ? (
+        <div className="bg-slate-50 rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-xl">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-600 bg-slate-200 px-3 py-1 rounded-full inline-flex items-center gap-1.5 w-fit">
+              <Lock className="w-3.5 h-3.5" />
+              Exclusivo para Planos Pro e Elite
             </span>
-            <button
-              onClick={() => setExtraSeats((prev) => prev + 1)}
-              className="w-8 h-8 rounded-xl bg-white border border-slate-300 font-bold text-sm text-slate-700 flex items-center justify-center hover:bg-slate-100"
-            >
-              +
-            </button>
+            <h3 className="text-xl font-bold text-slate-900">
+              Precisa de mais usuários além do limite gratuito?
+            </h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              A expansão de equipe (adição de assentos extras por <strong>R$ 14,90 / mês</strong>) é exclusiva para oficinas assinantes do Plano <strong>Torque Oficina Pro</strong> ou <strong>Elite</strong>.
+            </p>
           </div>
 
           <button
-            onClick={() => handleGeneratePix("EXTRA_SEAT", extraSeats)}
-            disabled={actionLoading === "pix_EXTRA_SEAT"}
-            className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-2 whitespace-nowrap shadow-md transition-all"
+            onClick={() => handleGeneratePix("PRO")}
+            className="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs flex items-center gap-2 shadow-md shadow-blue-500/20 transition-all active:scale-95 whitespace-nowrap"
           >
-            <QrCode className="w-4 h-4 text-amber-400" />
-            Adicionar por R$ {(extraSeats * 14.9).toFixed(2).replace(".", ",")}
+            <Sparkles className="w-4 h-4 text-amber-300 fill-current" />
+            Fazer Upgrade para Plano Pro
           </button>
         </div>
-      </div>
+      ) : (
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="space-y-2 max-w-xl">
+              <span className="text-[11px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                Expansão de Equipe
+              </span>
+              <h3 className="text-xl font-bold text-slate-900">
+                Precisa de mais usuários além do seu plano?
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Adicione assentos extras para mecânicos, atendentes ou lavadores por apenas <strong>R$ 14,90 / mês</strong> cada.
+              </p>
+              {maxUsers > (currentPlan === "ELITE" ? 8 : 4) && (
+                <div className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl inline-flex items-center gap-2">
+                  <Users className="w-4 h-4 text-emerald-600" />
+                  Sua oficina possui <strong>+{maxUsers - (currentPlan === "ELITE" ? 8 : 4)} assento(s) adicional(is)</strong> ativo(s) ({maxUsers} usuários no total).
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 w-full md:w-auto">
+              <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setExtraSeats((prev) => Math.max(1, prev - 1))}
+                  className="w-8 h-8 rounded-lg bg-slate-100 font-bold text-sm text-slate-700 flex items-center justify-center hover:bg-slate-200"
+                >
+                  -
+                </button>
+                <span className="w-8 text-center font-black text-sm text-slate-900">
+                  {extraSeats}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setExtraSeats((prev) => prev + 1)}
+                  className="w-8 h-8 rounded-lg bg-slate-100 font-bold text-sm text-slate-700 flex items-center justify-center hover:bg-slate-200"
+                >
+                  +
+                </button>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => handleGeneratePix("EXTRA_SEAT", extraSeats)}
+                  disabled={actionLoading === "pix_EXTRA_SEAT"}
+                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 whitespace-nowrap shadow-sm transition-all"
+                >
+                  <QrCode className="w-4 h-4" />
+                  PIX (R$ {(extraSeats * 14.9).toFixed(2).replace(".", ",")})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleCardExtraSeats(extraSeats)}
+                  disabled={actionLoading === "card_extra"}
+                  className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 whitespace-nowrap shadow-sm transition-all"
+                >
+                  <CreditCard className="w-4 h-4 text-blue-400" />
+                  Cartão Recorrente
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {maxUsers > (currentPlan === "ELITE" ? 8 : 4) && (
+            <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+              <span className="text-slate-500">
+                Deseja reduzir a capacidade de assentos da sua equipe?
+              </span>
+              <button
+                type="button"
+                onClick={() => handleRemoveSeats(1)}
+                disabled={actionLoading === "remove_seats"}
+                className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs flex items-center gap-1.5 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+                Reduzir 1 Assento Extra
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Modal PIX Dinâmico com QR Code */}
       {isPixModalOpen && pixData && (

@@ -11,31 +11,45 @@ export async function POST(req: NextRequest) {
     const token = req.cookies.get("torque_token")?.value;
     const session = token ? verifySessionToken(token) : null;
 
-    let targetTenantId = externalReference || session?.tenantId;
+    const cleanExtRef =
+      externalReference &&
+      externalReference !== "null" &&
+      externalReference !== "undefined" &&
+      String(externalReference).trim().length > 5
+        ? String(externalReference).trim()
+        : null;
 
-    if (!targetTenantId && session?.email) {
-      const t = await prisma.tenant.findFirst({
-        where: { ownerEmail: session.email },
-      });
-      targetTenantId = t?.id;
+    let targetTenant = null;
+
+    if (cleanExtRef) {
+      targetTenant = await prisma.tenant.findUnique({ where: { id: cleanExtRef } });
     }
 
-    if (!targetTenantId) {
-      const defaultTenant = await prisma.tenant.findFirst({
+    if (!targetTenant && session?.tenantId) {
+      targetTenant = await prisma.tenant.findUnique({ where: { id: session.tenantId } });
+    }
+
+    if (!targetTenant && session?.email) {
+      targetTenant = await prisma.tenant.findFirst({
+        where: { ownerEmail: session.email },
+      });
+    }
+
+    if (!targetTenant) {
+      targetTenant = await prisma.tenant.findFirst({
         where: { active: true },
         orderBy: { createdAt: "desc" },
       });
-      targetTenantId = defaultTenant?.id;
     }
 
-    if (!targetTenantId) {
+    if (!targetTenant) {
       return NextResponse.json(
-        { success: false, error: "Tenant não encontrado" },
+        { success: false, error: "Tenant da oficina não encontrado" },
         { status: 404 }
       );
     }
 
-    let isApproved = status === "approved";
+    let isApproved = status === "approved" || status === "sucesso";
     let amount = 69.9;
     let resolvedPlan = planId || "PRO";
 
@@ -62,7 +76,7 @@ export async function POST(req: NextRequest) {
         if (recordedPayment && recordedPayment.plan === "EXTRA_SEAT") {
           const extraSeatsCount = Math.round(amount / SAAS_PLANS.EXTRA_SEAT.price) || 1;
           const updatedTenant = await prisma.tenant.update({
-            where: { id: targetTenantId },
+            where: { id: targetTenant.id },
             data: {
               maxUsers: { increment: extraSeatsCount },
             },
@@ -87,8 +101,8 @@ export async function POST(req: NextRequest) {
         targetMaxUsers = 4;
       }
 
-      await prisma.tenant.update({
-        where: { id: targetTenantId },
+      const updatedTenant = await prisma.tenant.update({
+        where: { id: targetTenant.id },
         data: {
           plan: targetPlan,
           maxUsers: targetMaxUsers,

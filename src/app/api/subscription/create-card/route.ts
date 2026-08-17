@@ -48,14 +48,21 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const plan = SAAS_PLANS[planId] || SAAS_PLANS.PRO;
-    const originUrl = req.nextUrl.origin || req.headers.get("origin") || undefined;
-    const preapproval = await createMercadoPagoPreapproval(tenant, plan.price, plan.name, originUrl);
+    const { planId = "PRO", tenantId, seatsCount = 0 } = body;
 
-    await prisma.tenant.update({
-      where: { id: tenant.id },
-      data: { mercadopagoPreapprovalId: preapproval.preapproval_id },
-    });
+    const plan = SAAS_PLANS[planId] || SAAS_PLANS.PRO;
+    const amount = seatsCount > 0 ? SAAS_PLANS.EXTRA_SEAT.price * seatsCount : plan.price;
+    const planName =
+      seatsCount > 0 ? `+${seatsCount} Usuário(s) Extra(s) - Torque ERP` : plan.name;
+    const originUrl = req.nextUrl.origin || req.headers.get("origin") || undefined;
+    const preapproval = await createMercadoPagoPreapproval(tenant, amount, planName, originUrl);
+
+    if (seatsCount === 0) {
+      await prisma.tenant.update({
+        where: { id: tenant.id },
+        data: { mercadopagoPreapprovalId: preapproval.preapproval_id },
+      });
+    }
 
     return NextResponse.json({
       success: true,
