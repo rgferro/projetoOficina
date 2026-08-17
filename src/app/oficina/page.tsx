@@ -72,6 +72,7 @@ export default function OficinaPage() {
         </div>
 
         <Link
+          id="oficina-new-os-btn"
           href="/oficina/nova"
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all"
         >
@@ -94,7 +95,7 @@ export default function OficinaPage() {
         </div>
 
         {/* Status Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+        <div id="oficina-kanban-board" className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
           {[
             { id: "TODOS", label: "Todas" },
             { id: "ORCAMENTO", label: "Orçamento" },
@@ -129,7 +130,7 @@ export default function OficinaPage() {
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div id="oficina-os-card" className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200">

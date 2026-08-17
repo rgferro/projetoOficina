@@ -143,6 +143,7 @@ export default function ServicosPage() {
         </div>
 
         <button
+          id="servicos-new-btn"
           onClick={handleOpenNew}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all"
         >
@@ -152,7 +153,7 @@ export default function ServicosPage() {
       </div>
 
       {/* Barra de Busca */}
-      <div className="relative">
+      <div id="servicos-filters" className="relative">
         <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
           type="text"
@@ -172,7 +173,7 @@ export default function ServicosPage() {
           <h3 className="font-bold text-slate-700">Nenhum serviço padronizado cadastrado</h3>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div id="servicos-table" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {services.map((s) => (
             <div
               key={s.id}

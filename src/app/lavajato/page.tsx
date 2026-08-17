@@ -316,6 +316,7 @@ export default function LavaJatoPage() {
         </div>
 
           <button
+            id="lavajato-new-btn"
             onClick={handleOpenNewTicketModal}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-sm shadow-md shadow-cyan-500/20 transition-all"
           >
@@ -352,7 +353,7 @@ export default function LavaJatoPage() {
       {loading ? (
         <div className="text-center py-16 text-slate-400">Carregando quadro do lava-jato...</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div id="lavajato-kanban-board" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
           {/* Coluna 1: Aguardando */}
           <div className="bg-slate-100/80 rounded-2xl p-4 border border-slate-200/80 flex flex-col min-h-[500px]">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-3">
@@ -550,6 +551,7 @@ export default function LavaJatoPage() {
 
                       {/* Botão de Disparo WhatsApp Silencioso Interno */}
                       <button
+                        id="lavajato-whatsapp-action"
                         type="button"
                         disabled={sendingWaId === ticket.id}
                         onClick={() => handleSendSilentWhatsapp(ticket, whatsappMsg)}
@@ -569,6 +571,7 @@ export default function LavaJatoPage() {
                       </button>
 
                       <button
+                        id="lavajato-deliver-action"
                         onClick={() => {
                           setSelectedTicketForPayment(ticket);
                           setIsPaymentModalOpen(true);

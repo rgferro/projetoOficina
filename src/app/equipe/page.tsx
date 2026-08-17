@@ -230,6 +230,7 @@ export default function EquipePage() {
 
         <div className="flex items-center gap-2">
           <button
+            id="equipe-invite-btn"
             onClick={handleOpenNew}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all active:scale-95"
           >
@@ -247,7 +248,7 @@ export default function EquipePage() {
       )}
 
       {/* Tabs de Navegação: Usuários vs Matriz de Permissões */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+      <div id="equipe-roles-info" className="flex items-center gap-2 border-b border-slate-200 pb-3">
         <button
           onClick={() => setActiveTab("USUARIOS")}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
@@ -328,7 +329,7 @@ export default function EquipePage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div id="equipe-list-table" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredEmployees.map((emp) => {
                 const roleConfig = ROLE_CONFIG[emp.accessLevel as AccessLevel] || ROLE_CONFIG.MECANICO;
                 return (

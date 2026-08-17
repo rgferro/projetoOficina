@@ -300,7 +300,7 @@ export default function PDVPage() {
           </div>
 
           {/* Alternador de Abas: Todos vs Peças vs Serviços */}
-          <div className="flex items-center gap-2">
+          <div id="pdv-catalog-tabs" className="flex items-center gap-2">
             <button
               onClick={() => setCatalogTab("ALL")}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
@@ -339,7 +339,7 @@ export default function PDVPage() {
           {loading ? (
             <div className="text-center py-16 text-slate-400 text-xs">Carregando catálogo...</div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 max-h-[620px] overflow-y-auto pr-1">
+            <div id="pdv-catalog-grid" className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 max-h-[620px] overflow-y-auto pr-1">
               {/* SERVIÇOS CADASTRADOS */}
               {(catalogTab === "ALL" || catalogTab === "SERVICES") &&
                 filteredServices.map((serv) => (

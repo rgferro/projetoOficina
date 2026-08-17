@@ -20,6 +20,8 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth, ROLE_CONFIG } from "@/lib/authContext";
 import { InteractiveTourModal } from "@/components/InteractiveTour";
 
+import PageTourButton from "@/components/PageTourButton";
+
 interface HeaderProps {
   onOpenSidebar: () => void;
 }
@@ -96,18 +98,21 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Botão de Tour Interativo / Tutorial */}
+          {/* Botão Contextual de Tutorial da Tela Atual */}
+          <PageTourButton />
+
+          {/* Botão de Guia Geral do Fluxo */}
           <button
             id="tour-btn-guia"
             type="button"
             onClick={() => {
               window.dispatchEvent(new CustomEvent("torque:open-onboarding-tour"));
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black shadow-md shadow-blue-600/20 transition-all active:scale-95 border border-blue-400/30"
+            className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition-all active:scale-95"
             title="Clique para abrir o Guia de Primeiros Passos do Administrador"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>Guia Passo a Passo</span>
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Guia do Fluxo</span>
           </button>
 
           {/* Atalhos Rápidos */}

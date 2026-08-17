@@ -268,6 +268,7 @@ export default function EstoquePage() {
 
         <div className="flex items-center gap-2.5 flex-wrap">
           <button
+            id="estoque-xml-btn"
             onClick={() => {
               setXmlResult(null);
               setXmlContent("");
@@ -280,6 +281,7 @@ export default function EstoquePage() {
           </button>
 
           <button
+            id="estoque-new-btn"
             onClick={handleOpenNew}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-500/20 transition-all"
           >
@@ -337,6 +339,7 @@ export default function EstoquePage() {
         </div>
 
         <div
+          id="estoque-critical-alert"
           onClick={() => setLowStockOnly(!lowStockOnly)}
           className={`rounded-2xl p-5 border shadow-sm flex items-center justify-between cursor-pointer transition-all ${
             lowStockOnly
@@ -364,6 +367,7 @@ export default function EstoquePage() {
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
+            id="estoque-search-input"
             type="text"
             placeholder="Buscar por nome da peça, SKU, código de barras ou fabricante..."
             value={search}

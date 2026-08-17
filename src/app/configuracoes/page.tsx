@@ -249,7 +249,7 @@ export default function ConfiguracoesPage() {
       )}
 
       {/* Seção 0: Conexão do WhatsApp com QR Code */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
+      <div id="config-whatsapp-card" className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <div
@@ -476,7 +476,7 @@ export default function ConfiguracoesPage() {
       )}
 
       {/* Seção 1: Backup em Nuvem 100% Automático */}
-      <div className="bg-gradient-to-tr from-slate-900 via-slate-850 to-blue-950 rounded-2xl p-6 text-white shadow-xl space-y-5">
+      <div id="config-backup-card" className="bg-gradient-to-tr from-slate-900 via-slate-850 to-blue-950 rounded-2xl p-6 text-white shadow-xl space-y-5">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3.5">
             <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
@@ -564,7 +564,7 @@ export default function ConfiguracoesPage() {
         <div className="text-center py-8 text-slate-400">Carregando configurações...</div>
       ) : (
         <form onSubmit={handleSaveSettings} className="space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <div id="config-company-card" className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
             <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
               <Building className="w-4 h-4 text-blue-600" />
               Dados da Empresa (Aparecem nas OSs impressas)
@@ -625,7 +625,7 @@ export default function ConfiguracoesPage() {
           </div>
 
           {/* Seção 3: Modelos de Mensagens do WhatsApp */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <div id="config-templates-card" className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
             <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-emerald-600" />
               Modelos de Mensagem do WhatsApp (Variáveis: &#123;nome&#125;, &#123;veiculo&#125;, &#123;placa&#125;, &#123;oficina&#125;, &#123;valor&#125;)
@@ -684,6 +684,7 @@ export default function ConfiguracoesPage() {
 
           <div className="flex justify-end">
             <button
+              id="config-save-btn"
               type="submit"
               disabled={saving}
               className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 flex items-center gap-2 disabled:opacity-50"

@@ -105,7 +105,7 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2.5">
+        <div id="dash-quick-actions" className="flex flex-wrap gap-2.5">
           <Link
             href="/lavajato"
             className="px-4 py-2.5 rounded-xl bg-white text-blue-700 hover:bg-blue-50 font-bold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2"
@@ -124,7 +124,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Grid de Indicadores em Tempo Real */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div id="dash-metrics-grid" className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs font-bold uppercase">Lava-Jato no Pátio</span>
