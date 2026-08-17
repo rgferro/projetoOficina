@@ -1,27 +1,28 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  ShoppingCart,
   Droplets,
   Wrench,
   Package,
   ListOrdered,
-  Truck,
   Users,
   UserCheck,
   CircleDollarSign,
   BarChart3,
   MessageSquare,
   Settings,
+  Truck,
+  ShoppingCart,
   X,
-  Zap,
-  Lock,
-  BookOpen,
   CreditCard,
   Crown,
+  BookOpen,
+  Zap,
+  Lock,
 } from "lucide-react";
 import { useAuth, ROLE_CONFIG } from "@/lib/authContext";
 
@@ -33,8 +34,23 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { currentEmployee, canAccess, isEnforced } = useAuth();
+  const [isMasterUser, setIsMasterUser] = useState(false);
 
-  const navigation = [
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("torque_user");
+        if (saved) {
+          const u = JSON.parse(saved);
+          if (u.email === "rafael.gielow@gmail.com" || u.isMaster === true) {
+            setIsMasterUser(true);
+          }
+        }
+      } catch (e) {}
+    }
+  }, []);
+
+  const baseNavigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "PDV Balcão", href: "/pdv", icon: ShoppingCart, badge: "Vendas" },
     { name: "Lava-Jato", href: "/lavajato", icon: Droplets, badge: "Pátio" },
@@ -49,9 +65,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: "CRM WhatsApp", href: "/crm", icon: MessageSquare, badge: "Alertas" },
     { name: "Assinatura & Planos", href: "/assinatura", icon: CreditCard, badge: "SaaS" },
     { name: "Manual & Guia", href: "/manual", icon: BookOpen, badge: "Ajuda" },
-    { name: "Master Admin", href: "/master-admin", icon: Crown, badge: "Admin" },
     { name: "Ajustes da Oficina", href: "/configuracoes", icon: Settings },
   ];
+
+  // Apenas inclui "Master Admin" se o usuário for rafael.gielow@gmail.com
+  const navigation = isMasterUser
+    ? [
+        ...baseNavigation.slice(0, 14),
+        { name: "Master Admin", href: "/master-admin", icon: Crown, badge: "Admin" },
+        baseNavigation[14],
+      ]
+    : baseNavigation;
 
   const currentRole = currentEmployee
     ? ROLE_CONFIG[currentEmployee.accessLevel]
@@ -158,8 +182,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <span
                     className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
                       isActive
-                        ? "bg-white text-blue-700"
-                        : "bg-slate-800 text-slate-300 border border-slate-700"
+                        ? "bg-white/20 text-white"
+                        : item.badge === "Admin"
+                        ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
+                        : item.badge === "SaaS"
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                        : "bg-slate-800 text-slate-400"
                     }`}
                   >
                     {item.badge}
@@ -170,18 +198,18 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           })}
         </div>
 
-        {/* Footer Institucional & Suporte */}
-        <div className="p-3 border-t border-slate-800 bg-slate-950/80 space-y-2">
-          <div className="flex items-center justify-between text-[10px] text-slate-400 px-2">
-            <Link href="/sobre" className="hover:text-slate-200">Sobre</Link>
+        {/* Footer info */}
+        <div className="p-4 border-t border-slate-800 bg-slate-950 text-[10px] text-slate-400 flex flex-col gap-1">
+          <div className="flex items-center justify-between text-slate-400">
+            <Link href="/sobre" className="hover:text-white transition-colors">Sobre</Link>
             <span>•</span>
-            <Link href="/contato" className="hover:text-slate-200">Contato</Link>
+            <Link href="/contato" className="hover:text-white transition-colors">Contato</Link>
             <span>•</span>
-            <Link href="/termos" className="hover:text-slate-200">Termos</Link>
+            <Link href="/termos" className="hover:text-white transition-colors">Termos</Link>
             <span>•</span>
-            <Link href="/privacidade" className="hover:text-slate-200">Privacidade</Link>
+            <Link href="/privacidade" className="hover:text-white transition-colors">Privacidade</Link>
           </div>
-          <div className="text-center text-[9px] text-slate-400">
+          <div className="text-[9px] text-slate-400 text-center pt-1 border-t border-slate-900">
             Torque ERP © 2026 • torquerp.com.br
           </div>
         </div>

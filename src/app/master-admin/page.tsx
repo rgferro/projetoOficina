@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Crown,
   Users,
@@ -18,12 +19,15 @@ import {
   PlusCircle,
   Clock,
   Sparkles,
+  ShieldAlert,
+  ArrowLeft,
 } from "lucide-react";
 import { SAAS_PLANS } from "@/lib/mercadopago";
 
 export default function MasterAdminPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isMaster, setIsMaster] = useState<boolean | null>(null);
   const [activeTab, setActiveTab] = useState<"TENANTS" | "PAYMENTS" | "MESSAGES" | "METRICS">("TENANTS");
   const [actionMsg, setActionMsg] = useState<string | null>(null);
 
@@ -43,7 +47,21 @@ export default function MasterAdminPage() {
   };
 
   useEffect(() => {
-    fetchData();
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("torque_user");
+        if (saved) {
+          const u = JSON.parse(saved);
+          if (u.email === "rafael.gielow@gmail.com" || u.isMaster === true) {
+            setIsMaster(true);
+            fetchData();
+            return;
+          }
+        }
+      } catch (e) {}
+      setIsMaster(false);
+      setLoading(false);
+    }
   }, []);
 
   const handleAction = async (payload: any) => {
@@ -74,6 +92,30 @@ export default function MasterAdminPage() {
     );
   }
 
+  // 🔒 BLOQUEIO: Se não for rafael.gielow@gmail.com, exibe tela de acesso restrito
+  if (isMaster === false) {
+    return (
+      <div className="max-w-md mx-auto py-16 px-4 text-center space-y-5">
+        <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-3xl flex items-center justify-center mx-auto border border-rose-200 shadow-lg">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <div className="space-y-1.5">
+          <h1 className="text-xl font-black text-slate-900">Acesso Restrito ao Super Admin</h1>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Esta área é de uso exclusivo do desenvolvedor e administrador geral da plataforma (rafael.gielow@gmail.com).
+          </p>
+        </div>
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-bold shadow-md transition-all active:scale-95"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Voltar ao Painel da Minha Oficina
+        </Link>
+      </div>
+    );
+  }
+
   const stats = data?.stats;
   const tenants = data?.tenants || [];
   const payments = data?.payments || [];
@@ -98,25 +140,26 @@ export default function MasterAdminPage() {
 
         <button
           onClick={fetchData}
-          className="px-4 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-purple-500/30 transition-all"
+          className="px-5 py-3 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-purple-600/30 transition-all flex-shrink-0"
         >
           <RefreshCw className="w-4 h-4" />
           Atualizar Dados
         </button>
       </div>
 
+      {/* Feedback de Ação */}
       {actionMsg && (
         <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-fadeIn">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-          {actionMsg}
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+          <span>{actionMsg}</span>
         </div>
       )}
 
-      {/* Cards de Métricas Globais */}
+      {/* 4 Cards de Métricas Principais */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-2">
+        <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase">Oficinas (Tenants)</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider">Oficinas (Tenants)</span>
             <Building2 className="w-4 h-4 text-blue-600" />
           </div>
           <div className="text-2xl sm:text-3xl font-black text-slate-900">
@@ -127,9 +170,9 @@ export default function MasterAdminPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-2">
+        <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase">Total de Usuários</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider">Total de Usuários</span>
             <Users className="w-4 h-4 text-purple-600" />
           </div>
           <div className="text-2xl sm:text-3xl font-black text-slate-900">
@@ -140,10 +183,10 @@ export default function MasterAdminPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-2">
+        <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase">Ordens de Serviço</span>
-            <Wrench className="w-4 h-4 text-amber-600" />
+            <span className="text-[11px] font-bold uppercase tracking-wider">Ordens de Serviço</span>
+            <Wrench className="w-4 h-4 text-amber-500" />
           </div>
           <div className="text-2xl sm:text-3xl font-black text-slate-900">
             {stats?.totalServiceOrders || 0}
@@ -153,13 +196,13 @@ export default function MasterAdminPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-2">
+        <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase">Faturamento SaaS</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider">Faturamento SaaS</span>
             <CreditCard className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="text-2xl sm:text-3xl font-black text-emerald-600">
-            R$ {Number(stats?.totalRevenue || 0).toFixed(2).replace(".", ",")}
+            R$ {(stats?.totalRevenue || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
           </div>
           <div className="text-[11px] text-slate-500">
             Mercado Pago PIX & Cartão
@@ -167,14 +210,14 @@ export default function MasterAdminPage() {
         </div>
       </div>
 
-      {/* Navegação por Abas */}
+      {/* Abas Alternáveis */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
         <button
           onClick={() => setActiveTab("TENANTS")}
-          className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 ${
             activeTab === "TENANTS"
-              ? "bg-purple-600 text-white shadow-md shadow-purple-500/20"
-              : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+              ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
+              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
           }`}
         >
           <Building2 className="w-4 h-4" />
@@ -183,10 +226,10 @@ export default function MasterAdminPage() {
 
         <button
           onClick={() => setActiveTab("PAYMENTS")}
-          className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 ${
             activeTab === "PAYMENTS"
-              ? "bg-purple-600 text-white shadow-md shadow-purple-500/20"
-              : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+              ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
+              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
           }`}
         >
           <CreditCard className="w-4 h-4" />
@@ -195,10 +238,10 @@ export default function MasterAdminPage() {
 
         <button
           onClick={() => setActiveTab("MESSAGES")}
-          className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 ${
             activeTab === "MESSAGES"
-              ? "bg-purple-600 text-white shadow-md shadow-purple-500/20"
-              : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+              ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
+              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
           }`}
         >
           <Mail className="w-4 h-4" />
@@ -206,98 +249,89 @@ export default function MasterAdminPage() {
         </button>
       </div>
 
-      {/* Conteúdo: Oficinas (Tenants) */}
+      {/* TAB 1: LISTA DE OFICINAS / TENANTS */}
       {activeTab === "TENANTS" && (
-        <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-            <h3 className="font-bold text-sm text-slate-900">
-              Oficinas Cadastradas e Assentos de Usuários
-            </h3>
-          </div>
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <h2 className="text-sm font-black text-slate-900">
+            Oficinas Cadastradas e Assentos de Usuários
+          </h2>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold">
+              <thead className="bg-slate-50 text-slate-400 font-bold uppercase border-b border-slate-100">
                 <tr>
-                  <th className="p-4">Oficina / Razão Social</th>
-                  <th className="p-4">Dono / Contato</th>
-                  <th className="p-4">Plano & Assentos</th>
-                  <th className="p-4">Status & Vencimento</th>
-                  <th className="p-4 text-right">Ações Rápidas</th>
+                  <th className="py-3 px-4">Oficina / Razão Social</th>
+                  <th className="py-3 px-4">Dono / Contato</th>
+                  <th className="py-3 px-4">Plano & Assentos</th>
+                  <th className="py-3 px-4">Status & Vencimento</th>
+                  <th className="py-3 px-4 text-center">Ações Rápidas</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {tenants.map((t: any) => (
-                  <tr key={t.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-4">
-                      <div className="font-bold text-slate-900">{t.name}</div>
-                      <div className="text-[11px] text-slate-400">{t.document || "Sem CNPJ"}</div>
+                  <tr key={t.id} className="hover:bg-slate-50/50">
+                    <td className="py-3.5 px-4 font-bold text-slate-900">
+                      <div>{t.name}</div>
+                      <div className="text-[10px] text-slate-400 font-mono">{t.document || "Sem CNPJ"}</div>
                     </td>
-                    <td className="p-4">
-                      <div className="font-medium text-slate-800">{t.ownerName}</div>
-                      <div className="text-[11px] text-slate-500">{t.ownerEmail}</div>
-                      <div className="text-[11px] text-slate-400">{t.ownerPhone}</div>
+                    <td className="py-3.5 px-4">
+                      <div className="font-semibold text-slate-700">{t.ownerName}</div>
+                      <div className="text-[10px] text-slate-400 font-mono">{t.ownerEmail}</div>
+                      <div className="text-[10px] text-slate-400">{t.ownerPhone || "Sem telefone"}</div>
                     </td>
-                    <td className="p-4">
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200">
-                        {t.plan} • Max: {t.maxUsers} Usuários
+                    <td className="py-3.5 px-4">
+                      <span className="font-extrabold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
+                        {t.plan} • Max {t.maxUsers} Usuários
                       </span>
                     </td>
-                    <td className="p-4">
+                    <td className="py-3.5 px-4">
                       <div className="flex items-center gap-1.5">
                         <span
                           className={`w-2 h-2 rounded-full ${
                             t.subscriptionStatus === "active" ? "bg-emerald-500" : "bg-rose-500"
                           }`}
                         />
-                        <span className="font-bold text-slate-800 capitalize">
+                        <span className="capitalize font-bold text-slate-700">
                           {t.subscriptionStatus}
                         </span>
                       </div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">
+                      <div className="text-[10px] text-slate-400">
                         {t.subscriptionExpiresAt
-                          ? `Até ${new Date(t.subscriptionExpiresAt).toLocaleDateString("pt-BR")}`
+                          ? new Date(t.subscriptionExpiresAt).toLocaleDateString("pt-BR")
                           : "Sem validade"}
                       </div>
                     </td>
-                    <td className="p-4 text-right space-x-2">
-                      <button
-                        onClick={() =>
-                          handleAction({
-                            action: "EXTEND_DAYS",
-                            tenantId: t.id,
-                            addDays: 30,
-                          })
-                        }
-                        className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-[11px] border border-emerald-200 transition-colors"
-                      >
-                        +30 Dias
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          handleAction({
-                            action: "UPDATE_PLAN",
-                            tenantId: t.id,
-                            newPlan: t.plan === "PRO" ? "ELITE" : "PRO",
-                          })
-                        }
-                        className="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-[11px] border border-blue-200 transition-colors"
-                      >
-                        Mudar Plano
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          handleAction({
-                            action: "TOGGLE_STATUS",
-                            tenantId: t.id,
-                          })
-                        }
-                        className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-[11px] transition-colors"
-                      >
-                        {t.subscriptionStatus === "active" ? "Suspender" : "Ativar"}
-                      </button>
+                    <td className="py-3.5 px-4 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => handleAction({ action: "ADD_DAYS", tenantId: t.id, addDays: 30 })}
+                          className="px-2 py-1 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-[10px] font-bold"
+                          title="Adicionar +30 dias de acesso"
+                        >
+                          +30 Dias
+                        </button>
+                        <button
+                          onClick={() => {
+                            const newPlan = prompt("Digite o novo plano (STARTER, PRO, ELITE):", t.plan);
+                            if (newPlan) {
+                              const maxUsers = newPlan === "ELITE" ? 8 : newPlan === "PRO" ? 4 : 2;
+                              handleAction({ action: "UPDATE_PLAN", tenantId: t.id, newPlan, newMaxUsers: maxUsers });
+                            }
+                          }}
+                          className="px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 text-[10px] font-bold"
+                        >
+                          Mudar Plano
+                        </button>
+                        <button
+                          onClick={() => {
+                            const newStatus = t.subscriptionStatus === "active" ? "suspended" : "active";
+                            handleAction({ action: "SET_STATUS", tenantId: t.id, newStatus });
+                          }}
+                          className="px-2 py-1 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 text-[10px] font-bold"
+                        >
+                          {t.subscriptionStatus === "active" ? "Suspender" : "Reativar"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -307,44 +341,37 @@ export default function MasterAdminPage() {
         </div>
       )}
 
-      {/* Conteúdo: Pagamentos Mercado Pago */}
+      {/* TAB 2: PAGAMENTOS MERCADO PAGO */}
       {activeTab === "PAYMENTS" && (
-        <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-          <div className="p-6 border-b border-slate-100">
-            <h3 className="font-bold text-sm text-slate-900">
-              Histórico de Cobranças e PIX Mercado Pago
-            </h3>
-          </div>
-
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <h2 className="text-sm font-black text-slate-900">Histórico de Cobranças SaaS</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold">
+              <thead className="bg-slate-50 text-slate-400 font-bold uppercase border-b border-slate-100">
                 <tr>
-                  <th className="p-4">Data</th>
-                  <th className="p-4">Oficina</th>
-                  <th className="p-4">Plano</th>
-                  <th className="p-4">Método</th>
-                  <th className="p-4">Valor</th>
-                  <th className="p-4">Status</th>
+                  <th className="py-3 px-4">Data</th>
+                  <th className="py-3 px-4">Oficina</th>
+                  <th className="py-3 px-4">Plano</th>
+                  <th className="py-3 px-4">Método</th>
+                  <th className="py-3 px-4">Valor</th>
+                  <th className="py-3 px-4">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {payments.map((p: any) => (
-                  <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-4 text-slate-500">
-                      {new Date(p.createdAt).toLocaleString("pt-BR")}
+                  <tr key={p.id} className="hover:bg-slate-50/50">
+                    <td className="py-3.5 px-4 font-mono text-slate-500">
+                      {new Date(p.createdAt).toLocaleDateString("pt-BR")}
                     </td>
-                    <td className="p-4 font-bold text-slate-900">
-                      {p.tenant?.name || "Oficina"}
+                    <td className="py-3.5 px-4 font-bold text-slate-900">{p.tenant?.name}</td>
+                    <td className="py-3.5 px-4 font-semibold text-blue-600">{p.plan}</td>
+                    <td className="py-3.5 px-4 uppercase text-slate-600">{p.paymentMethod}</td>
+                    <td className="py-3.5 px-4 font-bold text-slate-900">
+                      R$ {p.amount.toFixed(2)}
                     </td>
-                    <td className="p-4 text-slate-700">{p.plan}</td>
-                    <td className="p-4 uppercase font-bold text-slate-600">{p.method}</td>
-                    <td className="p-4 font-black text-slate-900">
-                      R$ {Number(p.amount).toFixed(2).replace(".", ",")}
-                    </td>
-                    <td className="p-4">
+                    <td className="py-3.5 px-4">
                       <span
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-black ${
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           p.status === "approved"
                             ? "bg-emerald-100 text-emerald-800"
                             : "bg-amber-100 text-amber-800"
@@ -361,32 +388,19 @@ export default function MasterAdminPage() {
         </div>
       )}
 
-      {/* Conteúdo: Mensagens Fale Conosco */}
+      {/* TAB 3: MENSAGENS FALE CONOSCO */}
       {activeTab === "MESSAGES" && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-4">
-          <h3 className="font-bold text-sm text-slate-900">
-            Mensagens Recebidas pelo Fale Conosco do Site
-          </h3>
-
-          <div className="grid grid-cols-1 gap-4">
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <h2 className="text-sm font-black text-slate-900">Mensagens Recebidas pelo Site</h2>
+          <div className="space-y-3">
             {messages.map((m: any) => (
-              <div
-                key={m.id}
-                className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="font-bold text-sm text-slate-900">{m.name}</div>
-                  <span className="text-[11px] text-slate-400">
-                    {new Date(m.createdAt).toLocaleString("pt-BR")}
-                  </span>
+              <div key={m.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-900">{m.name} ({m.email})</span>
+                  <span className="text-slate-400 font-mono">{new Date(m.createdAt).toLocaleDateString("pt-BR")}</span>
                 </div>
-                <div className="text-xs text-blue-600 font-medium">
-                  {m.email} • {m.phone || "Sem telefone"}
-                </div>
-                <div className="text-xs font-bold text-slate-800">{m.subject}</div>
-                <p className="text-xs text-slate-600 leading-relaxed bg-white p-3 rounded-xl border border-slate-100">
-                  {m.message}
-                </p>
+                <div className="text-xs font-semibold text-blue-600">{m.subject}</div>
+                <p className="text-xs text-slate-600">{m.message}</p>
               </div>
             ))}
           </div>
