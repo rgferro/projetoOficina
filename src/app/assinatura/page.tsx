@@ -756,6 +756,169 @@ export default function AssinaturaPage() {
         </div>
       )}
 
+      {/* Histórico Oficial de Pagamentos & Transações Registradas */}
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold mb-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+              Auditoria Financeira do SaaS
+            </div>
+            <h2 className="text-xl font-bold text-slate-900">
+              Histórico de Pagamentos & Comprovantes
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Todas as transações PIX e Cartão ficam registradas no banco para auditoria, histórico contábil e validação imediata.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={fetchSubscription}
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Atualizar Histórico
+          </button>
+        </div>
+
+        {tenantInfo?.recentPayments && tenantInfo.recentPayments.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 text-slate-400 uppercase text-[10px] tracking-wider font-bold">
+                  <th className="pb-3">Data / Hora</th>
+                  <th className="pb-3">Descrição / Plano</th>
+                  <th className="pb-3">ID Mercado Pago</th>
+                  <th className="pb-3">Método</th>
+                  <th className="pb-3">Valor</th>
+                  <th className="pb-3">Status</th>
+                  <th className="pb-3 text-right">Ação / Validação</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {tenantInfo.recentPayments.map((pay: any) => {
+                  const isApproved = pay.status === "approved";
+                  const isPending = pay.status === "pending";
+
+                  return (
+                    <tr key={pay.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 font-medium text-slate-700 whitespace-nowrap">
+                        {new Date(pay.createdAt).toLocaleString("pt-BR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </td>
+                      <td className="py-3.5 font-bold text-slate-900">
+                        {pay.plan === "EXTRA_SEAT"
+                          ? "Assento(s) Extra(s)"
+                          : pay.plan === "ELITE"
+                          ? "Plano Oficina Elite"
+                          : pay.plan === "PRO"
+                          ? "Plano Oficina Pro"
+                          : pay.plan}
+                      </td>
+                      <td className="py-3.5 font-mono text-slate-500 select-all">
+                        {pay.paymentId || "—"}
+                      </td>
+                      <td className="py-3.5 uppercase font-black text-[10px] text-slate-600">
+                        <span className="px-2 py-0.5 rounded-md bg-slate-100">
+                          {pay.method === "pix" ? "⚡ PIX" : "💳 Cartão"}
+                        </span>
+                      </td>
+                      <td className="py-3.5 font-black text-slate-900">
+                        R$ {Number(pay.amount).toFixed(2).replace(".", ",")}
+                      </td>
+                      <td className="py-3.5">
+                        {isApproved ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px]">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            Aprovado
+                          </span>
+                        ) : isPending ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-bold text-[11px]">
+                            <Clock className="w-3.5 h-3.5 text-amber-600" />
+                            Pendente
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-bold text-[11px]">
+                            {pay.status}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 text-right">
+                        {isPending && pay.paymentId ? (
+                          <div className="flex items-center justify-end gap-2">
+                            {pay.qrCode && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPixData(pay);
+                                  setIsPixModalOpen(true);
+                                }}
+                                className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-bold"
+                              >
+                                Ver QR Code
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                setActionLoading(`check_${pay.paymentId}`);
+                                try {
+                                  const res = await fetch("/api/subscription/check-pix", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ paymentId: pay.paymentId }),
+                                  });
+                                  const data = await res.json();
+                                  if (data.success && data.status === "approved") {
+                                    setReturnSuccessMsg(data.message || "Pagamento aprovado!");
+                                    fetchSubscription();
+                                  } else {
+                                    alert(data.message || "Pagamento ainda pendente no banco.");
+                                  }
+                                } catch (e: any) {
+                                  alert(e.message || "Erro ao consultar banco");
+                                } finally {
+                                  setActionLoading(null);
+                                }
+                              }}
+                              disabled={actionLoading === `check_${pay.paymentId}`}
+                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold transition-all shadow-sm"
+                            >
+                              {actionLoading === `check_${pay.paymentId}`
+                                ? "Checando..."
+                                : "Validar Pagamento"}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 font-medium text-[11px]">
+                            {pay.paidAt
+                              ? `Pago em ${new Date(pay.paidAt).toLocaleDateString("pt-BR")}`
+                              : "—"}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-2">
+            <CreditCard className="w-8 h-8 text-slate-300 mx-auto" />
+            <p className="text-xs text-slate-500 font-medium">
+              Nenhuma transação registrada nesta conta até o momento.
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* Modal PIX Dinâmico com QR Code */}
       {isPixModalOpen && pixData && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
