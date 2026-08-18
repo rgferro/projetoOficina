@@ -387,13 +387,26 @@ export default function AssinaturaPage() {
           </div>
 
           {currentPlan !== "STARTER" && (
-            <button
-              onClick={() => setIsCancelModalOpen(true)}
-              className="px-4 py-2.5 rounded-2xl bg-red-500/10 hover:bg-red-500/20 text-red-300 hover:text-red-200 border border-red-500/30 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
-            >
-              <AlertCircle className="w-3.5 h-3.5" />
-              Cancelar Assinatura
-            </button>
+            tenant?.status === "cancelled" ? (
+              <button
+                type="button"
+                onClick={() => handleGeneratePix(currentPlan)}
+                disabled={actionLoading === `pix_${currentPlan}`}
+                className="px-4 py-2.5 rounded-2xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 hover:text-emerald-200 border border-emerald-500/40 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Reativar Assinatura
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsCancelModalOpen(true)}
+                className="px-4 py-2.5 rounded-2xl bg-red-500/10 hover:bg-red-500/20 text-red-300 hover:text-red-200 border border-red-500/30 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+              >
+                <AlertCircle className="w-3.5 h-3.5" />
+                Cancelar Assinatura
+              </button>
+            )
           )}
         </div>
       </div>
@@ -519,18 +532,43 @@ export default function AssinaturaPage() {
           <div className="space-y-2">
             {currentPlan === "PRO" ? (
               <div className="space-y-2 pt-2 border-t border-slate-100">
-                <div className="w-full py-3 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center justify-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  Assinatura Pro Ativa
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsCancelModalOpen(true)}
-                  className="w-full py-2.5 rounded-2xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
-                >
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  Cancelar Assinatura Pro
-                </button>
+                {tenant?.status === "cancelled" ? (
+                  <>
+                    <div className="w-full py-2.5 rounded-2xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold flex flex-col items-center justify-center gap-0.5 text-center">
+                      <div className="flex items-center gap-1 text-amber-700">
+                        <Clock className="w-4 h-4 text-amber-600" />
+                        Cancelamento Agendado
+                      </div>
+                      <span className="text-[10px] font-normal text-amber-600">
+                        Ativo até {tenant?.expiresAt ? new Date(tenant.expiresAt).toLocaleDateString("pt-BR") : "o fim do ciclo"}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleGeneratePix("PRO")}
+                      disabled={actionLoading === "pix_PRO"}
+                      className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 transition-all active:scale-95"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Reativar Assinatura Pro
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-full py-3 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center justify-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      Assinatura Pro Ativa
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsCancelModalOpen(true)}
+                      className="w-full py-2.5 rounded-2xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      Cancelar Assinatura Pro
+                    </button>
+                  </>
+                )}
               </div>
             ) : (
               <>
@@ -610,18 +648,43 @@ export default function AssinaturaPage() {
           <div className="space-y-2">
             {currentPlan === "ELITE" ? (
               <div className="space-y-2 pt-2 border-t border-slate-100">
-                <div className="w-full py-3 rounded-2xl bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold flex items-center justify-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-purple-600" />
-                  Assinatura Elite Ativa
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsCancelModalOpen(true)}
-                  className="w-full py-2.5 rounded-2xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
-                >
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  Cancelar Assinatura Elite
-                </button>
+                {tenant?.status === "cancelled" ? (
+                  <>
+                    <div className="w-full py-2.5 rounded-2xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold flex flex-col items-center justify-center gap-0.5 text-center">
+                      <div className="flex items-center gap-1 text-amber-700">
+                        <Clock className="w-4 h-4 text-amber-600" />
+                        Cancelamento Agendado
+                      </div>
+                      <span className="text-[10px] font-normal text-amber-600">
+                        Ativo até {tenant?.expiresAt ? new Date(tenant.expiresAt).toLocaleDateString("pt-BR") : "o fim do ciclo"}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleGeneratePix("ELITE")}
+                      disabled={actionLoading === "pix_ELITE"}
+                      className="w-full py-3 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black flex items-center justify-center gap-2 shadow-md shadow-purple-500/20 transition-all active:scale-95"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Reativar Assinatura Elite
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-full py-3 rounded-2xl bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold flex items-center justify-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-purple-600" />
+                      Assinatura Elite Ativa
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsCancelModalOpen(true)}
+                      className="w-full py-2.5 rounded-2xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      Cancelar Assinatura Elite
+                    </button>
+                  </>
+                )}
               </div>
             ) : (
               <>
