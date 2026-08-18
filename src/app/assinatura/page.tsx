@@ -18,6 +18,7 @@ import {
   TrendingUp,
   Lock,
   X,
+  RotateCcw,
 } from "lucide-react";
 import { SAAS_PLANS } from "@/lib/mercadopago";
 
