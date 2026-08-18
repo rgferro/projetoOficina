@@ -48,6 +48,28 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const now = new Date();
+    const isWithinActivePeriod =
+      tenant.subscriptionExpiresAt &&
+      new Date(tenant.subscriptionExpiresAt) > now &&
+      tenant.plan === planId;
+
+    // Se já estiver no período válido e a assinatura estava apenas com renovação cancelada, apenas reativa
+    if (isWithinActivePeriod && tenant.subscriptionStatus === "cancelled") {
+      await prisma.tenant.update({
+        where: { id: tenant.id },
+        data: {
+          subscriptionStatus: "active",
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        reactivatedOnly: true,
+        message: "Sua assinatura foi reativada com sucesso! Você continuará com acesso integral e a renovação automática será restabelecida sem cobranças imediatas.",
+      });
+    }
+
     const plan = SAAS_PLANS[planId] || SAAS_PLANS.PRO;
     const amount = seatsCount > 0 ? SAAS_PLANS.EXTRA_SEAT.price * seatsCount : plan.price;
     const planName =

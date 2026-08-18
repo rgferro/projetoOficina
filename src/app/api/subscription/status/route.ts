@@ -58,36 +58,58 @@ export async function GET(req: NextRequest) {
       take: 5,
     });
 
-    // Regra de Vigência Contratual: Se a assinatura foi cancelada ou está pendente,
-    // o usuário MANTÉM todos os benefícios do plano contratado até a data final de expiração (1 mês completo)
+    // Regra de Vigência Contratual e Tolerância de Pagamento PIX:
+    // - Durante os 30 dias contratados: Plano 100% ativo.
+    // - Se a fatura/PIX vencer:
+    //    * Dias 1 e 2 após vencimento: Mantém acesso integral com AVISO URGENTE DE COBRANÇA.
+    //    * A partir do Dia 3: Rebaixa automaticamente para o Plano Starter (2 usuários) e pausa funcionários adicionais com todo histórico preservado.
     let effectivePlan = tenant.plan;
     let effectiveMaxUsers = tenant.maxUsers;
     let effectiveStatus = tenant.subscriptionStatus || "active";
+    let paymentOverdueNotice: { daysOverdue: number; message: string; isGracePeriod: boolean } | null = null;
 
-    if (tenant.subscriptionExpiresAt) {
+    if (tenant.subscriptionExpiresAt && tenant.plan !== "STARTER") {
       const now = new Date();
       const expiresAt = new Date(tenant.subscriptionExpiresAt);
 
-      if (now > expiresAt && tenant.plan !== "STARTER") {
-        // Expirou oficialmente: agora sim reverte para STARTER e 2 usuários
-        await prisma.tenant.update({
-          where: { id: tenant.id },
-          data: {
-            plan: "STARTER",
-            maxUsers: 2,
-            subscriptionStatus: "expired",
-          },
-        });
+      if (now > expiresAt) {
+        const diffMs = now.getTime() - expiresAt.getTime();
+        const daysOverdue = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
 
-        // Desativa excedentes preventivamente
-        await prisma.employee.updateMany({
-          where: { tenantId: tenant.id },
-          data: { active: false },
-        });
+        if (daysOverdue <= 2) {
+          // Dias 1 e 2 de atraso: Tolerância ativa, avisa o usuário sem bloquear
+          paymentOverdueNotice = {
+            daysOverdue,
+            isGracePeriod: true,
+            message: `⚠️ Sua assinatura via PIX venceu há ${daysOverdue} dia(s). Renove hoje para evitar que seus colaboradores sejam pausados amanhã no 3º dia.`,
+          };
+          effectiveStatus = "past_due";
+        } else {
+          // Dia 3 em diante: Rebaixa para STARTER mantendo todo o histórico intacto no banco
+          await prisma.tenant.update({
+            where: { id: tenant.id },
+            data: {
+              plan: "STARTER",
+              maxUsers: 2,
+              subscriptionStatus: "expired",
+            },
+          });
 
-        effectivePlan = "STARTER";
-        effectiveMaxUsers = 2;
-        effectiveStatus = "expired";
+          // Desativa colaboradores adicionais preventivamente sem apagar nada
+          await prisma.employee.updateMany({
+            where: { tenantId: tenant.id },
+            data: { active: false },
+          });
+
+          effectivePlan = "STARTER";
+          effectiveMaxUsers = 2;
+          effectiveStatus = "expired";
+          paymentOverdueNotice = {
+            daysOverdue,
+            isGracePeriod: false,
+            message: "Seu plano foi revertido para o Torque Starter gratuito devido à falta de pagamento. Todo o seu histórico e funcionários foram salvos e podem ser reativados com a renovação.",
+          };
+        }
       }
     }
 
@@ -98,15 +120,16 @@ export async function GET(req: NextRequest) {
       tenant: {
         id: tenant.id,
         name: tenant.name,
-        plan: tenant.plan,
+        plan: effectivePlan,
         planName: planConfig.name,
         planPrice: planConfig.price,
-        status: tenant.subscriptionStatus,
+        status: effectiveStatus,
         expiresAt: tenant.subscriptionExpiresAt,
-        maxUsers: tenant.maxUsers,
+        maxUsers: effectiveMaxUsers,
         currentUsersCount: Math.max(1, currentUsersCount),
         ownerEmail: tenant.ownerEmail,
         ownerName: tenant.ownerName,
+        paymentOverdueNotice,
       },
       recentPayments,
     });

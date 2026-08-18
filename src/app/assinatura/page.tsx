@@ -269,6 +269,39 @@ export default function AssinaturaPage() {
         </div>
       )}
 
+      {/* Banner de Aviso de Vencimento PIX (Tolerância de 2 dias / Rebaixamento no 3º dia) */}
+      {tenant?.paymentOverdueNotice && (
+        <div
+          className={`p-5 rounded-3xl text-white shadow-xl flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-5 ${
+            tenant.paymentOverdueNotice.isGracePeriod
+              ? "bg-gradient-to-r from-amber-600 to-orange-600 shadow-orange-600/30"
+              : "bg-gradient-to-r from-red-600 to-rose-600 shadow-red-600/30"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center font-black text-xl flex-shrink-0">
+              <AlertCircle className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-sm sm:text-base">
+                {tenant.paymentOverdueNotice.isGracePeriod
+                  ? `Atenção: Assinatura Vencida (Tolerância Ativa - Dia ${tenant.paymentOverdueNotice.daysOverdue} de 2)`
+                  : "Assinatura Expirada (Revertida para Starter)"}
+              </h3>
+              <p className="text-xs text-white/90 leading-relaxed mt-0.5">
+                {tenant.paymentOverdueNotice.message}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => handleGeneratePix(tenant.plan === "STARTER" ? "PRO" : tenant.plan)}
+            className="px-4 py-2 bg-white text-slate-900 font-bold text-xs rounded-xl shadow hover:bg-slate-100 whitespace-nowrap"
+          >
+            Renovar Agora
+          </button>
+        </div>
+      )}
+
       {/* Top Banner de Status da Assinatura */}
       <div className="bg-slate-900 rounded-3xl p-6 sm:p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xl relative overflow-hidden">
         <div className="space-y-2 max-w-2xl">
