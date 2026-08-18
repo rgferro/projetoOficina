@@ -90,6 +90,56 @@ export default function AssinaturaPage() {
     checkReturn();
   }, []);
 
+  // Polling automático enquanto o modal do PIX estiver aberto
+  useEffect(() => {
+    let interval: any;
+    if (isPixModalOpen && pixData?.paymentId) {
+      interval = setInterval(async () => {
+        try {
+          const res = await fetch("/api/subscription/check-pix", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ paymentId: pixData.paymentId }),
+          });
+          const data = await res.json();
+          if (data.success && data.status === "approved") {
+            clearInterval(interval);
+            setIsPixModalOpen(false);
+            setReturnSuccessMsg(data.message || "🎉 Pagamento PIX Confirmado com Sucesso!");
+            fetchSubscription();
+          }
+        } catch (e) {
+          console.warn("Polling PIX:", e);
+        }
+      }, 4000);
+    }
+    return () => clearInterval(interval);
+  }, [isPixModalOpen, pixData]);
+
+  const handleCheckPixManual = async () => {
+    if (!pixData?.paymentId) return;
+    setActionLoading("check_pix");
+    try {
+      const res = await fetch("/api/subscription/check-pix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentId: pixData.paymentId }),
+      });
+      const data = await res.json();
+      if (data.success && data.status === "approved") {
+        setIsPixModalOpen(false);
+        setReturnSuccessMsg(data.message || "🎉 Pagamento PIX Confirmado com Sucesso!");
+        fetchSubscription();
+      } else {
+        alert(data.message || "O pagamento ainda está sendo processado pelo banco. Aguarde alguns instantes.");
+      }
+    } catch (e: any) {
+      alert(e.message || "Erro ao consultar status do PIX");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleGeneratePix = async (planId: string, seats: number = 0) => {
     setActionLoading(`pix_${planId}`);
     try {
@@ -100,6 +150,11 @@ export default function AssinaturaPage() {
       });
       const data = await res.json();
       if (data.success) {
+        if (data.reactivatedOnly) {
+          setReturnSuccessMsg(data.message || "Assinatura reativada com sucesso!");
+          fetchSubscription();
+          return;
+        }
         setPixData(data);
         setIsPixModalOpen(true);
       } else {
@@ -759,15 +814,27 @@ export default function AssinaturaPage() {
               ⚡ A aprovação é automática em segundos. Assim que o pagamento for confirmado, seu plano será atualizado na hora!
             </p>
 
-            <button
-              onClick={() => {
-                setIsPixModalOpen(false);
-                fetchSubscription();
-              }}
-              className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-2xl transition-colors"
-            >
-              Fechar
-            </button>
+            <div className="space-y-2 pt-2">
+              <button
+                type="button"
+                onClick={handleCheckPixManual}
+                disabled={actionLoading === "check_pix"}
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-2xl transition-all shadow-md shadow-emerald-500/20 active:scale-95 flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                {actionLoading === "check_pix" ? "Verificando no Banco..." : "Já realizei o pagamento / Confirmar"}
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsPixModalOpen(false);
+                  fetchSubscription();
+                }}
+                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-2xl transition-colors"
+              >
+                Fechar janela
+              </button>
+            </div>
           </div>
         </div>
       )}
