@@ -58,6 +58,56 @@ export async function GET(req: NextRequest) {
       take: 5,
     });
 
+    // 🔄 Auto-Sync com Mercado Pago: Se o tenant tiver pagamentos recentes pendentes no banco,
+    // consulta a API do Mercado Pago para ver se o PIX/Cartão foi aprovado enquanto o webhook não chegava
+    const pendingPayment = await prisma.subscriptionPayment.findFirst({
+      where: {
+        tenantId: tenant.id,
+        status: "pending",
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (pendingPayment && pendingPayment.paymentId) {
+      try {
+        const mpStatus = await getMercadoPagoPaymentStatus(pendingPayment.paymentId);
+        if (mpStatus && mpStatus.status === "approved") {
+          const nextExpiry = new Date();
+          nextExpiry.setDate(nextExpiry.getDate() + 30);
+
+          let newPlan = pendingPayment.plan === "ELITE" ? "ELITE" : "PRO";
+          let newMax = newPlan === "ELITE" ? 8 : 4;
+
+          if (pendingPayment.plan === "EXTRA_SEAT") {
+            const extraCount = Math.round(pendingPayment.amount / SAAS_PLANS.EXTRA_SEAT.price) || 1;
+            await prisma.tenant.update({
+              where: { id: tenant.id },
+              data: { maxUsers: { increment: extraCount } },
+            });
+          } else {
+            tenant = await prisma.tenant.update({
+              where: { id: tenant.id },
+              data: {
+                plan: newPlan,
+                maxUsers: newMax,
+                subscriptionStatus: "active",
+                subscriptionExpiresAt: nextExpiry,
+              },
+            });
+          }
+
+          await prisma.subscriptionPayment.update({
+            where: { id: pendingPayment.id },
+            data: { status: "approved", paidAt: new Date() },
+          });
+
+          console.log(`✅ [Auto-Sync MP] Pagamento PIX ${pendingPayment.paymentId} confirmado e ativado automaticamente!`);
+        }
+      } catch (err) {
+        console.warn("Auto-sync MP fallback:", err);
+      }
+    }
+
     // Regra de Vigência Contratual e Tolerância de Pagamento PIX:
     // - Durante os 30 dias contratados: Plano 100% ativo.
     // - Se a fatura/PIX vencer:
