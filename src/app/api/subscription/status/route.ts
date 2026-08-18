@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { SAAS_PLANS } from "@/lib/mercadopago";
+import { SAAS_PLANS, getMercadoPagoPaymentStatus } from "@/lib/mercadopago";
 import { verifySessionToken } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
