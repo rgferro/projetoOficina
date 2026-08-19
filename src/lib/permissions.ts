@@ -143,7 +143,6 @@ export const DEFAULT_PERMISSIONS_MAP: Record<AccessLevel, string[]> = {
   ],
   LAVADOR: [
     "/lavajato",
-    "/clientes",
     "/manual",
     "/sobre",
     "/contato",
