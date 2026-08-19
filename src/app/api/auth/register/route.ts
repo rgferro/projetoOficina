@@ -89,7 +89,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. Verifica se o e-mail já está cadastrado
+    // 3. Verificação Antifraude e Auditoria de IP (Marco Civil da Internet Art. 15 e LGPD Art. 7º IX e X)
+    const { getClientIp, checkIpRegistrationAbuse, logAuditEvent } = await import("@/lib/audit");
+    const clientIp = getClientIp(req);
+
+    const fraudCheck = await checkIpRegistrationAbuse(clientIp);
+    if (!fraudCheck.allowed) {
+      await logAuditEvent({
+        action: "FRAUD_REGISTRATION_BLOCKED",
+        req,
+        userEmail: cleanEmail,
+        details: { reason: fraudCheck.reason, count: fraudCheck.count },
+      });
+
+      return NextResponse.json(
+        { success: false, error: fraudCheck.reason },
+        { status: 429 }
+      );
+    }
+
+    // 4. Verifica se o e-mail já está cadastrado
     const existing = await prisma.tenant.findUnique({
       where: { ownerEmail: cleanEmail },
     });
@@ -104,7 +123,7 @@ export async function POST(req: NextRequest) {
     const isMaster = cleanEmail === "rafael.gielow@gmail.com";
     const passwordHash = hashPassword(ownerPassword);
 
-    // 4. Cria a Oficina / Tenant com dados de endereço completos
+    // 5. Cria a Oficina / Tenant com dados de endereço completos e IP gravado para auditoria
     const tenant = await prisma.tenant.create({
       data: {
         name: workshopName.trim(),
@@ -123,8 +142,19 @@ export async function POST(req: NextRequest) {
         plan: "STARTER",
         maxUsers: 2, // 2 Usuários Grátis no Starter
         subscriptionStatus: "active",
+        registrationIp: clientIp,
+        lastLoginIp: clientIp,
         isMaster,
       },
+    });
+
+    // Registra log de auditoria de criação do Tenant
+    await logAuditEvent({
+      action: "REGISTER_TENANT",
+      req,
+      tenantId: tenant.id,
+      userEmail: tenant.ownerEmail,
+      details: { workshopName: tenant.name, plan: tenant.plan },
     });
 
     // 5. Formata o endereço completo da oficina

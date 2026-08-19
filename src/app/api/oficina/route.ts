@@ -68,6 +68,37 @@ export async function POST(request: Request) {
       );
     }
 
+    // 1. Validação de Sessão e Cota Mensal do Plano Starter (30 OSs / mês)
+    const { cookies } = await import("next/headers");
+    const { verifySessionToken } = await import("@/lib/auth");
+    const { checkTenantMonthlyQuota, logAuditEvent } = await import("@/lib/audit");
+
+    const cookieStore = await cookies();
+    const token = cookieStore.get("torque_token")?.value;
+    const session = token ? verifySessionToken(token) : null;
+
+    let targetTenantId = session?.tenantId;
+    if (!targetTenantId) {
+      const firstTenant = await prisma.tenant.findFirst({ where: { active: true } });
+      targetTenantId = firstTenant?.id;
+    }
+
+    if (targetTenantId) {
+      const quotaCheck = await checkTenantMonthlyQuota(targetTenantId, "OS");
+      if (!quotaCheck.allowed) {
+        return NextResponse.json(
+          {
+            error: quotaCheck.message,
+            quotaExceeded: true,
+            quotaType: "OS",
+            current: quotaCheck.currentCount,
+            limit: quotaCheck.limit,
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     let totalParts = 0;
     let totalServices = 0;
 

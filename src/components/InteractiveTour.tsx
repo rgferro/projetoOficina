@@ -207,35 +207,35 @@ export function InteractiveTourModal({
   const progressPercent = ((currentStepIndex + 1) / TOUR_STEPS.length) * 100;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col animate-scaleUp">
+    <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[92vh] animate-scaleUp">
         {/* Top Header com Barra de Progresso */}
-        <div className="bg-slate-900 p-6 text-white relative">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
-                <Sparkles className="w-5 h-5" />
+        <div className="bg-slate-900 p-4 sm:p-6 text-white relative flex-shrink-0">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30 flex-shrink-0">
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
               </div>
-              <div>
-                <span className="text-[10px] uppercase font-black tracking-widest text-blue-400">
+              <div className="min-w-0">
+                <span className="text-[10px] uppercase font-black tracking-widest text-blue-400 block truncate">
                   Tour Interativo do Sistema
                 </span>
-                <h2 className="text-lg font-bold">{step.title}</h2>
+                <h2 className="text-sm sm:text-lg font-bold truncate">{step.title}</h2>
               </div>
             </div>
 
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-colors flex-shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          <p className="text-xs text-slate-400 mt-1 pl-13">{step.subtitle}</p>
+          <p className="text-xs text-slate-400 mt-1 pl-11 sm:pl-13 line-clamp-1">{step.subtitle}</p>
 
           {/* Barra de Progresso */}
-          <div className="mt-4 w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+          <div className="mt-3 sm:mt-4 w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
             <div
               className="bg-gradient-to-r from-blue-500 to-cyan-400 h-full transition-all duration-300"
               style={{ width: `${progressPercent}%` }}
@@ -243,11 +243,11 @@ export function InteractiveTourModal({
           </div>
         </div>
 
-        {/* Corpo do Tutorial */}
-        <div className="p-6 sm:p-8 space-y-6 flex-1 overflow-y-auto max-h-[60vh]">
-          <div className="flex items-center gap-2">
+        {/* Corpo do Tutorial (Rolagem suave no celular) */}
+        <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 flex-1 overflow-y-auto">
+          <div className="flex items-center justify-between gap-2">
             <span
-              className={`text-xs font-black px-3 py-1 rounded-full border ${step.badgeColor}`}
+              className={`text-[11px] sm:text-xs font-black px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border ${step.badgeColor}`}
             >
               {step.badge}
             </span>
@@ -256,11 +256,11 @@ export function InteractiveTourModal({
             </span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-4">
-            <div className="p-3 rounded-2xl bg-white border border-slate-200 text-blue-600 shadow-sm">
-              <Icon className="w-8 h-8" />
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3 sm:gap-4">
+            <div className="p-2.5 sm:p-3 rounded-2xl bg-white border border-slate-200 text-blue-600 shadow-sm flex-shrink-0">
+              <Icon className="w-6 h-6 sm:w-8 sm:h-8" />
             </div>
-            <p className="text-xs text-slate-700 leading-relaxed pt-1">
+            <p className="text-xs sm:text-sm text-slate-700 leading-relaxed pt-0.5">
               {step.content}
             </p>
           </div>
@@ -268,44 +268,44 @@ export function InteractiveTourModal({
           {/* Dicas Práticas de Uso */}
           <div className="space-y-2">
             <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
               Dicas Práticas de Operação:
             </h4>
             <div className="grid grid-cols-1 gap-2">
               {step.tips.map((tip, idx) => (
                 <div
                   key={idx}
-                  className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-100 text-xs text-slate-700 flex items-start gap-2"
+                  className="p-2.5 sm:p-3 rounded-xl bg-emerald-50/60 border border-emerald-100 text-xs text-slate-700 flex items-start gap-2"
                 >
                   <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0 mt-0.5">
                     ✓
                   </span>
-                  <span>{tip}</span>
+                  <span className="leading-relaxed">{tip}</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Footer com Navegação */}
-        <div className="p-4 sm:p-6 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+        {/* Footer com Navegação Responsiva */}
+        <div className="p-3 sm:p-5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2.5 flex-shrink-0">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentStepIndex((prev) => Math.max(0, prev - 1))}
               disabled={isFirst}
-              className="px-4 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold disabled:opacity-40 transition-all flex items-center gap-1.5 shadow-sm"
+              className="px-3 sm:px-4 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold disabled:opacity-40 transition-all flex items-center gap-1 shadow-sm"
             >
-              <ChevronLeft className="w-4 h-4" />
-              Anterior
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Anterior</span>
             </button>
 
             <Link
               href="/manual"
               onClick={onClose}
-              className="hidden sm:flex items-center gap-1 px-3 py-2 text-xs font-bold text-blue-600 hover:underline"
+              className="hidden md:flex items-center gap-1 px-2 py-2 text-xs font-bold text-blue-600 hover:underline"
             >
               <BookOpen className="w-3.5 h-3.5" />
-              Manual Completo
+              Manual
             </Link>
           </div>
 
@@ -313,7 +313,7 @@ export function InteractiveTourModal({
             <Link
               href={step.route}
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold transition-all"
+              className="px-3 sm:px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold transition-all whitespace-nowrap"
             >
               {step.actionLabel || "Abrir Módulo"}
             </Link>
@@ -321,7 +321,7 @@ export function InteractiveTourModal({
             {isLast ? (
               <button
                 onClick={onClose}
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-md shadow-emerald-500/20 transition-all"
+                className="px-4 sm:px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-md shadow-emerald-500/20 transition-all whitespace-nowrap"
               >
                 Concluir Tour ✓
               </button>
@@ -332,10 +332,10 @@ export function InteractiveTourModal({
                     Math.min(TOUR_STEPS.length - 1, prev + 1)
                   )
                 }
-                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all flex items-center gap-1.5"
+                className="px-4 sm:px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all flex items-center gap-1 whitespace-nowrap"
               >
-                Próximo
-                <ChevronRight className="w-4 h-4" />
+                <span>Próximo</span>
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
             )}
           </div>

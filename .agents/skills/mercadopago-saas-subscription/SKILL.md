@@ -21,6 +21,9 @@ O fluxo conecta a aplicação diretamente à API REST do Mercado Pago (`api.merc
      - `qr_code_base64`: Imagem do QR Code para exibição imediata no modal do cliente.
 3. **Webhook de Notificação Automática (`/api/webhooks/mercadopago`):**
    * Recebe eventos de `payment.updated` e `preapproval`, consulta a API oficial do Mercado Pago para confirmação de segurança e atualiza o status da assinatura do Tenant/Empresa para `active` até a próxima data de expiração (`expires_at = NOW() + 30 days`).
+4. **Controle e Bloqueio Rigoroso de Cotas no Plano Starter:**
+   * **Plano Starter (Grátis):** Limite de 2 usuários, até 30 Ordens de Serviço/mês e até 50 Lavagens/mês.
+   * **Plano Pro / Elite:** Ilimitado. Ao estourar a cota no Starter, as APIs bloqueiam com HTTP 403 e a UI exibe o modal de Upgrade com PIX imediato.
 
 ---
 

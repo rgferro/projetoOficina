@@ -308,9 +308,17 @@ export default function NovaOrdemServicoPage() {
       </div>
 
       {errorMessage && (
-        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
-          <span>{errorMessage}</span>
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs sm:text-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+            <span className="font-semibold">{errorMessage}</span>
+          </div>
+          <Link
+            href="/assinatura"
+            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-xs font-bold hover:brightness-110 transition-all shadow-md shadow-blue-500/20 whitespace-nowrap flex items-center gap-1.5"
+          >
+            Fazer Upgrade Pro 🚀
+          </Link>
         </div>
       )}
 

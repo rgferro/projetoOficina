@@ -92,6 +92,37 @@ export async function POST(request: Request) {
       );
     }
 
+    // 1. Validação de Sessão e Cota Mensal do Plano Starter (50 Lavagens / mês)
+    const { cookies } = await import("next/headers");
+    const { verifySessionToken } = await import("@/lib/auth");
+    const { checkTenantMonthlyQuota } = await import("@/lib/audit");
+
+    const cookieStore = await cookies();
+    const token = cookieStore.get("torque_token")?.value;
+    const session = token ? verifySessionToken(token) : null;
+
+    let targetTenantId = session?.tenantId;
+    if (!targetTenantId) {
+      const firstTenant = await prisma.tenant.findFirst({ where: { active: true } });
+      targetTenantId = firstTenant?.id;
+    }
+
+    if (targetTenantId) {
+      const quotaCheck = await checkTenantMonthlyQuota(targetTenantId, "WASH");
+      if (!quotaCheck.allowed) {
+        return NextResponse.json(
+          {
+            error: quotaCheck.message,
+            quotaExceeded: true,
+            quotaType: "WASH",
+            current: quotaCheck.currentCount,
+            limit: quotaCheck.limit,
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     const lastTicket = await prisma.washTicket.findFirst({
       orderBy: { ticketNumber: "desc" },
     });

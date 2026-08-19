@@ -159,9 +159,43 @@ export async function sendEmployeeInviteEmail(data: {
 }
 
 /**
+ * Despacha código de recuperação / redefinição de senha para o e-mail do usuário
+ */
+export async function sendPasswordResetEmail(targetEmail: string, code: string, recipientName?: string) {
+  console.log(`🔑 [Torque ERP] Despachando código de recuperação [${code}] para [${targetEmail}] via Brevo...`);
+
+  return sendBrevoEmail({
+    to: [{ email: targetEmail, name: recipientName || "Usuário Torque" }],
+    subject: `Recuperação de Senha: ${code} - Torque ERP`,
+    htmlContent: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 30px; color: #1e293b; max-width: 520px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 20px; background: #ffffff;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <div style="display: inline-block; width: 48px; height: 48px; line-height: 48px; background: linear-gradient(135deg, #2563eb, #4f46e5); color: #ffffff; font-size: 24px; font-weight: bold; border-radius: 14px;">⚡</div>
+          <h2 style="color: #0f172a; margin: 12px 0 0 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;">Torque ERP</h2>
+          <p style="color: #64748b; font-size: 12px; margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Recuperação de Acesso</p>
+        </div>
+        
+        <p style="font-size: 15px; line-height: 1.5; color: #334155;">Olá${recipientName ? `, <strong>${recipientName}</strong>` : ""}!</p>
+        <p style="font-size: 14px; line-height: 1.6; color: #475569;">Recebemos uma solicitação para redefinir a senha de acesso à sua conta no <strong>Torque ERP</strong>. Use o código de segurança abaixo para criar uma nova senha:</p>
+        
+        <div style="font-size: 38px; font-weight: 900; background: #f8fafc; padding: 20px; border-radius: 16px; text-align: center; letter-spacing: 10px; color: #2563eb; margin: 24px 0; border: 2px dashed #93c5fd;">
+          ${code}
+        </div>
+        
+        <p style="font-size: 12px; line-height: 1.5; color: #94a3b8; text-align: center;">⏱️ Este código de segurança expira em <strong>15 minutos</strong>.<br/>Se você não solicitou a redefinição de senha, nenhuma alteração foi feita e você pode desconsiderar este e-mail.</p>
+        
+        <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 28px 0 20px 0;" />
+        <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">Torque ERP • <a href="https://torquerp.com.br" style="color: #2563eb; text-decoration: none; font-weight: bold;">torquerp.com.br</a></p>
+      </div>
+    `,
+  });
+}
+
+/**
  * Despacha mensagens recebidas do formulário de contato para seu e-mail
  */
 export async function sendContactEmail(data: {
+
   name: string;
   senderEmail: string;
   phone?: string;
@@ -187,3 +221,5 @@ export async function sendContactEmail(data: {
     `,
   });
 }
+
+

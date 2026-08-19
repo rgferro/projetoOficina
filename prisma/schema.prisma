@@ -412,6 +412,8 @@ model Tenant {
   state                   String?               // Estado (UF)
   isMaster                Boolean               @default(false) // Super Admin do SaaS (Rafael)
   mercadopagoPreapprovalId String?
+  registrationIp          String?               // IP de registro para auditoria e antifraude
+  lastLoginIp             String?               // Último IP de acesso
   active                  Boolean               @default(true)
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt
@@ -450,5 +452,16 @@ model ContactMessage {
   subject   String
   message   String
   status    String   @default("UNREAD") // UNREAD, READ, RESPONDED
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // REGISTER_TENANT, LOGIN, CREATE_OS, CREATE_WASH, FRAUD_SUSPECT, etc.
+  ip        String   // Endereço IP do cliente
+  userAgent String?  // Browser / Dispositivo
+  tenantId  String?  // ID do Tenant (se autenticado/aplicável)
+  userEmail String?  // E-mail do usuário
+  details   String?  // Detalhes em JSON ou texto
   createdAt DateTime @default(now())
 }

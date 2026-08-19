@@ -71,3 +71,17 @@ export function buildWashReminderMessage(params: {
     .replace(/{dias}/g, String(params.daysSinceLastWash))
     .replace(/{oficina}/g, params.workshopName || "AutoGestão");
 }
+
+export function buildOsReadyMessage(params: {
+  name: string;
+  osNumber: number | string;
+  vehiclePlate: string;
+  vehicleModel: string;
+  total: number;
+  pending: number;
+  workshopName?: string;
+}): string {
+  const firstName = params.name.split(" ")[0];
+  const totalFormatted = `R$ ${params.total.toFixed(2).replace(".", ",")}`;
+  return `Olá ${firstName}! A Ordem de Serviço #${params.osNumber} do seu veículo ${params.vehicleModel} (${params.vehiclePlate}) foi finalizada com sucesso na ${params.workshopName || "Oficina"}! Valor total: ${totalFormatted}. Seu veículo já está pronto para retirada.`;
+}

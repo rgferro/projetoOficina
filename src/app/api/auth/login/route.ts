@@ -136,6 +136,22 @@ export async function POST(req: NextRequest) {
           });
         }
 
+        // Atualiza o último IP de login e registra auditoria
+        const { getClientIp, logAuditEvent } = await import("@/lib/audit");
+        const clientIp = getClientIp(req);
+        await prisma.tenant.update({
+          where: { id: tenant.id },
+          data: { lastLoginIp: clientIp },
+        });
+
+        await logAuditEvent({
+          action: "LOGIN_SUCCESS",
+          req,
+          tenantId: tenant.id,
+          userEmail: tenant.ownerEmail,
+          details: { role: "ADMIN", isOwner: true },
+        });
+
         const token = createSessionToken({
           userId: employee.id,
           tenantId: tenant.id,

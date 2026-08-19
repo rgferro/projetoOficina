@@ -1,0 +1,27 @@
+🛡️ *[AutoGestão SaaS] Guardião de Segurança IA*
+📅 *Data:* 18/08/2026 às 13:56
+
+🟡 *Status Geral:* Avisos de Segurança Detectados (Nenhuma quebra aplicada)
+📊 *Resumo de Auditoria:* 12 vulnerabilidade(s) encontrada(s) na base de pacotes.
+
+🔍 *Diagnóstico dos Pacotes:*
+🟡 *app-builder-lib* (HIGH)
+   └ *Ação:* Correção de segurança recomendada em branch de testes.
+🟡 *builder-util* (HIGH)
+   └ *Ação:* Correção de segurança recomendada em branch de testes.
+🟡 *builder-util-runtime* (HIGH)
+   └ *Ação:* Correção de segurança recomendada em branch de testes.
+🟡 *dmg-builder* (HIGH)
+   └ *Ação:* Correção de segurança recomendada em branch de testes.
+🔴 *electron* (HIGH)
+   └ *Ação:* ATENÇÃO: Requer recompilação e testes no instalador desktop. Não atualizar de forma automática!
+   └ _...e mais 7 itens de baixa severidade no log completo._
+
+📦 *Atualizações Disponíveis no Ecossistema:*
+• 🟢 Patches Seguros: *2 pacotes*
+• 🔴 Versões Principais (Com Breaking Changes): *16 pacotes*
+   ⚠️ _@prisma/client_ (5.22.0 ➔ 7.9.1): Retido com segurança.
+   ⚠️ _@types/node_ (20.19.43 ➔ 26.2.0): Retido com segurança.
+   ⚠️ _@types/react_ (18.3.31 ➔ 19.2.18): Retido com segurança.
+
+💡 *Política de Segurança Ativa:* A IA não altera nenhum arquivo em produção automaticamente. Todas as versões críticas permanecem blindadas e operando normalmente.

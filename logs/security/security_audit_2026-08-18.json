@@ -1,0 +1,294 @@
+{
+  "timestamp": "2026-08-18T16:56:25.003Z",
+  "totalVulns": 12,
+  "criticalVulns": 1,
+  "highVulns": 11,
+  "moderateVulns": 0,
+  "lowVulns": 0,
+  "findings": [
+    {
+      "package": "app-builder-lib",
+      "type": "vulnerability",
+      "severity": "high",
+      "riskLevel": "🟡 Atenção",
+      "riskIcon": "🟡",
+      "isDirect": false,
+      "recommendation": "Correção de segurança recomendada em branch de testes.",
+      "details": "Correção de patch disponível"
+    },
+    {
+      "package": "builder-util",
+      "type": "vulnerability",
+      "severity": "high",
+      "riskLevel": "🟡 Atenção",
+      "riskIcon": "🟡",
+      "isDirect": false,
+      "recommendation": "Correção de segurança recomendada em branch de testes.",
+      "details": "Correção de patch disponível"
+    },
+    {
+      "package": "builder-util-runtime",
+      "type": "vulnerability",
+      "severity": "high",
+      "riskLevel": "🟡 Atenção",
+      "riskIcon": "🟡",
+      "isDirect": false,
+      "recommendation": "Correção de segurança recomendada em branch de testes.",
+      "details": "Correção de patch disponível"
+    },
+    {
+      "package": "dmg-builder",
+      "type": "vulnerability",
+      "severity": "high",
+      "riskLevel": "🟡 Atenção",
+      "riskIcon": "🟡",
+      "isDirect": false,
+      "recommendation": "Correção de segurança recomendada em branch de testes.",
+      "details": "Correção de patch disponível"
+    },
+    {
+      "package": "electron",
+      "type": "vulnerability",
+      "severity": "high",
+      "riskLevel": "🔴 Alto Risco de Quebra",
+      "riskIcon": "🔴",
+      "isDirect": true,
+      "recommendation": "ATENÇÃO: Requer recompilação e testes no instalador desktop. Não atualizar de forma automática!",
+      "details": "Correção de patch disponível"
+    },
+    {
+      "package": "electron-builder",
+      "type": "vulnerability",
+      "severity": "high",
+      "riskLevel": "🟡 Atenção",
+      "riskIcon": "🟡",
+      "isDirect": true,
+      "recommendation": "Correção de segurança recomendada em branch de testes.",
+      "details": "Correção de patch disponível"
+    },
+    {
+      "package": "electron-builder-squirrel-windows",
+      "type": "vulnerability",
+      "severity": "high",
+      "riskLevel": "🟡 Atenção",
+      "riskIcon": "🟡",
+      "isDirect": false,
+      "recommendation": "Correção de segurança recomendada em branch de testes.",
+      "details": "Correção de patch disponível"
+    },
+    {
+      "package": "electron-publish",
+      "type": "vulnerability",
+      "severity": "high",
+      "riskLevel": "🟡 Atenção",
+      "riskIcon": "🟡",
+      "isDirect": false,
+      "recommendation": "Correção de segurança recomendada em branch de testes.",
+      "details": "Correção de patch disponível"
+    },
+    {
+      "package": "extract-zip",
+      "type": "vulnerability",
+      "severity": "high",
+      "riskLevel": "🟡 Atenção",
+      "riskIcon": "🟡",
+      "isDirect": false,
+      "recommendation": "Correção de segurança recomendada em branch de testes.",
+      "details": "Correção de patch disponível"
+    },
+    {
+      "package": "next",
+      "type": "vulnerability",
+      "severity": "high",
+      "riskLevel": "🔴 Alto Risco de Quebra",
+      "riskIcon": "🔴",
+      "isDirect": true,
+      "recommendation": "ATENÇÃO: Núcleo do SaaS. Major updates requerem revisão completa de rotas e Server Actions. Não atualizar de forma automática!",
+      "details": "Correção de patch disponível"
+    },
+    {
+      "package": "postcss",
+      "type": "vulnerability",
+      "severity": "high",
+      "riskLevel": "🟡 Atenção",
+      "riskIcon": "🟡",
+      "isDirect": false,
+      "recommendation": "Correção de segurança recomendada em branch de testes.",
+      "details": "Correção de patch disponível"
+    },
+    {
+      "package": "tar",
+      "type": "vulnerability",
+      "severity": "critical",
+      "riskLevel": "🟡 Atenção",
+      "riskIcon": "🟡",
+      "isDirect": false,
+      "recommendation": "Correção de segurança recomendada em branch de testes.",
+      "details": "Correção de patch disponível"
+    }
+  ],
+  "outdatedSummary": [
+    {
+      "package": "@prisma/client",
+      "current": "5.22.0",
+      "wanted": "5.22.0",
+      "latest": "7.9.1",
+      "riskIcon": "🔴",
+      "riskNote": "Nova versão principal (Major). Pode conter quebras de código. [Crítico: Requer migração explícita e compatibilidade com prisma CLI.]",
+      "isMajor": true
+    },
+    {
+      "package": "@types/node",
+      "current": "20.19.43",
+      "wanted": "20.19.43",
+      "latest": "26.2.0",
+      "riskIcon": "🔴",
+      "riskNote": "Nova versão principal (Major). Pode conter quebras de código.",
+      "isMajor": true
+    },
+    {
+      "package": "@types/react",
+      "current": "18.3.31",
+      "wanted": "18.3.31",
+      "latest": "19.2.18",
+      "riskIcon": "🔴",
+      "riskNote": "Nova versão principal (Major). Pode conter quebras de código.",
+      "isMajor": true
+    },
+    {
+      "package": "@types/react-dom",
+      "current": "18.3.7",
+      "wanted": "18.3.7",
+      "latest": "19.2.4",
+      "riskIcon": "🔴",
+      "riskNote": "Nova versão principal (Major). Pode conter quebras de código.",
+      "isMajor": true
+    },
+    {
+      "package": "@whiskeysockets/baileys",
+      "current": "6.7.24",
+      "wanted": "6.7.24",
+      "latest": "7.0.0-rc14",
+      "riskIcon": "🔴",
+      "riskNote": "Nova versão principal (Major). Pode conter quebras de código. [Crítico: Versão homologada para estabilidade do WhatsApp. Alterações major podem quebrar autenticação QR.]",
+      "isMajor": true
+    },
+    {
+      "package": "concurrently",
+      "current": "10.0.4",
+      "wanted": "10.0.5",
+      "latest": "10.0.5",
+      "riskIcon": "🟢",
+      "riskNote": "Patch seguro (sem breaking changes).",
+      "isMajor": false
+    },
+    {
+      "package": "date-fns",
+      "current": "3.6.0",
+      "wanted": "3.6.0",
+      "latest": "4.4.0",
+      "riskIcon": "🔴",
+      "riskNote": "Nova versão principal (Major). Pode conter quebras de código.",
+      "isMajor": true
+    },
+    {
+      "package": "electron",
+      "current": "31.3.1",
+      "wanted": "31.3.1",
+      "latest": "43.4.0",
+      "riskIcon": "🔴",
+      "riskNote": "Nova versão principal (Major). Pode conter quebras de código. [Crítico: Requer recompilação e testes no instalador desktop.]",
+      "isMajor": true
+    },
+    {
+      "package": "electron-builder",
+      "current": "24.13.3",
+      "wanted": "24.13.3",
+      "latest": "26.15.3",
+      "riskIcon": "🔴",
+      "riskNote": "Nova versão principal (Major). Pode conter quebras de código.",
+      "isMajor": true
+    },
+    {
+      "package": "lucide-react",
+      "current": "0.441.0",
+      "wanted": "0.441.0",
+      "latest": "1.32.0",
+      "riskIcon": "🔴",
+      "riskNote": "Nova versão principal (Major). Pode conter quebras de código.",
+      "isMajor": true
+    },
+    {
+      "package": "next",
+      "current": "14.2.35",
+      "wanted": "14.2.35",
+      "latest": "16.3.1",
+      "riskIcon": "🔴",
+      "riskNote": "Nova versão principal (Major). Pode conter quebras de código. [Crítico: Núcleo do SaaS. Major updates requerem revisão completa de rotas e Server Actions.]",
+      "isMajor": true
+    },
+    {
+      "package": "prisma",
+      "current": "5.22.0",
+      "wanted": "5.22.0",
+      "latest": "7.9.1",
+      "riskIcon": "🔴",
+      "riskNote": "Nova versão principal (Major). Pode conter quebras de código. [Crítico: Deve sempre estar alinhada com @prisma/client.]",
+      "isMajor": true
+    },
+    {
+      "package": "react",
+      "current": "18.3.1",
+      "wanted": "18.3.1",
+      "latest": "19.2.8",
+      "riskIcon": "🔴",
+      "riskNote": "Nova versão principal (Major). Pode conter quebras de código.",
+      "isMajor": true
+    },
+    {
+      "package": "react-dom",
+      "current": "18.3.1",
+      "wanted": "18.3.1",
+      "latest": "19.2.8",
+      "riskIcon": "🔴",
+      "riskNote": "Nova versão principal (Major). Pode conter quebras de código.",
+      "isMajor": true
+    },
+    {
+      "package": "tailwind-merge",
+      "current": "2.6.1",
+      "wanted": "2.6.1",
+      "latest": "3.6.0",
+      "riskIcon": "🔴",
+      "riskNote": "Nova versão principal (Major). Pode conter quebras de código.",
+      "isMajor": true
+    },
+    {
+      "package": "tailwindcss",
+      "current": "3.4.19",
+      "wanted": "3.4.19",
+      "latest": "4.3.3",
+      "riskIcon": "🔴",
+      "riskNote": "Nova versão principal (Major). Pode conter quebras de código.",
+      "isMajor": true
+    },
+    {
+      "package": "typescript",
+      "current": "5.9.3",
+      "wanted": "5.9.3",
+      "latest": "7.0.2",
+      "riskIcon": "🔴",
+      "riskNote": "Nova versão principal (Major). Pode conter quebras de código.",
+      "isMajor": true
+    },
+    {
+      "package": "vitest",
+      "current": "4.1.10",
+      "wanted": "4.1.11",
+      "latest": "4.1.11",
+      "riskIcon": "🟢",
+      "riskNote": "Patch seguro (sem breaking changes).",
+      "isMajor": false
+    }
+  ]
+}

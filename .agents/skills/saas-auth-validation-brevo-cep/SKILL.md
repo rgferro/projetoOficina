@@ -58,11 +58,24 @@ model Tenant {
   city                    String?
   state                   String?
   isMaster                Boolean               @default(false)
+  registrationIp          String?               // IP de registro para auditoria e antifraude
+  lastLoginIp             String?               // Último IP de acesso
   active                  Boolean               @default(true)
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt
 
   employees               Employee[]
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // REGISTER_TENANT, LOGIN_SUCCESS, FRAUD_REGISTRATION_BLOCKED
+  ip        String   // Endereço IP do cliente
+  userAgent String?  // Browser / Dispositivo
+  tenantId  String?  // ID do Tenant
+  userEmail String?  // E-mail do usuário
+  details   String?  // Detalhes em JSON
+  createdAt DateTime @default(now())
 }
 
 model Employee {
@@ -85,6 +98,47 @@ model EmailVerification {
   code      String
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+```
+
+---
+
+## 🛡️ 2. Auditoria e Antifraude de IP (Marco Civil & LGPD)
+
+### Base Legal:
+- **Marco Civil da Internet (Lei 12.965/2014, Art. 15):** Guarda de registros de IP, data e hora por 6 meses.
+- **LGPD (Lei 13.709/2018, Art. 7º IX e X):** Legítimo interesse e prevenção à fraude.
+
+### Helper de Auditoria e Trava Antifraude (`src/lib/audit.ts`):
+```typescript
+import { NextRequest } from "next/server";
+import { prisma } from "./prisma";
+
+export function getClientIp(req: NextRequest | Request): string {
+  const headers = req.headers;
+  const cfIp = headers.get("cf-connecting-ip");
+  if (cfIp) return cfIp.split(",")[0].trim();
+  const xForwardedFor = headers.get("x-forwarded-for");
+  if (xForwardedFor) return xForwardedFor.split(",")[0].trim();
+  const xRealIp = headers.get("x-real-ip");
+  if (xRealIp) return xRealIp.split(",")[0].trim();
+  return "127.0.0.1";
+}
+
+export async function checkIpRegistrationAbuse(ip: string): Promise<{ allowed: boolean; count: number; reason?: string }> {
+  if (ip === "127.0.0.1" || ip === "::1" || ip === "localhost") return { allowed: true, count: 0 };
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const count = await prisma.tenant.count({
+    where: { registrationIp: ip, createdAt: { gte: twentyFourHoursAgo } },
+  });
+  if (count >= 2) {
+    return {
+      allowed: false,
+      count,
+      reason: "Limite de criação de contas para este endereço de rede atingido nas últimas 24 horas (máx 2 por rede).",
+    };
+  }
+  return { allowed: true, count };
 }
 ```
 

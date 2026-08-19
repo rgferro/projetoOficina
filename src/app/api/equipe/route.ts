@@ -143,10 +143,13 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Constrói o link de convite
-    const host = req.headers.get("host") || "localhost:3000";
-    const protocol = host.includes("localhost") ? "http" : "https";
-    const inviteLink = `${protocol}://${host}/convite?token=${inviteToken}`;
+    // Constrói o link de convite oficial
+    const appUrl = process.env.APP_URL || "https://torquerp.com.br";
+    const forwardedHost = req.headers.get("x-forwarded-host");
+    const host = forwardedHost || req.headers.get("host") || "";
+    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
+    const baseUrl = !isLocal && host ? `https://${host}` : (isLocal ? `http://${host}` : appUrl);
+    const inviteLink = `${baseUrl}/convite?token=${inviteToken}`;
 
     // Dispara e-mail de convite via Brevo REST API v3
     await sendEmployeeInviteEmail({

@@ -253,6 +253,40 @@ export default function PDVPage() {
     }
   };
 
+  // Auto-Focus no campo de busca/código de barras ao abrir a tela
+  useEffect(() => {
+    searchInputRef.current?.focus();
+  }, []);
+
+  // Leitor de Código de Barras USB / EAN-13 Automático:
+  // Quando o leitor bipe um código e envia a tecla "Enter", adiciona o produto imediatamente ao carrinho
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && search.trim()) {
+      e.preventDefault();
+      const term = search.trim().toLowerCase();
+
+      // 1. Tenta correspondência exata por Código de Barras (EAN) ou SKU
+      const exactProduct = products.find(
+        (p) =>
+          (p.barcode && p.barcode.toLowerCase() === term) ||
+          (p.sku && p.sku.toLowerCase() === term)
+      );
+
+      if (exactProduct) {
+        handleAddToCart(exactProduct);
+        setSearch(""); // Limpa para o próximo bipe
+        return;
+      }
+
+      // 2. Se houver apenas 1 produto filtrado, adiciona ele
+      if (filteredProducts.length === 1) {
+        handleAddToCart(filteredProducts[0]);
+        setSearch("");
+        return;
+      }
+    }
+  };
+
   // Filtragem de produtos e serviços
   const filteredProducts = products.filter(
     (p) =>
@@ -292,9 +326,10 @@ export default function PDVPage() {
             <input
               ref={searchInputRef}
               type="text"
-              placeholder="Buscar por Nome, Código de Barras (EAN), SKU, Marca ou Serviço..."
+              placeholder="Bipar Código de Barras (EAN-13 / SKU) ou buscar por Nome..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
               className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm font-medium"
             />
           </div>

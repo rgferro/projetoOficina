@@ -6,6 +6,8 @@ export async function GET() {
     "",
     "/sistema-para-oficina-mecanica",
     "/sistema-para-lava-jato",
+    "/cadastro",
+    "/login",
     "/sobre",
     "/contato",
     "/assinatura",

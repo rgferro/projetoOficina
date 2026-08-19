@@ -22,6 +22,9 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
+    "email:prospeccao": "node scripts/disparar_emails_leads_jf.js",
+    "email:prospeccao:dry": "node scripts/disparar_emails_leads_jf.js --dry-run",
+    "security:check": "node scripts/security_ai_monitor.js",
     "setup": "npm install && npx prisma generate && npx prisma db push && npx tsx prisma/seed.ts"
   },
   "build": {

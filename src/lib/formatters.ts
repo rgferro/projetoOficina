@@ -69,3 +69,8 @@ export function formatDocument(doc: string | null | undefined): string {
   }
   return doc;
 }
+
+export function sanitizeDigits(value: string | null | undefined): string {
+  if (!value) return "";
+  return value.replace(/\D/g, "");
+}

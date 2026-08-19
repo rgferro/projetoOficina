@@ -62,6 +62,7 @@ export default function LavaJatoPage() {
   const [sendingWaId, setSendingWaId] = useState<string | null>(null);
   const [waAlertTicket, setWaAlertTicket] = useState<any>(null);
   const [waAlertMessage, setWaAlertMessage] = useState<string>("");
+  const [quotaErrorMsg, setQuotaErrorMsg] = useState<string | null>(null);
 
   const [standardServices, setStandardServices] = useState<any[]>([]);
 
@@ -289,7 +290,12 @@ export default function LavaJatoPage() {
         loadData();
       } else {
         const errorData = await res.json();
-        alert(errorData.error || "Erro ao criar ticket");
+        if (res.status === 403 || errorData.quotaExceeded) {
+          setIsNewTicketModalOpen(false);
+          setQuotaErrorMsg(errorData.error || "Limite mensal de 50 lavagens atingido no Plano Starter.");
+        } else {
+          alert(errorData.error || "Erro ao criar ticket");
+        }
       }
     } catch (err) {
       console.error(err);
@@ -1022,7 +1028,55 @@ export default function LavaJatoPage() {
           </div>
         </div>
       )}
+
+      {/* Modal de Limite de Cota Excedida (Plano Starter) */}
+      {quotaErrorMsg && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-amber-200 space-y-5">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-300 text-amber-600 flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-black text-slate-900">
+                Limite Mensal Atingido
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                {quotaErrorMsg}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-xs text-slate-600 space-y-2">
+              <div className="font-bold text-slate-800">Vantagens do Plano Pro:</div>
+              <ul className="space-y-1 text-[11px] text-slate-500">
+                <li>✓ Ordens de Serviço Ilimitadas</li>
+                <li>✓ Lavagens de Lava-Jato Ilimitadas</li>
+                <li>✓ Até 4 Usuários ativos inclusos</li>
+                <li>✓ Notificações automáticas de WhatsApp</li>
+              </ul>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <Link
+                href="/assinatura"
+                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:brightness-110 text-white font-extrabold text-xs shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition-all active:scale-95 text-center"
+              >
+                <Sparkles className="w-4 h-4 text-amber-300 fill-current" />
+                Fazer Upgrade para o Plano Pro Agora
+              </Link>
+              <button
+                type="button"
+                onClick={() => setQuotaErrorMsg(null)}
+                className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
