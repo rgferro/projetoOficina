@@ -18,6 +18,7 @@ import {
   AlertCircle,
   Calendar,
   Save,
+  Lock,
 } from "lucide-react";
 import {
   formatPhone,
@@ -26,8 +27,17 @@ import {
   formatCurrency,
   formatDateTime,
 } from "@/lib/formatters";
+import { useAuth } from "@/lib/authContext";
 
 export default function ClientesPage() {
+  const { currentEmployee } = useAuth();
+  // Somente ADMIN, GERENTE e ATENDENTE podem criar/editar clientes
+  const canManage =
+    !currentEmployee ||
+    currentEmployee.accessLevel === "ADMIN" ||
+    currentEmployee.accessLevel === "GERENTE" ||
+    currentEmployee.accessLevel === "ATENDENTE";
+
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -409,13 +419,20 @@ export default function ClientesPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsNewCustomerModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          Novo Cliente
-        </button>
+        {canManage ? (
+          <button
+            onClick={() => setIsNewCustomerModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            Novo Cliente
+          </button>
+        ) : (
+          <span className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 font-bold text-xs">
+            <Lock className="w-3.5 h-3.5" />
+            Somente Leitura
+          </span>
+        )}
       </div>
 
       {successMessage && (
@@ -468,14 +485,16 @@ export default function ClientesPage() {
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
                       {c.vehicles?.length || 0} {c.vehicles?.length === 1 ? "veículo" : "veículos"}
                     </span>
-                    <button
-                      type="button"
-                      title="Editar Dados do Cliente"
-                      onClick={(e) => handleOpenEditCustomer(c, e)}
-                      className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
+                    {canManage && (
+                      <button
+                        type="button"
+                        title="Editar Dados do Cliente"
+                        onClick={(e) => handleOpenEditCustomer(c, e)}
+                        className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -950,13 +969,15 @@ export default function ClientesPage() {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleOpenEditCustomer(selectedCustomer)}
-                  className="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold text-xs flex items-center gap-1.5 transition-all"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                  Editar Dados
-                </button>
+                {canManage && (
+                  <button
+                    onClick={() => handleOpenEditCustomer(selectedCustomer)}
+                    className="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold text-xs flex items-center gap-1.5 transition-all"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                    Editar Dados
+                  </button>
+                )}
                 <button
                   onClick={() => setIsDetailsModalOpen(false)}
                   className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
@@ -974,12 +995,14 @@ export default function ClientesPage() {
                     <Car className="w-4 h-4 text-blue-600" />
                     Veículos Vinculados ({selectedCustomer.vehicles?.length || 0})
                   </h3>
-                  <button
-                    onClick={() => setIsAddVehicleModalOpen(true)}
-                    className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Adicionar Outro Veículo
-                  </button>
+                  {canManage && (
+                    <button
+                      onClick={() => setIsAddVehicleModalOpen(true)}
+                      className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Adicionar Outro Veículo
+                    </button>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1007,23 +1030,25 @@ export default function ClientesPage() {
                         </div>
                       </div>
 
-                      <div className="mt-3 pt-2.5 border-t border-slate-200/70 flex items-center justify-end gap-2 text-xs">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditVehicle(v)}
-                          className="text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1"
-                        >
-                          <Edit2 className="w-3 h-3" /> Editar
-                        </button>
-                        <span className="text-slate-300">•</span>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteVehicle(v.id, v.plate)}
-                          className="text-red-500 hover:text-red-700 font-bold flex items-center gap-1"
-                        >
-                          <Trash2 className="w-3 h-3" /> Excluir
-                        </button>
-                      </div>
+                      {canManage && (
+                        <div className="mt-3 pt-2.5 border-t border-slate-200/70 flex items-center justify-end gap-2 text-xs">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditVehicle(v)}
+                            className="text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1"
+                          >
+                            <Edit2 className="w-3 h-3" /> Editar
+                          </button>
+                          <span className="text-slate-300">•</span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteVehicle(v.id, v.plate)}
+                            className="text-red-500 hover:text-red-700 font-bold flex items-center gap-1"
+                          >
+                            <Trash2 className="w-3 h-3" /> Excluir
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
