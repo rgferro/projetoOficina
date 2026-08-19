@@ -4,6 +4,7 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { Header } from "@/components/Header";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { AuthProvider } from "@/lib/authContext";
 import { AccessGuard } from "@/components/AccessGuard";
 import { ActivationGate } from "@/components/ActivationGate";
@@ -51,13 +52,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="flex-1 flex flex-col lg:pl-72 min-w-0">
             <Header onOpenSidebar={() => setSidebarOpen(true)} />
-            <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+            <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 max-w-7xl w-full mx-auto">
               <AccessGuard>{children}</AccessGuard>
             </main>
           </div>
+
+          {/* Barra de atalhos rápidos fixada no rodapé no modo mobile */}
+          <MobileBottomNav onOpenSidebar={() => setSidebarOpen(true)} />
         </div>
         <OnboardingTour />
       </AuthProvider>
     </ActivationGate>
   );
 }
+
