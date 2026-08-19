@@ -112,8 +112,9 @@ export function getCloudBackupStatus(): CloudDetectionResult & {
   };
 }
 
-// Gera o dump JSON completo de todas as tabelas
-export async function generateFullBackupData() {
+// Gera o dump JSON completo filtrado por Tenant
+export async function generateFullBackupData(tenantId?: string) {
+  const whereTenant = tenantId ? { tenantId } : {};
   const [
     settings,
     employees,
@@ -128,20 +129,21 @@ export async function generateFullBackupData() {
     accountsPayable,
     accountsReceivable,
   ] = await Promise.all([
-    prisma.workshopSetting.findMany(),
-    prisma.employee.findMany(),
-    prisma.customer.findMany({ include: { vehicles: true } }),
-    prisma.supplier.findMany(),
-    prisma.product.findMany(),
-    prisma.standardService.findMany(),
-    prisma.washTicket.findMany(),
+    prisma.workshopSetting.findMany({ where: tenantId ? { tenantId } : undefined }),
+    prisma.employee.findMany({ where: whereTenant }),
+    prisma.customer.findMany({ where: whereTenant, include: { vehicles: true } }),
+    prisma.supplier.findMany({ where: whereTenant }),
+    prisma.product.findMany({ where: whereTenant }),
+    prisma.standardService.findMany({ where: whereTenant }),
+    prisma.washTicket.findMany({ where: whereTenant }),
     prisma.serviceOrder.findMany({
+      where: whereTenant,
       include: { items: true, payments: true, photos: true },
     }),
-    prisma.sale.findMany({ include: { items: true } }),
-    prisma.financialTransaction.findMany(),
-    prisma.accountPayable.findMany(),
-    prisma.accountReceivable.findMany(),
+    prisma.sale.findMany({ where: whereTenant, include: { items: true } }),
+    prisma.financialTransaction.findMany({ where: whereTenant }),
+    prisma.accountPayable.findMany({ where: whereTenant }),
+    prisma.accountReceivable.findMany({ where: whereTenant }),
   ]);
 
   return {

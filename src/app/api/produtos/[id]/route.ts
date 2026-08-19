@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantContext } from "@/lib/tenant";
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const product = await prisma.product.findUnique({
-      where: { id: params.id },
+    const { tenantId } = await getTenantContext(request);
+    const product = await prisma.product.findFirst({
+      where: { id: params.id, tenantId },
       include: {
         supplier: true,
         stockMovements: {
@@ -32,6 +34,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
     const {
       name,
@@ -48,53 +51,33 @@ export async function PUT(
       shelfLocation,
       supplierId,
       notes,
-      stockAdjustmentReason,
     } = body;
 
-    const current = await prisma.product.findUnique({
-      where: { id: params.id },
+    const existing = await prisma.product.findFirst({
+      where: { id: params.id, tenantId },
     });
 
-    if (!current) {
-      return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 });
-    }
-
-    const newStock = currentStock !== undefined ? Number(currentStock) : current.currentStock;
-    const stockDiff = newStock - current.currentStock;
-
-    // Se houve ajuste manual de estoque, registra movimentação
-    if (stockDiff !== 0) {
-      await prisma.stockMovement.create({
-        data: {
-          productId: params.id,
-          type: stockDiff > 0 ? "ENTRADA" : "AJUSTE",
-          quantity: Math.abs(stockDiff),
-          unitCost: Number(costPrice) || current.costPrice,
-          description: stockAdjustmentReason || "Ajuste manual de estoque",
-        },
-      });
+    if (!existing) {
+      return NextResponse.json({ error: "Produto não encontrado nesta oficina" }, { status: 404 });
     }
 
     const updated = await prisma.product.update({
       where: { id: params.id },
       data: {
-        name: name ?? current.name,
-        sku: sku !== undefined ? sku || null : current.sku,
-        barcode: barcode !== undefined ? barcode || null : current.barcode,
-        brand: brand !== undefined ? brand || null : current.brand,
-        category: category ?? current.category,
-        unit: unit ?? current.unit,
-        costPrice: costPrice !== undefined ? Number(costPrice) : current.costPrice,
-        profitMargin: profitMargin !== undefined ? Number(profitMargin) : current.profitMargin,
-        salePrice: salePrice !== undefined ? Number(salePrice) : current.salePrice,
-        currentStock: newStock,
-        minStock: minStock !== undefined ? Number(minStock) : current.minStock,
-        shelfLocation: shelfLocation !== undefined ? shelfLocation || null : current.shelfLocation,
-        supplierId: supplierId !== undefined ? supplierId || null : current.supplierId,
-        notes: notes !== undefined ? notes || null : current.notes,
-      },
-      include: {
-        supplier: true,
+        name,
+        sku: sku || null,
+        barcode: barcode || null,
+        brand: brand || null,
+        category: category || "Peças Gerais",
+        unit: unit || "UN",
+        costPrice: Number(costPrice) || 0,
+        profitMargin: Number(profitMargin) || 0,
+        salePrice: Number(salePrice) || 0,
+        currentStock: Number(currentStock) || 0,
+        minStock: Number(minStock) || 2,
+        shelfLocation: shelfLocation || null,
+        supplierId: supplierId || null,
+        notes: notes || null,
       },
     });
 
@@ -109,9 +92,19 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { tenantId } = await getTenantContext(request);
+    const existing = await prisma.product.findFirst({
+      where: { id: params.id, tenantId },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Produto não encontrado nesta oficina" }, { status: 404 });
+    }
+
     await prisma.product.delete({
       where: { id: params.id },
     });
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Erro ao excluir produto" }, { status: 500 });

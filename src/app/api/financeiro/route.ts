@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantContext } from "@/lib/tenant";
 
 export async function GET(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const { searchParams } = new URL(request.url);
-    const dateParam = searchParams.get("date"); // YYYY-MM-DD ou vazio
+    const dateParam = searchParams.get("date");
 
     let startOfDay: Date;
     let endOfDay: Date;
@@ -14,7 +16,6 @@ export async function GET(request: Request) {
       startOfDay = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 0, 0, 0, 0);
       endOfDay = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 23, 59, 59, 999);
     } else {
-      // Hoje por padrão
       const now = new Date();
       startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
       endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
@@ -22,6 +23,7 @@ export async function GET(request: Request) {
 
     const transactions = await prisma.financialTransaction.findMany({
       where: {
+        tenantId,
         date: {
           gte: startOfDay,
           lte: endOfDay,
@@ -30,7 +32,6 @@ export async function GET(request: Request) {
       orderBy: { date: "desc" },
     });
 
-    // Totalizadores do dia
     let totalIncome = 0;
     let totalExpense = 0;
     const byMethod: Record<string, number> = {
@@ -74,6 +75,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
     const { description, type, category, amount, paymentMethod, date } = body;
 
@@ -86,8 +88,9 @@ export async function POST(request: Request) {
 
     const transaction = await prisma.financialTransaction.create({
       data: {
+        tenantId,
         description,
-        type, // RECEITA ou DESPESA
+        type,
         category: category || "OUTROS",
         amount: Number(amount),
         paymentMethod,

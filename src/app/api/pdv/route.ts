@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantContext } from "@/lib/tenant";
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const dateParam = searchParams.get("date");
-
+    const { tenantId } = await getTenantContext(request);
     const sales = await prisma.sale.findMany({
+      where: { tenantId },
       include: {
         customer: true,
         employee: true,
@@ -26,6 +26,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
     const {
       customerId,
@@ -64,13 +65,14 @@ export async function POST(request: Request) {
     const change = Math.max(0, paid - grandTotal);
 
     const lastSale = await prisma.sale.findFirst({
+      where: { tenantId },
       orderBy: { saleNumber: "desc" },
     });
     const saleNumber = lastSale ? lastSale.saleNumber + 1 : 1001;
 
-    // Cria a venda
     const sale = await prisma.sale.create({
       data: {
+        tenantId,
         saleNumber,
         customerId: customerId || null,
         employeeId: employeeId || null,
@@ -93,11 +95,10 @@ export async function POST(request: Request) {
       },
     });
 
-    // 1. Baixa no estoque dos produtos vendidos
     for (const item of items) {
       if (item.productId) {
-        const product = await prisma.product.findUnique({
-          where: { id: item.productId },
+        const product = await prisma.product.findFirst({
+          where: { id: item.productId, tenantId },
         });
 
         if (product) {
@@ -109,6 +110,7 @@ export async function POST(request: Request) {
 
           await prisma.stockMovement.create({
             data: {
+              tenantId,
               productId: item.productId,
               type: "VENDA_PDV",
               quantity: Number(item.quantity),
@@ -120,9 +122,9 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. Registro financeiro no caixa
     await prisma.financialTransaction.create({
       data: {
+        tenantId,
         description: `Venda PDV Balcão #${sale.saleNumber}`,
         type: "RECEITA",
         category: "PDV_BALCAO",

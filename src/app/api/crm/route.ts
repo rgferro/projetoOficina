@@ -1,31 +1,37 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantContext } from "@/lib/tenant";
 import {
   generateWhatsappLink,
   buildOilReminderMessage,
   buildWashReminderMessage,
 } from "@/lib/whatsapp";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
+
     const settings = await prisma.workshopSetting.findUnique({
-      where: { id: "default" },
+      where: { tenantId },
     });
 
     const workshopName = settings?.workshopName || "Oficina & Lava-Jato";
 
-    // 1. Clientes do Lava-Jato sem retorno há mais de 15 dias
     const now = new Date();
     const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000);
+    const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
 
     const vehicles = await prisma.vehicle.findMany({
+      where: { tenantId },
       include: {
         customer: true,
         washTickets: {
+          where: { tenantId },
           orderBy: { enteredAt: "desc" },
           take: 1,
         },
         serviceOrders: {
+          where: { tenantId },
           orderBy: { createdAt: "desc" },
           take: 1,
         },
@@ -35,10 +41,7 @@ export async function GET() {
     const washRetentionAlerts: any[] = [];
     const oilServiceAlerts: any[] = [];
 
-    const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
-
     vehicles.forEach((vehicle) => {
-      // Análise Lava-Jato
       const lastWash = vehicle.washTickets[0];
       if (lastWash && lastWash.enteredAt <= fifteenDaysAgo) {
         const diffTime = Math.abs(now.getTime() - new Date(lastWash.enteredAt).getTime());
@@ -67,7 +70,6 @@ export async function GET() {
         });
       }
 
-      // Análise Oficina / Revisão / Troca de Óleo (> 180 dias da última OS)
       const lastOS = vehicle.serviceOrders[0];
       if (lastOS && lastOS.createdAt <= sixMonthsAgo) {
         const diffTime = Math.abs(now.getTime() - new Date(lastOS.createdAt).getTime());

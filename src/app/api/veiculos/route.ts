@@ -1,26 +1,33 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantContext } from "@/lib/tenant";
 
 export async function GET(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q") || "";
 
+    const where: any = { tenantId };
+    if (q) {
+      where.AND = [
+        {
+          OR: [
+            { plate: { contains: q } },
+            { model: { contains: q } },
+            { brand: { contains: q } },
+            { customer: { name: { contains: q } } },
+          ],
+        },
+      ];
+    }
+
     const vehicles = await prisma.vehicle.findMany({
-      where: q
-        ? {
-            OR: [
-              { plate: { contains: q } },
-              { model: { contains: q } },
-              { brand: { contains: q } },
-              { customer: { name: { contains: q } } },
-            ],
-          }
-        : undefined,
+      where,
       include: {
         customer: true,
       },
-      orderBy: { plate: "asc" },
+      orderBy: { createdAt: "desc" },
     });
 
     return NextResponse.json(vehicles);
@@ -31,27 +38,24 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
-    const { plate, brand, model, year, color, category, currentKm, notes, customerId } = body;
+    const { plate, brand, model, year, color, currentKm, category, notes, customerId } = body;
 
     if (!plate || !customerId) {
-      return NextResponse.json(
-        { error: "Placa e Cliente são obrigatórios" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Placa e Cliente são obrigatórios" }, { status: 400 });
     }
-
-    const cleanPlate = plate.toUpperCase().trim().replace(/[^A-Z0-9]/g, "");
 
     const vehicle = await prisma.vehicle.create({
       data: {
-        plate: cleanPlate,
-        brand: brand || "Desconhecida",
-        model: model || "Modelo",
+        tenantId,
+        plate: plate.toUpperCase().trim(),
+        brand: brand || "Geral",
+        model: model || "Veículo",
         year: year ? Number(year) : null,
         color: color || null,
-        category: category || "Hatch / Sedan",
         currentKm: currentKm ? Number(currentKm) : 0,
+        category: category || "Hatch / Sedan",
         notes: notes || null,
         customerId,
       },
@@ -62,12 +66,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json(vehicle, { status: 201 });
   } catch (error: any) {
-    if (error.code === "P2002") {
-      return NextResponse.json(
-        { error: "Já existe um veículo cadastrado com esta placa." },
-        { status: 400 }
-      );
-    }
-    return NextResponse.json({ error: error.message || "Erro ao criar veículo" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Erro ao cadastrar veículo" }, { status: 500 });
   }
 }

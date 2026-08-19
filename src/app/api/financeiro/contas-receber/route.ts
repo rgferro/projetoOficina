@@ -1,22 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantContext } from "@/lib/tenant";
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status");
-
-    const where: any = {};
-    if (status && status !== "TODAS") {
-      where.status = status;
-    }
-
+    const { tenantId } = await getTenantContext(request);
     const receivables = await prisma.accountReceivable.findMany({
-      where,
-      include: {
-        customer: true,
-        serviceOrder: true,
-      },
+      where: { tenantId },
+      include: { customer: true, serviceOrder: true },
       orderBy: { dueDate: "asc" },
     });
 
@@ -28,89 +19,104 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
-    const { description, amount, dueDate, customerId, serviceOrderId, notes } = body;
+    const { description, amount, dueDate, paymentMethod, status, customerId, serviceOrderId, notes } = body;
 
     if (!description || !amount || !dueDate) {
       return NextResponse.json({ error: "Descrição, Valor e Vencimento são obrigatórios" }, { status: 400 });
     }
 
-    const rec = await prisma.accountReceivable.create({
+    const receivable = await prisma.accountReceivable.create({
       data: {
+        tenantId,
         description,
         amount: Number(amount),
         dueDate: new Date(dueDate),
+        paymentMethod: paymentMethod || null,
+        status: status || "PENDENTE",
         customerId: customerId || null,
         serviceOrderId: serviceOrderId || null,
         notes: notes || null,
-        status: "PENDENTE",
       },
       include: { customer: true, serviceOrder: true },
     });
 
-    return NextResponse.json(rec, { status: 201 });
+    return NextResponse.json(receivable, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Erro ao cadastrar conta a receber" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Erro ao criar conta a receber" }, { status: 500 });
   }
 }
 
 export async function PUT(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
-    const { id, status, paymentMethod, receivedDate, notes } = body;
+    const { id, description, amount, dueDate, receivedDate, paymentMethod, status, customerId, notes } = body;
 
     if (!id) {
       return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
     }
 
-    const current = await prisma.accountReceivable.findUnique({
-      where: { id },
+    const existing = await prisma.accountReceivable.findFirst({
+      where: { id, tenantId },
     });
 
-    if (!current) {
-      return NextResponse.json({ error: "Conta não encontrada" }, { status: 404 });
+    if (!existing) {
+      return NextResponse.json({ error: "Conta não encontrada nesta oficina" }, { status: 404 });
     }
-
-    const isReceivingNow = status === "PAGO" && current.status !== "PAGO";
 
     const updated = await prisma.accountReceivable.update({
       where: { id },
       data: {
-        status: status || current.status,
-        paymentMethod: paymentMethod || current.paymentMethod,
-        receivedDate: status === "PAGO" ? new Date(receivedDate || Date.now()) : current.receivedDate,
-        notes: notes !== undefined ? notes : current.notes,
+        description,
+        amount: amount !== undefined ? Number(amount) : undefined,
+        dueDate: dueDate ? new Date(dueDate) : undefined,
+        receivedDate: receivedDate ? new Date(receivedDate) : null,
+        paymentMethod,
+        status,
+        customerId: customerId || null,
+        notes,
       },
       include: { customer: true, serviceOrder: true },
     });
 
-    if (isReceivingNow) {
+    if (status === "PAGO" && existing.status !== "PAGO") {
       await prisma.financialTransaction.create({
         data: {
-          description: `Recebimento: ${current.description}`,
+          tenantId,
+          description: `Recebimento de Conta: ${updated.description}`,
           type: "RECEITA",
-          category: "ORDEM_SERVICO",
-          amount: current.amount,
-          paymentMethod: paymentMethod || "PIX",
-          serviceOrderId: current.serviceOrderId,
-          date: new Date(),
+          category: "OUTROS",
+          amount: updated.amount,
+          paymentMethod: updated.paymentMethod || "PIX",
+          date: receivedDate ? new Date(receivedDate) : new Date(),
         },
       });
     }
 
     return NextResponse.json(updated);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Erro ao atualizar recebimento" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Erro ao atualizar conta a receber" }, { status: 500 });
   }
 }
 
 export async function DELETE(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
     if (!id) {
       return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
+    }
+
+    const existing = await prisma.accountReceivable.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Conta não encontrada nesta oficina" }, { status: 404 });
     }
 
     await prisma.accountReceivable.delete({
@@ -119,6 +125,6 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Erro ao excluir" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Erro ao excluir conta a receber" }, { status: 500 });
   }
 }

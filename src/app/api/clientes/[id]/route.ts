@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantContext } from "@/lib/tenant";
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const customer = await prisma.customer.findUnique({
-      where: { id: params.id },
+    const { tenantId } = await getTenantContext(request);
+    const customer = await prisma.customer.findFirst({
+      where: { id: params.id, tenantId },
       include: {
         vehicles: {
           include: {
@@ -32,7 +34,7 @@ export async function GET(
     });
 
     if (!customer) {
-      return NextResponse.json({ error: "Cliente não encontrado" }, { status: 404 });
+      return NextResponse.json({ error: "Cliente não encontrado nesta oficina" }, { status: 404 });
     }
 
     return NextResponse.json(customer);
@@ -47,6 +49,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
     const {
       name,
@@ -59,6 +62,14 @@ export async function PUT(
       address,
       notes,
     } = body;
+
+    const existing = await prisma.customer.findFirst({
+      where: { id: params.id, tenantId },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Cliente não encontrado nesta oficina" }, { status: 404 });
+    }
 
     const updated = await prisma.customer.update({
       where: { id: params.id },
@@ -80,7 +91,6 @@ export async function PUT(
 
     return NextResponse.json(updated);
   } catch (error: any) {
-    console.error("Erro ao atualizar cliente:", error);
     return NextResponse.json({ error: error.message || "Erro ao atualizar" }, { status: 500 });
   }
 }
@@ -90,12 +100,20 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { tenantId } = await getTenantContext(request);
+    const existing = await prisma.customer.findFirst({
+      where: { id: params.id, tenantId },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Cliente não encontrado nesta oficina" }, { status: 404 });
+    }
+
     await prisma.customer.delete({
       where: { id: params.id },
     });
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error("Erro ao excluir cliente:", error);
     return NextResponse.json({ error: error.message || "Erro ao excluir" }, { status: 500 });
   }
 }

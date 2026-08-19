@@ -1,22 +1,29 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantContext } from "@/lib/tenant";
 
 export async function GET(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q") || "";
 
+    const where: any = { tenantId };
+    if (q) {
+      where.AND = [
+        {
+          OR: [
+            { name: { contains: q } },
+            { document: { contains: q } },
+            { contactName: { contains: q } },
+            { phone: { contains: q } },
+          ],
+        },
+      ];
+    }
+
     const suppliers = await prisma.supplier.findMany({
-      where: q
-        ? {
-            OR: [
-              { name: { contains: q } },
-              { document: { contains: q } },
-              { contactName: { contains: q } },
-              { phone: { contains: q } },
-            ],
-          }
-        : undefined,
+      where,
       include: {
         _count: {
           select: { products: true, accountsPayable: true },
@@ -33,6 +40,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
     const { name, document, contactName, phone, email, city, state, pixKey, notes } = body;
 
@@ -42,6 +50,7 @@ export async function POST(request: Request) {
 
     const supplier = await prisma.supplier.create({
       data: {
+        tenantId,
         name,
         document: document || null,
         contactName: contactName || null,
@@ -62,11 +71,20 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
     const { id, name, document, contactName, phone, email, city, state, pixKey, notes } = body;
 
     if (!id) {
       return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
+    }
+
+    const existing = await prisma.supplier.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Fornecedor não encontrado nesta oficina" }, { status: 404 });
     }
 
     const updated = await prisma.supplier.update({
@@ -92,11 +110,20 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
     if (!id) {
       return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
+    }
+
+    const existing = await prisma.supplier.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Fornecedor não encontrado nesta oficina" }, { status: 404 });
     }
 
     await prisma.supplier.delete({

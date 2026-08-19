@@ -1,21 +1,27 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantContext } from "@/lib/tenant";
 
 export async function GET(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const q = searchParams.get("q") || "";
 
-    const whereClause: any = {};
+    const whereClause: any = { tenantId };
     if (status && status !== "TODOS") {
       whereClause.status = status;
     }
     if (q) {
-      whereClause.OR = [
-        { customer: { name: { contains: q } } },
-        { vehicle: { plate: { contains: q } } },
-        { vehicle: { model: { contains: q } } },
+      whereClause.AND = [
+        {
+          OR: [
+            { customer: { name: { contains: q } } },
+            { vehicle: { plate: { contains: q } } },
+            { vehicle: { model: { contains: q } } },
+          ],
+        },
       ];
     }
 
@@ -43,6 +49,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
     const {
       customerId,
@@ -68,23 +75,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Validação de Sessão e Cota Mensal do Plano Starter (30 OSs / mês)
-    const { cookies } = await import("next/headers");
-    const { verifySessionToken } = await import("@/lib/auth");
-    const { checkTenantMonthlyQuota, logAuditEvent } = await import("@/lib/audit");
-
-    const cookieStore = await cookies();
-    const token = cookieStore.get("torque_token")?.value;
-    const session = token ? verifySessionToken(token) : null;
-
-    let targetTenantId = session?.tenantId;
-    if (!targetTenantId) {
-      const firstTenant = await prisma.tenant.findFirst({ where: { active: true } });
-      targetTenantId = firstTenant?.id;
-    }
-
-    if (targetTenantId) {
-      const quotaCheck = await checkTenantMonthlyQuota(targetTenantId, "OS");
+    // Validação de Cota Mensal do Plano Starter (30 OSs / mês)
+    const { checkTenantMonthlyQuota } = await import("@/lib/audit");
+    if (tenantId) {
+      const quotaCheck = await checkTenantMonthlyQuota(tenantId, "OS");
       if (!quotaCheck.allowed) {
         return NextResponse.json(
           {
@@ -132,10 +126,11 @@ export async function POST(request: Request) {
       await prisma.vehicle.update({
         where: { id: vehicleId },
         data: { currentKm: Number(entryKm) },
-      });
+      }).catch(() => {});
     }
 
     const lastOrder = await prisma.serviceOrder.findFirst({
+      where: { tenantId },
       orderBy: { osNumber: "desc" },
     });
     const osNumber = lastOrder ? lastOrder.osNumber + 1 : 1001;
@@ -148,6 +143,7 @@ export async function POST(request: Request) {
 
     const order = await prisma.serviceOrder.create({
       data: {
+        tenantId,
         osNumber,
         customerId,
         vehicleId,
@@ -189,8 +185,8 @@ export async function POST(request: Request) {
     if (status === "EM_EXECUCAO" || status === "APROVADO") {
       for (const item of formattedItems) {
         if (item.productId) {
-          const product = await prisma.product.findUnique({
-            where: { id: item.productId },
+          const product = await prisma.product.findFirst({
+            where: { id: item.productId, tenantId },
           });
           if (product) {
             const newStock = Math.max(0, product.currentStock - item.quantity);
@@ -200,6 +196,7 @@ export async function POST(request: Request) {
             });
             await prisma.stockMovement.create({
               data: {
+                tenantId,
                 productId: item.productId,
                 type: "ORDEM_SERVICO",
                 quantity: item.quantity,

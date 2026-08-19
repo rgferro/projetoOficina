@@ -1,39 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifySessionToken } from "@/lib/auth";
+import { getTenantContext } from "@/lib/tenant";
 
 export async function GET(req: NextRequest) {
   try {
-    const token = req.cookies.get("torque_token")?.value;
-    const session = token ? verifySessionToken(token) : null;
-    const tenantId = session?.tenantId || "default";
+    const { tenantId } = await getTenantContext(req);
 
-    let tenant = null;
-    if (session?.tenantId) {
-      tenant = await prisma.tenant.findUnique({
-        where: { id: session.tenantId },
-      });
-    }
-
-    // Se não encontrou tenant específico, busca o primeiro tenant ativo ou master
-    if (!tenant) {
-      tenant = await prisma.tenant.findFirst({
-        where: { active: true },
-        orderBy: { createdAt: "desc" },
-      });
-    }
-
-    let settings = await prisma.workshopSetting.findUnique({
-      where: { id: tenant?.id || "default" },
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
     });
 
-    if (!settings && tenant) {
-      settings = await prisma.workshopSetting.findUnique({
-        where: { id: "default" },
-      });
-    }
+    let settings = await prisma.workshopSetting.findUnique({
+      where: { tenantId },
+    });
 
-    // Formata o endereço a partir do cadastro do Tenant se disponível
     const formattedTenantAddress = tenant
       ? [
           tenant.street && tenant.number ? `${tenant.street}, ${tenant.number}` : tenant.street,
@@ -46,24 +26,10 @@ export async function GET(req: NextRequest) {
           .join(" - ")
       : "";
 
-    // Se não houver configurações ou se ainda tiverem dados mock/fakes antigos, sincroniza com o cadastro real do dono
-    const isMockData =
-      !settings ||
-      settings.workshopName === "AutoCenter & Lava-Jato Master" ||
-      settings.cnpj === "23.456.789/0001-12";
-
-    if (tenant && isMockData) {
-      settings = await prisma.workshopSetting.upsert({
-        where: { id: tenant.id },
-        update: {
-          workshopName: tenant.name,
-          cnpj: tenant.document || "",
-          phone: tenant.ownerPhone || "",
-          address: formattedTenantAddress,
-          email: tenant.ownerEmail || "",
-        },
-        create: {
-          id: tenant.id,
+    if (!settings && tenant) {
+      settings = await prisma.workshopSetting.create({
+        data: {
+          tenantId,
           workshopName: tenant.name,
           cnpj: tenant.document || "",
           phone: tenant.ownerPhone || "",
@@ -80,17 +46,6 @@ export async function GET(req: NextRequest) {
             "🎉 Parabéns {nome}! A equipe do {oficina} deseja a você um feliz aniversário com muita saúde e sucesso! Venha comemorar conosco e ganhe 15% de desconto em qualquer serviço neste mês! 🎁🚗",
         },
       });
-    } else if (!settings) {
-      settings = await prisma.workshopSetting.create({
-        data: {
-          id: "default",
-          workshopName: tenant?.name || "AutoGestão Oficina & Lava-Jato",
-          cnpj: tenant?.document || "",
-          phone: tenant?.ownerPhone || "",
-          address: formattedTenantAddress || "",
-          email: tenant?.ownerEmail || "",
-        },
-      });
     }
 
     return NextResponse.json(settings);
@@ -102,10 +57,7 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const token = request.cookies.get("torque_token")?.value;
-    const session = token ? verifySessionToken(token) : null;
-    const tenantId = session?.tenantId || "default";
-
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
     const {
       workshopName,
@@ -120,9 +72,8 @@ export async function PUT(request: NextRequest) {
       whatsappBirthdayTemplate,
     } = body;
 
-    // Atualiza as configurações da oficina
     const updated = await prisma.workshopSetting.upsert({
-      where: { id: tenantId },
+      where: { tenantId },
       update: {
         workshopName,
         cnpj,
@@ -136,7 +87,7 @@ export async function PUT(request: NextRequest) {
         whatsappBirthdayTemplate,
       },
       create: {
-        id: tenantId,
+        tenantId,
         workshopName: workshopName || "AutoGestão Oficina & Lava-Jato",
         cnpj,
         phone,
@@ -150,19 +101,16 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    // Se estiver associado a um Tenant, mantém a sincronização com os dados cadastrais da empresa
-    if (session?.tenantId) {
-      await prisma.tenant
-        .update({
-          where: { id: session.tenantId },
-          data: {
-            name: workshopName,
-            document: cnpj || undefined,
-            ownerPhone: phone || undefined,
-          },
-        })
-        .catch(() => {});
-    }
+    await prisma.tenant
+      .update({
+        where: { id: tenantId },
+        data: {
+          name: workshopName,
+          document: cnpj || undefined,
+          ownerPhone: phone || undefined,
+        },
+      })
+      .catch(() => {});
 
     return NextResponse.json(updated);
   } catch (error: any) {

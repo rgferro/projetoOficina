@@ -1,22 +1,29 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantContext } from "@/lib/tenant";
 
 export async function GET(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q") || "";
 
+    const where: any = { tenantId };
+    if (q) {
+      where.AND = [
+        {
+          OR: [
+            { name: { contains: q } },
+            { phone: { contains: q } },
+            { document: { contains: q } },
+            { vehicles: { some: { plate: { contains: q } } } },
+          ],
+        },
+      ];
+    }
+
     const customers = await prisma.customer.findMany({
-      where: q
-        ? {
-            OR: [
-              { name: { contains: q } },
-              { phone: { contains: q } },
-              { document: { contains: q } },
-              { vehicles: { some: { plate: { contains: q } } } },
-            ],
-          }
-        : undefined,
+      where,
       include: {
         vehicles: true,
         _count: {
@@ -31,15 +38,13 @@ export async function GET(request: Request) {
     return NextResponse.json(customers);
   } catch (error) {
     console.error("Erro ao buscar clientes:", error);
-    return NextResponse.json(
-      { error: "Falha ao buscar clientes" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Falha ao buscar clientes" }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
     const {
       name,
@@ -63,6 +68,7 @@ export async function POST(request: Request) {
 
     const customer = await prisma.customer.create({
       data: {
+        tenantId,
         name,
         type: type || "PF",
         phone,
@@ -76,6 +82,7 @@ export async function POST(request: Request) {
           ? {
               create: [
                 {
+                  tenantId,
                   plate: vehicle.plate.toUpperCase().trim(),
                   brand: vehicle.brand || "Desconhecida",
                   model: vehicle.model || "Modelo",

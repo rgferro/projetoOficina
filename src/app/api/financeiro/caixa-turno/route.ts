@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantContext } from "@/lib/tenant";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // Busca o turno de caixa atualmente aberto
+    const { tenantId } = await getTenantContext(request);
     const activeShift = await prisma.cashShift.findFirst({
-      where: { status: "ABERTO" },
+      where: { tenantId, status: "ABERTO" },
       include: { employee: true },
       orderBy: { openedAt: "desc" },
     });
@@ -18,24 +19,25 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
     const { action, initialBalance, employeeId, amount, reason, finalBalance, notes } = body;
 
-    // 1. ABRIR CAIXA
     if (action === "ABRIR") {
       const existing = await prisma.cashShift.findFirst({
-        where: { status: "ABERTO" },
+        where: { tenantId, status: "ABERTO" },
       });
 
       if (existing) {
         return NextResponse.json(
-          { error: "Já existe um turno de caixa aberto. Feche o atual antes de abrir outro." },
+          { error: "Já existe um turno de caixa aberto nesta oficina. Feche o atual antes de abrir outro." },
           { status: 400 }
         );
       }
 
       const shift = await prisma.cashShift.create({
         data: {
+          tenantId,
           initialBalance: Number(initialBalance) || 0,
           status: "ABERTO",
           employeeId: employeeId || null,
@@ -48,10 +50,9 @@ export async function POST(request: Request) {
       return NextResponse.json(shift, { status: 201 });
     }
 
-    // 2. SANGRIA (Retirada) OU SUPRIMENTO (Entrada de troco)
     if (action === "SANGRIA" || action === "SUPRIMENTO") {
       const activeShift = await prisma.cashShift.findFirst({
-        where: { status: "ABERTO" },
+        where: { tenantId, status: "ABERTO" },
       });
 
       if (!activeShift) {
@@ -60,9 +61,9 @@ export async function POST(request: Request) {
 
       const numAmount = Number(amount) || 0;
 
-      // Registra transação financeira
       await prisma.financialTransaction.create({
         data: {
+          tenantId,
           description: `${action === "SANGRIA" ? "Sangria de Caixa" : "Suprimento de Caixa"}: ${reason || "Sem descrição"}`,
           type: action === "SANGRIA" ? "DESPESA" : "RECEITA",
           category: action,
@@ -89,19 +90,18 @@ export async function POST(request: Request) {
       return NextResponse.json(updatedShift);
     }
 
-    // 3. FECHAR CAIXA
     if (action === "FECHAR") {
       const activeShift = await prisma.cashShift.findFirst({
-        where: { status: "ABERTO" },
+        where: { tenantId, status: "ABERTO" },
       });
 
       if (!activeShift) {
         return NextResponse.json({ error: "Nenhum turno de caixa aberto para fechar" }, { status: 400 });
       }
 
-      // Calcula movimentação em dinheiro ocorrida durante o turno
       const transactions = await prisma.financialTransaction.findMany({
         where: {
+          tenantId,
           date: { gte: activeShift.openedAt },
           paymentMethod: "DINHEIRO",
         },

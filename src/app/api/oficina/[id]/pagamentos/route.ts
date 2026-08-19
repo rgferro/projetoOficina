@@ -14,13 +14,15 @@ export async function POST(
       return NextResponse.json({ error: "Valor do pagamento deve ser maior que zero" }, { status: 400 });
     }
 
-    const order = await prisma.serviceOrder.findUnique({
-      where: { id: params.id },
+    const { tenantId } = await (await import("@/lib/tenant")).getTenantContext(request);
+
+    const order = await prisma.serviceOrder.findFirst({
+      where: { id: params.id, tenantId },
       include: { payments: true, vehicle: true },
     });
 
     if (!order) {
-      return NextResponse.json({ error: "OS não encontrada" }, { status: 404 });
+      return NextResponse.json({ error: "OS não encontrada nesta oficina" }, { status: 404 });
     }
 
     // 1. Cria o registro de pagamento
@@ -52,9 +54,10 @@ export async function POST(
       },
     });
 
-    // 3. Registra receita no caixa financeiro
+    // 3. Registra receita no caixa financeiro com isolamento de tenant
     await prisma.financialTransaction.create({
       data: {
+        tenantId,
         description: `Pagamento Parcial OS #${order.osNumber} - ${order.vehicle.model} (${order.vehicle.plate})`,
         type: "RECEITA",
         category: "ORDEM_SERVICO",

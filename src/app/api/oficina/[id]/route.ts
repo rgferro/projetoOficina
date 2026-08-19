@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantContext } from "@/lib/tenant";
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const order = await prisma.serviceOrder.findUnique({
-      where: { id: params.id },
+    const { tenantId } = await getTenantContext(request);
+    const order = await prisma.serviceOrder.findFirst({
+      where: { id: params.id, tenantId },
       include: {
         customer: true,
         vehicle: true,
@@ -24,7 +26,7 @@ export async function GET(
     });
 
     if (!order) {
-      return NextResponse.json({ error: "Ordem de Serviço não encontrada" }, { status: 404 });
+      return NextResponse.json({ error: "Ordem de Serviço não encontrada nesta oficina" }, { status: 404 });
     }
 
     return NextResponse.json(order);
@@ -38,6 +40,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
     const {
       status,
@@ -84,16 +87,15 @@ export async function PUT(
     const parsedDiscount = Number(discount) || 0;
     const grandTotal = Math.max(0, totalParts + totalServices - parsedDiscount);
 
-    const current = await prisma.serviceOrder.findUnique({
-      where: { id: params.id },
+    const current = await prisma.serviceOrder.findFirst({
+      where: { id: params.id, tenantId },
       include: { items: true },
     });
 
     if (!current) {
-      return NextResponse.json({ error: "OS não encontrada" }, { status: 404 });
+      return NextResponse.json({ error: "OS não encontrada nesta oficina" }, { status: 404 });
     }
 
-    // Atualiza itens da OS
     await prisma.serviceOrderItem.deleteMany({
       where: { serviceOrderId: params.id },
     });
@@ -107,7 +109,6 @@ export async function PUT(
     let remainingBalance = Math.max(0, grandTotal - paidAmount);
     let paymentStatus = current.paymentStatus;
 
-    // Se marcou como quitado total agora
     if (markAsPaid && paymentMethod) {
       const balanceToPay = remainingBalance > 0 ? remainingBalance : grandTotal;
       paidAmount = grandTotal;
@@ -126,6 +127,7 @@ export async function PUT(
 
       await prisma.financialTransaction.create({
         data: {
+          tenantId,
           description: `Quitação OS #${current.osNumber} - ${paymentMethod}`,
           type: "RECEITA",
           category: "ORDEM_SERVICO",
@@ -137,12 +139,11 @@ export async function PUT(
       });
     }
 
-    // Se entrou em execução, deduz peças do estoque
     if ((status === "EM_EXECUCAO" || status === "APROVADO") && current.status === "ORCAMENTO") {
       for (const item of formattedItems) {
         if (item.productId) {
-          const product = await prisma.product.findUnique({
-            where: { id: item.productId },
+          const product = await prisma.product.findFirst({
+            where: { id: item.productId, tenantId },
           });
           if (product) {
             const newStock = Math.max(0, product.currentStock - item.quantity);
@@ -152,6 +153,7 @@ export async function PUT(
             });
             await prisma.stockMovement.create({
               data: {
+                tenantId,
                 productId: item.productId,
                 type: "ORDEM_SERVICO",
                 quantity: item.quantity,
@@ -211,6 +213,15 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { tenantId } = await getTenantContext(request);
+    const existing = await prisma.serviceOrder.findFirst({
+      where: { id: params.id, tenantId },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "OS não encontrada nesta oficina" }, { status: 404 });
+    }
+
     await prisma.serviceOrder.delete({
       where: { id: params.id },
     });

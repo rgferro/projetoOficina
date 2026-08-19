@@ -21,15 +21,20 @@ model Customer {
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
+  tenantId           String?
+  tenant             Tenant?             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   vehicles           Vehicle[]
   serviceOrders      ServiceOrder[]
   sales              Sale[]
   accountsReceivable AccountReceivable[]
+
+  @@index([tenantId])
 }
 
 model Vehicle {
   id            String         @id @default(cuid())
-  plate         String         @unique // Placa (ex: ABC1D23)
+  plate         String         // Placa (ex: ABC1D23)
   brand         String         // Marca (ex: Volkswagen, Fiat, Toyota)
   model         String         // Modelo (ex: Gol, Civic, Hilux)
   year          Int?
@@ -41,10 +46,16 @@ model Vehicle {
   customerId    String
   customer      Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
+  tenantId      String?
+  tenant        Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   washTickets   WashTicket[]
   serviceOrders ServiceOrder[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+
+  @@index([tenantId])
+  @@index([plate])
 }
 
 model Employee {
@@ -71,6 +82,8 @@ model Employee {
   orderItems     ServiceOrderItem[]
   sales          Sale[]
   cashShifts     CashShift[]
+
+  @@index([tenantId])
 }
 
 model Supplier {
@@ -87,14 +100,19 @@ model Supplier {
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
+  tenantId           String?
+  tenant             Tenant?             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   products           Product[]
   accountsPayable    AccountPayable[]
+
+  @@index([tenantId])
 }
 
 model Product {
   id             String              @id @default(cuid())
-  sku            String?             @unique // Código interno ou de referência
-  barcode        String?             @unique // Código de barras EAN
+  sku            String?             // Código interno ou de referência
+  barcode        String?             // Código de barras EAN
   name           String              // Nome da Peça (ex: Pastilha de Freio Dianteira)
   brand          String?             // Fabricante (ex: Bosch, Fras-le, Castrol)
   category       String              @default("Peças Gerais") // Óleos, Filtros, Suspensão, Freios, Acessórios, Pneus, etc.
@@ -110,12 +128,19 @@ model Product {
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
+  tenantId       String?
+  tenant         Tenant?             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   supplierId     String?
   supplier       Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   orderItems     ServiceOrderItem[]
   saleItems      SaleItem[]
   stockMovements StockMovement[]
+
+  @@index([tenantId])
+  @@index([sku])
+  @@index([barcode])
 }
 
 model StockMovement {
@@ -126,8 +151,13 @@ model StockMovement {
   description String?
   date        DateTime @default(now())
 
+  tenantId    String?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   productId   String
   product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
 
 model StandardService {
@@ -139,6 +169,11 @@ model StandardService {
   description      String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  tenantId         String?
+  tenant           Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
 
 model WashTicket {
@@ -159,6 +194,9 @@ model WashTicket {
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
+  tenantId         String?
+  tenant           Tenant?         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   vehicleId        String
   vehicle          Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 
@@ -166,6 +204,8 @@ model WashTicket {
   employee         Employee?       @relation(fields: [employeeId], references: [id], onDelete: SetNull)
 
   transactions     FinancialTransaction[]
+
+  @@index([tenantId])
 }
 
 model ServiceOrder {
@@ -195,6 +235,9 @@ model ServiceOrder {
   createdAt          DateTime               @default(now())
   updatedAt          DateTime               @updatedAt
 
+  tenantId           String?
+  tenant             Tenant?                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   customerId         String
   customer           Customer               @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
@@ -209,6 +252,8 @@ model ServiceOrder {
   payments           ServiceOrderPayment[]
   transactions       FinancialTransaction[]
   accountsReceivable AccountReceivable[]
+
+  @@index([tenantId])
 }
 
 model ServiceOrderItem {
@@ -267,6 +312,9 @@ model Sale {
   date           DateTime               @default(now())
   createdAt      DateTime               @default(now())
 
+  tenantId       String?
+  tenant         Tenant?                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   customerId     String?
   customer       Customer?              @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
@@ -275,6 +323,8 @@ model Sale {
 
   items          SaleItem[]
   transactions   FinancialTransaction[]
+
+  @@index([tenantId])
 }
 
 model SaleItem {
@@ -305,8 +355,13 @@ model CashShift {
   status         String    @default("ABERTO") // ABERTO, FECHADO
   notes          String?
 
+  tenantId       String?
+  tenant         Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   employeeId     String?
   employee       Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
 }
 
 model AccountPayable {
@@ -322,8 +377,13 @@ model AccountPayable {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
+  tenantId       String?
+  tenant         Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   supplierId     String?
   supplier       Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
 }
 
 model AccountReceivable {
@@ -338,11 +398,16 @@ model AccountReceivable {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
+  tenantId       String?
+  tenant         Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   customerId     String?
   customer       Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   serviceOrderId String?
   serviceOrder   ServiceOrder? @relation(fields: [serviceOrderId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
 }
 
 model FinancialTransaction {
@@ -355,6 +420,9 @@ model FinancialTransaction {
   date           DateTime      @default(now())
   createdAt      DateTime      @default(now())
 
+  tenantId       String?
+  tenant         Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   washTicketId   String?
   washTicket     WashTicket?   @relation(fields: [washTicketId], references: [id], onDelete: SetNull)
 
@@ -363,6 +431,8 @@ model FinancialTransaction {
 
   saleId         String?
   sale           Sale?         @relation(fields: [saleId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
 }
 
 model WorkshopSetting {
@@ -387,6 +457,9 @@ model WorkshopSetting {
   gdriveFolderId              String?
   gdriveWebhookUrl            String?
   gdriveLastBackup            DateTime?
+
+  tenantId                    String?  @unique
+  tenant                      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   updatedAt                   DateTime @updatedAt
 }
@@ -418,7 +491,21 @@ model Tenant {
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt
 
+  workshopSettings        WorkshopSetting?
   employees               Employee[]
+  customers               Customer[]
+  vehicles                Vehicle[]
+  suppliers               Supplier[]
+  products                Product[]
+  stockMovements          StockMovement[]
+  standardServices        StandardService[]
+  washTickets             WashTicket[]
+  serviceOrders           ServiceOrder[]
+  sales                   Sale[]
+  cashShifts              CashShift[]
+  accountsPayable         AccountPayable[]
+  accountsReceivable      AccountReceivable[]
+  financialTransactions   FinancialTransaction[]
   payments                SubscriptionPayment[]
 }
 

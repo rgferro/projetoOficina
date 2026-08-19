@@ -16,9 +16,11 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const format = searchParams.get("format"); // "db", "json" ou "status"
 
+    const { tenantId } = await (await import("@/lib/tenant")).getTenantContext(request);
+
     // 1. Status da Integração Google Drive & Backup
     if (format === "status") {
-      const gdriveStatus = await getGoogleDriveStatus();
+      const gdriveStatus = await getGoogleDriveStatus(tenantId);
       return NextResponse.json(gdriveStatus);
     }
 
@@ -26,7 +28,7 @@ export async function GET(request: Request) {
 
     // 2. Exportação JSON Completa (Download direto para o navegador)
     if (format === "json") {
-      const dump = await generateFullBackupData();
+      const dump = await generateFullBackupData(tenantId);
 
       return new NextResponse(JSON.stringify(dump, null, 2), {
         headers: {

@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseNFeXML } from "@/lib/xmlParser";
+import { getTenantContext } from "@/lib/tenant";
 
 export async function POST(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
     const { xmlContent, defaultProfitMargin, generateAccountPayable } = body;
 
@@ -22,18 +24,22 @@ export async function POST(request: Request) {
 
     const margin = Number(defaultProfitMargin) || 50.0;
 
-    // 1. Cadastra ou encontra o Fornecedor pelo CNPJ/Nome
+    // 1. Cadastra ou encontra o Fornecedor pelo CNPJ/Nome dentro da oficina
     let supplier = null;
     if (parsed.supplier.cnpj || parsed.supplier.name) {
       supplier = await prisma.supplier.findFirst({
-        where: parsed.supplier.cnpj
-          ? { document: parsed.supplier.cnpj }
-          : { name: parsed.supplier.name },
+        where: {
+          tenantId,
+          ...(parsed.supplier.cnpj
+            ? { document: parsed.supplier.cnpj }
+            : { name: parsed.supplier.name }),
+        },
       });
 
       if (!supplier) {
         supplier = await prisma.supplier.create({
           data: {
+            tenantId,
             name: parsed.supplier.tradeName || parsed.supplier.name,
             document: parsed.supplier.cnpj || null,
             phone: parsed.supplier.phone || null,
@@ -49,31 +55,29 @@ export async function POST(request: Request) {
 
     // 2. Itera sobre cada produto do XML
     for (const item of parsed.products) {
-      // Tenta encontrar por Código de Barras (EAN) ou por SKU/Nome
       let existingProduct = null;
 
       if (item.barcode) {
-        existingProduct = await prisma.product.findUnique({
-          where: { barcode: item.barcode },
+        existingProduct = await prisma.product.findFirst({
+          where: { tenantId, barcode: item.barcode },
         });
       }
 
       if (!existingProduct && item.sku) {
-        existingProduct = await prisma.product.findUnique({
-          where: { sku: item.sku },
+        existingProduct = await prisma.product.findFirst({
+          where: { tenantId, sku: item.sku },
         });
       }
 
       if (!existingProduct) {
         existingProduct = await prisma.product.findFirst({
-          where: { name: item.name },
+          where: { tenantId, name: item.name },
         });
       }
 
       const salePrice = item.costPrice * (1 + margin / 100);
 
       if (existingProduct) {
-        // Atualiza estoque somando a quantidade e atualiza custo
         const updated = await prisma.product.update({
           where: { id: existingProduct.id },
           data: {
@@ -88,6 +92,7 @@ export async function POST(request: Request) {
 
         await prisma.stockMovement.create({
           data: {
+            tenantId,
             productId: updated.id,
             type: "ENTRADA",
             quantity: item.quantity,
@@ -102,9 +107,9 @@ export async function POST(request: Request) {
           importedQty: item.quantity,
         });
       } else {
-        // Cria novo produto
         const created = await prisma.product.create({
           data: {
+            tenantId,
             name: item.name,
             sku: item.sku || null,
             barcode: item.barcode || null,
@@ -119,6 +124,7 @@ export async function POST(request: Request) {
             stockMovements: {
               create: [
                 {
+                  tenantId,
                   type: "ENTRADA",
                   quantity: item.quantity,
                   unitCost: item.costPrice,
@@ -137,14 +143,15 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Se solicitado, gera conta a pagar da NF-e
+    // 3. Se solicitado, gera conta a pagar da NF-e para a oficina
     if (generateAccountPayable && parsed.totalInvoiceAmount > 0) {
       await prisma.accountPayable.create({
         data: {
+          tenantId,
           description: `Compra de Peças - NF-e nº ${parsed.invoiceNumber} (${parsed.supplier.tradeName || parsed.supplier.name})`,
           category: "PEÇAS",
           amount: parsed.totalInvoiceAmount,
-          dueDate: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000), // 28 dias padrão
+          dueDate: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000),
           status: "PENDENTE",
           supplierId: supplier ? supplier.id : null,
           notes: `NF emitida em ${parsed.issueDate}`,

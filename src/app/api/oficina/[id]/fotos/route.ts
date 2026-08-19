@@ -37,6 +37,16 @@ export async function POST(
       );
     }
 
+    const { tenantId } = await (await import("@/lib/tenant")).getTenantContext(request);
+
+    const order = await prisma.serviceOrder.findFirst({
+      where: { id: params.id, tenantId },
+    });
+
+    if (!order) {
+      return NextResponse.json({ error: "OS não encontrada nesta oficina" }, { status: 404 });
+    }
+
     const photo = await prisma.serviceOrderPhoto.create({
       data: {
         serviceOrderId: params.id,

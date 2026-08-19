@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, createSessionToken } from "@/lib/auth";
 import { validateCPF, validateCNPJ, validatePasswordStrength } from "@/lib/validation";
+import { ensureTenantDefaults } from "@/lib/tenant";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
       ownerPassword,
       ownerPhone,
       workshopName,
-      documentType, // "CPF" ou "CNPJ"
+      documentType,
       document,
       cep,
       street,
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
       neighborhood,
       city,
       state,
-      verificationCode, // Código de 6 dígitos enviado por e-mail
+      verificationCode,
     } = body;
 
     if (!ownerName || !ownerEmail || !ownerPassword || !workshopName) {
@@ -33,7 +34,6 @@ export async function POST(req: NextRequest) {
 
     const cleanEmail = ownerEmail.trim().toLowerCase();
 
-    // 1. Validação de Segurança da Senha (Padrão Forte)
     const passCheck = validatePasswordStrength(ownerPassword);
     if (!passCheck.isValid) {
       return NextResponse.json(
@@ -42,7 +42,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Validação de CPF ou CNPJ (Receita Federal)
     if (document) {
       const cleanDoc = document.replace(/\D/g, "");
       if (documentType === "CPF" || cleanDoc.length === 11) {
@@ -62,7 +61,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. Validação do Código de 6 Dígitos do E-mail
     if (!verificationCode) {
       return NextResponse.json(
         { success: false, error: "Informe o código de verificação de 6 dígitos enviado para seu e-mail." },
@@ -89,7 +87,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. Verificação Antifraude e Auditoria de IP (Marco Civil da Internet Art. 15 e LGPD Art. 7º IX e X)
     const { getClientIp, checkIpRegistrationAbuse, logAuditEvent } = await import("@/lib/audit");
     const clientIp = getClientIp(req);
 
@@ -108,7 +105,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 4. Verifica se o e-mail já está cadastrado
     const existing = await prisma.tenant.findUnique({
       where: { ownerEmail: cleanEmail },
     });
@@ -123,7 +119,6 @@ export async function POST(req: NextRequest) {
     const isMaster = cleanEmail === "rafael.gielow@gmail.com";
     const passwordHash = hashPassword(ownerPassword);
 
-    // 5. Cria a Oficina / Tenant com dados de endereço completos e IP gravado para auditoria
     const tenant = await prisma.tenant.create({
       data: {
         name: workshopName.trim(),
@@ -140,7 +135,7 @@ export async function POST(req: NextRequest) {
         city: city ? city.trim() : null,
         state: state ? state.trim() : null,
         plan: "STARTER",
-        maxUsers: 2, // 2 Usuários Grátis no Starter
+        maxUsers: 2,
         subscriptionStatus: "active",
         registrationIp: clientIp,
         lastLoginIp: clientIp,
@@ -148,7 +143,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Registra log de auditoria de criação do Tenant
     await logAuditEvent({
       action: "REGISTER_TENANT",
       req,
@@ -157,47 +151,9 @@ export async function POST(req: NextRequest) {
       details: { workshopName: tenant.name, plan: tenant.plan },
     });
 
-    // 5. Formata o endereço completo da oficina
-    const formattedAddress = [
-      street && number ? `${street}, ${number}` : street,
-      complement,
-      neighborhood,
-      city && state ? `${city}/${state}` : city,
-      cep ? `CEP ${cep}` : null,
-    ]
-      .filter(Boolean)
-      .join(" - ");
+    // Popula configurações e serviços padrão automaticamente para a nova oficina
+    await ensureTenantDefaults(tenant.id, tenant.name);
 
-    // Cria as configurações iniciais da oficina com os dados reais do cadastro
-    await prisma.workshopSetting.upsert({
-      where: { id: tenant.id },
-      update: {
-        workshopName: tenant.name,
-        cnpj: tenant.document || "",
-        phone: tenant.ownerPhone || "",
-        address: formattedAddress,
-        email: cleanEmail,
-      },
-      create: {
-        id: tenant.id,
-        workshopName: tenant.name,
-        cnpj: tenant.document || "",
-        phone: tenant.ownerPhone || "",
-        address: formattedAddress,
-        email: cleanEmail,
-        warrantyDays: 90,
-        whatsappWashReadyTemplate:
-          "Olá {nome}! Seu {veiculo} ({placa}) já está limpo e pronto para retirada no {oficina}! 🚗✨\nValor: {valor}\nPode retirar a qualquer momento!",
-        whatsappOilReminderTemplate:
-          "Olá {nome}! Notamos que faz 6 meses da última revisão/troca de óleo do seu {veiculo} ({placa}). Agende sua revisão preventiva com a gente no {oficina}! 🛠️",
-        whatsappWashReminderTemplate:
-          "Olá {nome}! Faz {dias} dias que seu {veiculo} ({placa}) não toma aquele banho especial no {oficina}. Que tal agendar uma lavagem hoje? 🧼✨",
-        whatsappBirthdayTemplate:
-          "🎉 Parabéns {nome}! A equipe do {oficina} deseja a você um feliz aniversário com muita saúde e sucesso! Venha comemorar conosco e ganhe 15% de desconto em qualquer serviço neste mês! 🎁🚗",
-      },
-    }).catch(() => {});
-
-    // 6. Cria o Dono como Primeiro Colaborador / Administrador da Oficina
     const employee = await prisma.employee.create({
       data: {
         tenantId: tenant.id,
@@ -212,10 +168,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Limpa o código de verificação utilizado
     await prisma.emailVerification.delete({ where: { email: cleanEmail } }).catch(() => {});
 
-    // 7. Cria token de sessão
     const sessionToken = createSessionToken({
       userId: employee.id,
       tenantId: tenant.id,

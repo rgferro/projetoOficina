@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantContext } from "@/lib/tenant";
 
 export async function GET(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const activeOnly = searchParams.get("active") === "true";
 
-    const whereClause: any = {};
+    const whereClause: any = { tenantId };
     if (status) {
       whereClause.status = status;
     } else if (activeOnly) {
@@ -38,6 +40,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
     const {
       serviceType,
@@ -57,8 +60,8 @@ export async function POST(request: Request) {
     if (!targetVehicleId && newPlate) {
       const cleanPlate = newPlate.toUpperCase().trim().replace(/[^A-Z0-9]/g, "");
 
-      let existingVehicle = await prisma.vehicle.findUnique({
-        where: { plate: cleanPlate },
+      let existingVehicle = await prisma.vehicle.findFirst({
+        where: { tenantId, plate: cleanPlate },
       });
 
       if (existingVehicle) {
@@ -66,6 +69,7 @@ export async function POST(request: Request) {
       } else {
         let customer = await prisma.customer.create({
           data: {
+            tenantId,
             name: newCustomerName || `Cliente ${cleanPlate}`,
             phone: newCustomerPhone || "00000000000",
           },
@@ -73,6 +77,7 @@ export async function POST(request: Request) {
 
         const newVehicle = await prisma.vehicle.create({
           data: {
+            tenantId,
             plate: cleanPlate,
             brand: "Geral",
             model: newVehicleModel || "Veículo",
@@ -92,23 +97,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Validação de Sessão e Cota Mensal do Plano Starter (50 Lavagens / mês)
-    const { cookies } = await import("next/headers");
-    const { verifySessionToken } = await import("@/lib/auth");
+    // Validação de Cota Mensal do Plano Starter (50 Lavagens / mês)
     const { checkTenantMonthlyQuota } = await import("@/lib/audit");
-
-    const cookieStore = await cookies();
-    const token = cookieStore.get("torque_token")?.value;
-    const session = token ? verifySessionToken(token) : null;
-
-    let targetTenantId = session?.tenantId;
-    if (!targetTenantId) {
-      const firstTenant = await prisma.tenant.findFirst({ where: { active: true } });
-      targetTenantId = firstTenant?.id;
-    }
-
-    if (targetTenantId) {
-      const quotaCheck = await checkTenantMonthlyQuota(targetTenantId, "WASH");
+    if (tenantId) {
+      const quotaCheck = await checkTenantMonthlyQuota(tenantId, "WASH");
       if (!quotaCheck.allowed) {
         return NextResponse.json(
           {
@@ -124,12 +116,14 @@ export async function POST(request: Request) {
     }
 
     const lastTicket = await prisma.washTicket.findFirst({
+      where: { tenantId },
       orderBy: { ticketNumber: "desc" },
     });
     const ticketNumber = lastTicket ? lastTicket.ticketNumber + 1 : 1001;
 
     const ticket = await prisma.washTicket.create({
       data: {
+        tenantId,
         ticketNumber,
         serviceType,
         price: Number(price),
@@ -158,6 +152,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
     const {
       id,
@@ -173,13 +168,13 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "ID do ticket é obrigatório" }, { status: 400 });
     }
 
-    const current = await prisma.washTicket.findUnique({
-      where: { id },
+    const current = await prisma.washTicket.findFirst({
+      where: { id, tenantId },
       include: { vehicle: true },
     });
 
     if (!current) {
-      return NextResponse.json({ error: "Lavagem não encontrada" }, { status: 404 });
+      return NextResponse.json({ error: "Lavagem não encontrada nesta oficina" }, { status: 404 });
     }
 
     const dataToUpdate: any = {};
@@ -201,6 +196,7 @@ export async function PATCH(request: Request) {
 
         await prisma.financialTransaction.create({
           data: {
+            tenantId,
             description: `Lavagem #${current.ticketNumber} - ${current.serviceType} (${current.vehicle.plate})`,
             type: "RECEITA",
             category: "LAVA_JATO",
@@ -235,11 +231,20 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
     if (!id) {
       return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
+    }
+
+    const existing = await prisma.washTicket.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Ticket não encontrado nesta oficina" }, { status: 404 });
     }
 
     await prisma.washTicket.delete({

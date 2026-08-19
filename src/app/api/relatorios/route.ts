@@ -1,30 +1,26 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateWhatsappLink } from "@/lib/whatsapp";
-import { cookies } from "next/headers";
-import { verifySessionToken } from "@/lib/auth";
+import { getTenantContext } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get("type") || "geral"; // abc, aniversariantes, estoque, produtividade, geral
+    const type = searchParams.get("type") || "geral";
     const month = searchParams.get("month") ? Number(searchParams.get("month")) : new Date().getMonth();
 
-    const cookieStore = await cookies();
-    const token = cookieStore.get("torque_token")?.value || cookieStore.get("torque_session")?.value;
-    const session = token ? verifySessionToken(token) : null;
-    const targetTenantId = session?.tenantId || searchParams.get("tenantId");
-
     const settings = await prisma.workshopSetting.findUnique({
-      where: { id: targetTenantId || "default" },
+      where: { tenantId },
     });
     const workshopName = settings?.workshopName || "Oficina Mecânica";
 
-    // 1. ANIVERSARIANTES DO MÊS
+    // 1. ANIVERSARIANTES DO MÊS DA OFICINA
     const allCustomers = await prisma.customer.findMany({
       where: {
+        tenantId,
         birthDate: { not: null },
       },
       include: {
@@ -60,8 +56,9 @@ export async function GET(request: Request) {
       })
       .sort((a, b) => a.day - b.day);
 
-    // 2. CURVA ABC DE PRODUTOS
+    // 2. CURVA ABC DE PRODUTOS DA OFICINA
     const products = await prisma.product.findMany({
+      where: { tenantId },
       include: {
         saleItems: true,
         orderItems: true,
@@ -96,10 +93,8 @@ export async function GET(request: Request) {
       };
     });
 
-    // Ordena por receita decrescente
     productStats.sort((a, b) => b.totalRevenue - a.totalRevenue);
 
-    // Classificação ABC acumulada
     let accumulatedRevenue = 0;
     const abcClassified = productStats.map((item) => {
       accumulatedRevenue += item.totalRevenue;
@@ -109,11 +104,11 @@ export async function GET(request: Request) {
 
       let classification = "C";
       if (percentageOfTotal <= 70) {
-        classification = "A"; // 70% da receita (os mais vitais)
+        classification = "A";
       } else if (percentageOfTotal <= 90) {
-        classification = "B"; // 20% intermediários
+        classification = "B";
       } else {
-        classification = "C"; // 10% de menor impacto
+        classification = "C";
       }
 
       return {
@@ -149,7 +144,7 @@ export async function GET(request: Request) {
 
     // 4. PRODUTIVIDADE E COMISSÕES DA EQUIPE
     const employees = await prisma.employee.findMany({
-      where: targetTenantId ? { tenantId: targetTenantId } : undefined,
+      where: { tenantId },
       include: {
         orderItems: true,
         washTickets: { where: { status: "ENTREGUE" } },
@@ -167,7 +162,6 @@ export async function GET(request: Request) {
       const totalSalesCount = emp.sales.length;
       const salesRevenue = emp.sales.reduce((sum, s) => sum + s.grandTotal, 0);
 
-      // Comissão padrão + individual
       const commissionTotal =
         (servicesRevenue * emp.commissionRate) / 100 +
         (washesRevenue * emp.commissionRate) / 100;

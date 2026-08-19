@@ -1,21 +1,27 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantContext } from "@/lib/tenant";
 
 export async function GET(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q") || "";
     const lowStock = searchParams.get("lowStock") === "true";
     const category = searchParams.get("category");
 
-    const where: any = {};
+    const where: any = { tenantId };
 
     if (q) {
-      where.OR = [
-        { name: { contains: q } },
-        { sku: { contains: q } },
-        { barcode: { contains: q } },
-        { brand: { contains: q } },
+      where.AND = [
+        {
+          OR: [
+            { name: { contains: q } },
+            { sku: { contains: q } },
+            { barcode: { contains: q } },
+            { brand: { contains: q } },
+          ],
+        },
       ];
     }
 
@@ -44,6 +50,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
     const {
       name,
@@ -73,6 +80,7 @@ export async function POST(request: Request) {
 
     const product = await prisma.product.create({
       data: {
+        tenantId,
         name,
         sku: sku || null,
         barcode: barcode || null,
@@ -91,6 +99,7 @@ export async function POST(request: Request) {
           ? {
               create: [
                 {
+                  tenantId,
                   type: "ENTRADA",
                   quantity: initialStock,
                   unitCost: cost,
@@ -108,12 +117,6 @@ export async function POST(request: Request) {
     return NextResponse.json(product, { status: 201 });
   } catch (error: any) {
     console.error("Erro ao criar produto:", error);
-    if (error.code === "P2002") {
-      return NextResponse.json(
-        { error: "Já existe um produto com este SKU ou Código de Barras." },
-        { status: 400 }
-      );
-    }
     return NextResponse.json({ error: error.message || "Erro ao cadastrar produto" }, { status: 500 });
   }
 }

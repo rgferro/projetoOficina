@@ -1,25 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantContext } from "@/lib/tenant";
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status");
-
-    const where: any = {};
-    if (status && status !== "TODAS") {
-      where.status = status;
-    }
-
-    const bills = await prisma.accountPayable.findMany({
-      where,
-      include: {
-        supplier: true,
-      },
+    const { tenantId } = await getTenantContext(request);
+    const payables = await prisma.accountPayable.findMany({
+      where: { tenantId },
+      include: { supplier: true },
       orderBy: { dueDate: "asc" },
     });
 
-    return NextResponse.json(bills);
+    return NextResponse.json(payables);
   } catch (error) {
     return NextResponse.json({ error: "Erro ao buscar contas a pagar" }, { status: 500 });
   }
@@ -27,27 +19,30 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
-    const { description, category, amount, dueDate, supplierId, notes } = body;
+    const { description, category, amount, dueDate, paymentMethod, status, supplierId, notes } = body;
 
     if (!description || !amount || !dueDate) {
       return NextResponse.json({ error: "Descrição, Valor e Vencimento são obrigatórios" }, { status: 400 });
     }
 
-    const bill = await prisma.accountPayable.create({
+    const payable = await prisma.accountPayable.create({
       data: {
+        tenantId,
         description,
         category: category || "PEÇAS",
         amount: Number(amount),
         dueDate: new Date(dueDate),
+        paymentMethod: paymentMethod || null,
+        status: status || "PENDENTE",
         supplierId: supplierId || null,
         notes: notes || null,
-        status: "PENDENTE",
       },
       include: { supplier: true },
     });
 
-    return NextResponse.json(bill, { status: 201 });
+    return NextResponse.json(payable, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Erro ao criar conta a pagar" }, { status: 500 });
   }
@@ -55,61 +50,75 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const body = await request.json();
-    const { id, status, paymentMethod, paymentDate, notes } = body;
+    const { id, description, category, amount, dueDate, paymentDate, paymentMethod, status, supplierId, notes } = body;
 
     if (!id) {
       return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
     }
 
-    const current = await prisma.accountPayable.findUnique({
-      where: { id },
+    const existing = await prisma.accountPayable.findFirst({
+      where: { id, tenantId },
     });
 
-    if (!current) {
-      return NextResponse.json({ error: "Conta não encontrada" }, { status: 404 });
+    if (!existing) {
+      return NextResponse.json({ error: "Conta não encontrada nesta oficina" }, { status: 404 });
     }
-
-    const isPayingNow = status === "PAGO" && current.status !== "PAGO";
 
     const updated = await prisma.accountPayable.update({
       where: { id },
       data: {
-        status: status || current.status,
-        paymentMethod: paymentMethod || current.paymentMethod,
-        paymentDate: status === "PAGO" ? new Date(paymentDate || Date.now()) : current.paymentDate,
-        notes: notes !== undefined ? notes : current.notes,
+        description,
+        category,
+        amount: amount !== undefined ? Number(amount) : undefined,
+        dueDate: dueDate ? new Date(dueDate) : undefined,
+        paymentDate: paymentDate ? new Date(paymentDate) : null,
+        paymentMethod,
+        status,
+        supplierId: supplierId || null,
+        notes,
       },
       include: { supplier: true },
     });
 
-    // Se marcou como pago, registra despesa financeira
-    if (isPayingNow) {
+    // Se foi marcada como PAGO, registra despesa no financeiro
+    if (status === "PAGO" && existing.status !== "PAGO") {
       await prisma.financialTransaction.create({
         data: {
-          description: `Pagamento: ${current.description}`,
+          tenantId,
+          description: `Pagamento de Conta: ${updated.description}`,
           type: "DESPESA",
-          category: current.category,
-          amount: current.amount,
-          paymentMethod: paymentMethod || "PIX",
-          date: new Date(),
+          category: updated.category,
+          amount: updated.amount,
+          paymentMethod: updated.paymentMethod || "PIX",
+          date: paymentDate ? new Date(paymentDate) : new Date(),
         },
       });
     }
 
     return NextResponse.json(updated);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Erro ao atualizar conta" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Erro ao atualizar conta a pagar" }, { status: 500 });
   }
 }
 
 export async function DELETE(request: Request) {
   try {
+    const { tenantId } = await getTenantContext(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
     if (!id) {
       return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
+    }
+
+    const existing = await prisma.accountPayable.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Conta não encontrada nesta oficina" }, { status: 404 });
     }
 
     await prisma.accountPayable.delete({
@@ -118,6 +127,6 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Erro ao excluir conta" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Erro ao excluir conta a pagar" }, { status: 500 });
   }
 }
