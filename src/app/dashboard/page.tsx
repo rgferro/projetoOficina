@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatPlate, formatPhone, formatDateTime } from "@/lib/formatters";
+import { getTenantContext } from "@/lib/tenant";
 import {
   Droplets,
   Wrench,
@@ -20,6 +21,7 @@ import { generateWhatsappLink, buildWashReadyMessage } from "@/lib/whatsapp";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  const { tenantId } = await getTenantContext();
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
@@ -34,6 +36,7 @@ export default async function DashboardPage() {
     // 1. Dados do Lava-Jato hoje
     activeWashTickets = await prisma.washTicket.findMany({
       where: {
+        tenantId,
         status: { in: ["AGUARDANDO", "EM_LAVAGEM", "FINALIZADO"] },
       },
       include: {
@@ -46,6 +49,7 @@ export default async function DashboardPage() {
     // 2. Dados das Ordens de Serviço ativas
     activeServiceOrders = await prisma.serviceOrder.findMany({
       where: {
+        tenantId,
         status: { in: ["ORCAMENTO", "APROVADO", "EM_EXECUCAO", "AGUARDANDO_PECA"] },
       },
       include: {
@@ -60,18 +64,23 @@ export default async function DashboardPage() {
     // 3. Faturamento de Hoje
     todayTransactions = await prisma.financialTransaction.findMany({
       where: {
+        tenantId,
         date: { gte: todayStart },
       },
     });
 
     // 4. Configurações da oficina
     settings = await prisma.workshopSetting.findUnique({
-      where: { id: "default" },
+      where: { tenantId },
     });
 
-    // 5. Totalizadores gerais
-    totalCustomers = await prisma.customer.count();
-    totalVehicles = await prisma.vehicle.count();
+    // 5. Totalizadores gerais isolados por oficina (tenant)
+    totalCustomers = await prisma.customer.count({
+      where: { tenantId },
+    });
+    totalVehicles = await prisma.vehicle.count({
+      where: { tenantId },
+    });
   } catch (err) {
     console.error("Aviso ao carregar dados do Dashboard:", err);
   }
