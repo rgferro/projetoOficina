@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, beforeEach, beforeAll, afterAll } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { hashPassword, verifyPassword, createSessionToken, verifySessionToken } from "@/lib/auth";
 import { validateCPF, validateCNPJ, validatePasswordStrength } from "@/lib/validation";

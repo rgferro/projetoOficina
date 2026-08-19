@@ -35,7 +35,7 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
   const [loggedUser, setLoggedUser] = useState<any>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const { currentEmployee, canAccess } = useAuth();
+  const { currentEmployee, canAccess, updateCurrentUser } = useAuth();
 
   useEffect(() => {
     const d = new Date();
@@ -54,15 +54,26 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
           setLoggedUser(JSON.parse(saved));
         }
       } catch (e) {}
-    }
 
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsUserMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+      const handleUserUpdated = (e: any) => {
+        if (e.detail) {
+          setLoggedUser(e.detail);
+        }
+      };
+      window.addEventListener("torque:user-updated", handleUserUpdated);
+
+      const handleClickOutside = (event: MouseEvent) => {
+        if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+          setIsUserMenuOpen(false);
+        }
+      };
+      document.addEventListener("mousedown", handleClickOutside);
+
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+        window.removeEventListener("torque:user-updated", handleUserUpdated);
+      };
+    }
   }, []);
 
   const handleLogout = () => {
@@ -75,10 +86,10 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
     router.push("/login");
   };
 
-  const displayName = loggedUser?.name || currentEmployee?.name || "Usuário";
+  const displayName = currentEmployee?.name || loggedUser?.name || "Usuário";
   const displayRole = loggedUser?.isOwner
     ? "Proprietário"
-    : loggedUser?.role || currentEmployee?.role || "Colaborador";
+    : currentEmployee?.role || loggedUser?.role || "Colaborador";
 
   const canCreateDirectly =
     !currentEmployee ||
@@ -87,10 +98,10 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
     currentEmployee.accessLevel === "ATENDENTE";
 
   const activeUserForModal = {
-    id: loggedUser?.id || currentEmployee?.id,
+    id: currentEmployee?.id || loggedUser?.id,
     name: displayName,
-    email: loggedUser?.email || currentEmployee?.email,
-    phone: loggedUser?.phone || currentEmployee?.phone,
+    email: currentEmployee?.email || loggedUser?.email,
+    phone: currentEmployee?.phone || loggedUser?.phone,
     role: displayRole,
     accessLevel: currentEmployee?.accessLevel || loggedUser?.accessLevel || "MECANICO",
     workshopName: loggedUser?.workshopName || "Torque ERP",
@@ -248,13 +259,7 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
         user={activeUserForModal}
         onUserUpdated={(updated) => {
           setLoggedUser((prev: any) => ({ ...prev, ...updated }));
-          if (typeof window !== "undefined") {
-            const saved = localStorage.getItem("torque_user");
-            if (saved) {
-              const current = JSON.parse(saved);
-              localStorage.setItem("torque_user", JSON.stringify({ ...current, ...updated }));
-            }
-          }
+          updateCurrentUser(updated);
         }}
       />
 

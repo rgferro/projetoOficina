@@ -24,6 +24,8 @@ interface AuthContextType {
   resetPermissions: () => void;
   canAccess: (path: string) => boolean;
   reloadEmployees: () => Promise<void>;
+  updateCurrentUser: (user: Partial<EmployeeUser>) => void;
+  syncUserProfile: () => Promise<void>;
 }
 
 const DEFAULT_ADMIN: EmployeeUser = {
@@ -45,6 +47,8 @@ const AuthContext = createContext<AuthContextType>({
   resetPermissions: () => {},
   canAccess: () => true,
   reloadEmployees: async () => {},
+  updateCurrentUser: () => {},
+  syncUserProfile: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -55,6 +59,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     DEFAULT_PERMISSIONS_MAP
   );
 
+  const updateCurrentUser = (updatedUser: Partial<EmployeeUser>) => {
+    setCurrentEmployee((prev) => {
+      if (!prev) return null;
+      const merged: EmployeeUser = {
+        ...prev,
+        ...updatedUser,
+        accessLevel: (updatedUser.accessLevel || prev.accessLevel) as AccessLevel,
+      };
+      if (typeof window !== "undefined") {
+        try {
+          const savedUser = localStorage.getItem("torque_user");
+          const parsed = savedUser ? JSON.parse(savedUser) : {};
+          const nextSaved = { ...parsed, ...merged };
+          localStorage.setItem("torque_user", JSON.stringify(nextSaved));
+          window.dispatchEvent(new CustomEvent("torque:user-updated", { detail: nextSaved }));
+        } catch (e) {}
+      }
+      return merged;
+    });
+  };
+
+  const syncUserProfile = async () => {
+    try {
+      const res = await fetch("/api/auth/profile");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.user) {
+          const u = data.user;
+          const freshEmployee: EmployeeUser = {
+            id: u.id,
+            name: u.name,
+            role: u.role,
+            accessLevel: u.accessLevel as AccessLevel,
+            email: u.email,
+            phone: u.phone,
+            active: u.active !== undefined ? u.active : true,
+          };
+          setCurrentEmployee(freshEmployee);
+          if (typeof window !== "undefined") {
+            const savedUser = localStorage.getItem("torque_user");
+            const parsed = savedUser ? JSON.parse(savedUser) : {};
+            const nextSaved = { ...parsed, ...u, accessLevel: u.accessLevel, role: u.role };
+            localStorage.setItem("torque_user", JSON.stringify(nextSaved));
+            window.dispatchEvent(new CustomEvent("torque:user-updated", { detail: nextSaved }));
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Erro ao sincronizar perfil do usuário:", err);
+    }
+  };
+
   const reloadEmployees = async () => {
     try {
       const res = await fetch("/api/equipe");
@@ -62,6 +118,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json();
         if (Array.isArray(data)) {
           setEmployees(data);
+          if (typeof window !== "undefined") {
+            try {
+              const savedUser = localStorage.getItem("torque_user");
+              if (savedUser) {
+                const u = JSON.parse(savedUser);
+                const matching = data.find(
+                  (emp: any) =>
+                    emp.id === u.id ||
+                    (emp.email && u.email && emp.email.toLowerCase() === u.email.toLowerCase())
+                );
+                if (matching) {
+                  const updated: EmployeeUser = {
+                    id: matching.id,
+                    name: matching.name,
+                    role: matching.role,
+                    accessLevel: matching.accessLevel as AccessLevel,
+                    email: matching.email,
+                    phone: matching.phone,
+                    active: matching.active,
+                  };
+                  setCurrentEmployee(updated);
+                  const nextSaved = { ...u, ...updated };
+                  localStorage.setItem("torque_user", JSON.stringify(nextSaved));
+                  window.dispatchEvent(
+                    new CustomEvent("torque:user-updated", { detail: nextSaved })
+                  );
+                }
+              }
+            } catch (e) {}
+          }
         }
       }
     } catch (err) {
@@ -71,7 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      // 1. Carrega dados do usuário autenticado real
+      // 1. Carrega dados do usuário autenticado real de forma síncrona para evitar flicker
       try {
         const savedUser = localStorage.getItem("torque_user");
         if (savedUser) {
@@ -94,9 +180,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setPermissionsMap(JSON.parse(savedPerms));
         } catch (e) {}
       }
-    }
 
-    reloadEmployees();
+      const handleUserUpdated = (e: any) => {
+        const u = e.detail;
+        if (u) {
+          setCurrentEmployee((prev) => ({
+            id: u.id || prev?.id || "admin-owner",
+            name: u.name || prev?.name || "Usuário",
+            role: u.role || prev?.role || "Colaborador",
+            accessLevel: (u.accessLevel as AccessLevel) || prev?.accessLevel || "MECANICO",
+            email: u.email || prev?.email,
+            phone: u.phone || prev?.phone,
+            active: u.active !== undefined ? u.active : (prev?.active ?? true),
+          }));
+        }
+      };
+
+      window.addEventListener("torque:user-updated", handleUserUpdated);
+
+      // Revalida em segundo plano contra o servidor para garantir permissões frescas
+      syncUserProfile();
+      reloadEmployees();
+
+      return () => {
+        window.removeEventListener("torque:user-updated", handleUserUpdated);
+      };
+    }
   }, []);
 
   const savePermissions = (newMap: Record<AccessLevel, string[]>) => {
@@ -159,6 +268,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetPermissions,
         canAccess,
         reloadEmployees,
+        updateCurrentUser,
+        syncUserProfile,
       }}
     >
       {children}

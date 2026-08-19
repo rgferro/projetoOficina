@@ -75,6 +75,8 @@ export default function EquipePage() {
 
   const {
     reloadEmployees: reloadAuthEmployees,
+    updateCurrentUser,
+    syncUserProfile,
     isEnforced,
     setIsEnforced,
     permissionsMap,
@@ -173,8 +175,29 @@ export default function EquipePage() {
             : data.message || "Convite enviado com sucesso para o e-mail do colaborador!"
         );
         setTimeout(() => setSuccessMessage(""), 5000);
-        loadEmployees();
-        reloadAuthEmployees();
+
+        if (
+          editingEmployee &&
+          currentEmployee &&
+          (editingEmployee.id === currentEmployee.id ||
+            (editingEmployee.email &&
+              currentEmployee.email &&
+              editingEmployee.email.toLowerCase() === currentEmployee.email.toLowerCase()))
+        ) {
+          updateCurrentUser({
+            id: editingEmployee.id,
+            name: formData.name,
+            role: formData.role,
+            accessLevel: formData.accessLevel,
+            email: formData.email,
+            phone: formData.phone,
+            active: formData.active,
+          });
+        }
+
+        await loadEmployees();
+        await reloadAuthEmployees();
+        await syncUserProfile();
       } else {
         setErrorMessage(data.error || "Erro ao salvar funcionário");
       }

@@ -1,24 +1,57 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashPassword, verifyPassword } from "@/lib/auth";
+import { hashPassword, verifyPassword, verifySessionToken, createSessionToken } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId");
+    let userId = searchParams.get("userId");
 
-    if (!userId) {
-      return NextResponse.json({ error: "ID do usuário não fornecido" }, { status: 400 });
+    const token =
+      req.cookies.get("torque_token")?.value ||
+      req.cookies.get("torque_session")?.value ||
+      req.headers.get("authorization")?.replace("Bearer ", "");
+    const session = token ? verifySessionToken(token) : null;
+
+    if (!userId && session?.userId) {
+      userId = session.userId;
     }
 
-    // Tenta encontrar em Employee
-    const employee = await prisma.employee.findUnique({
-      where: { id: userId },
-      include: { tenant: true },
-    });
+    if (!userId && !session?.email) {
+      return NextResponse.json({ error: "Sessão não informada" }, { status: 400 });
+    }
+
+    // 1. Tenta encontrar em Employee por ID ou e-mail
+    let employee = userId
+      ? await prisma.employee.findUnique({
+          where: { id: userId },
+          include: { tenant: true },
+        })
+      : null;
+
+    if (!employee && session?.email) {
+      employee = await prisma.employee.findFirst({
+        where: { email: session.email },
+        include: { tenant: true },
+      });
+    }
 
     if (employee) {
-      return NextResponse.json({
+      const isOwner = false;
+      const newToken = createSessionToken({
+        userId: employee.id,
+        tenantId: employee.tenantId || "default",
+        name: employee.name,
+        email: employee.email || `${employee.id}@torquerp.com.br`,
+        role: employee.role,
+        accessLevel: employee.accessLevel as any,
+        isMaster: session?.isMaster || false,
+        workshopName: employee.tenant?.name || "Minha Oficina",
+        plan: employee.tenant?.plan || "STARTER",
+        isOwner,
+      });
+
+      const response = NextResponse.json({
         success: true,
         user: {
           id: employee.id,
@@ -28,30 +61,75 @@ export async function GET(req: NextRequest) {
           role: employee.role,
           accessLevel: employee.accessLevel,
           workshopName: employee.tenant?.name || "Minha Oficina",
-          isOwner: false,
+          isOwner,
+          plan: employee.tenant?.plan || "STARTER",
+          active: employee.active,
         },
+        token: newToken,
+      });
+
+      response.cookies.set("torque_token", newToken, {
+        path: "/",
+        httpOnly: false,
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: "lax",
+      });
+
+      return response;
+    }
+
+    // 2. Tenta encontrar em Tenant (Dono) por ID ou por ownerEmail
+    let tenant = userId
+      ? await prisma.tenant.findUnique({
+          where: { id: userId },
+        })
+      : null;
+
+    if (!tenant && session?.email) {
+      tenant = await prisma.tenant.findUnique({
+        where: { ownerEmail: session.email },
       });
     }
 
-    // Tenta encontrar em Tenant (Dono)
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: userId },
-    });
-
     if (tenant) {
-      return NextResponse.json({
+      const newToken = createSessionToken({
+        userId: tenant.id,
+        tenantId: tenant.id,
+        name: tenant.ownerName,
+        email: tenant.ownerEmail,
+        role: "Proprietário",
+        accessLevel: "ADMIN",
+        isMaster: tenant.isMaster || false,
+        workshopName: tenant.name,
+        plan: tenant.plan,
+        isOwner: true,
+      });
+
+      const response = NextResponse.json({
         success: true,
         user: {
           id: tenant.id,
           name: tenant.ownerName,
           email: tenant.ownerEmail,
           phone: tenant.ownerPhone || "",
-          role: "Proprietário / Administrador",
+          role: "Proprietário",
           accessLevel: "ADMIN",
           workshopName: tenant.name,
           isOwner: true,
+          plan: tenant.plan,
+          isMaster: tenant.isMaster,
         },
+        token: newToken,
       });
+
+      response.cookies.set("torque_token", newToken, {
+        path: "/",
+        httpOnly: false,
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: "lax",
+      });
+
+      return response;
     }
 
     return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });

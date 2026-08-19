@@ -22,12 +22,12 @@ git push origin master
 
 echo.
 echo [2/4] Conectando na VM via SSH e puxando codigo atualizado...
-powershell -Command "ssh -o StrictHostKeyChecking=no -i $env:USERPROFILE\.ssh\id_ed25519 ubuntu@137.131.221.53 'cd /var/www/torquerp && git stash && git pull origin master && printf \"DATABASE_URL=file:./dev.db\nAPP_URL=https://torquerp.com.br\nPORT=3001\n\" > .env && npx prisma db push && npm run build && pm2 restart all && pm2 status'"
+powershell -Command "ssh -o StrictHostKeyChecking=no -i $env:USERPROFILE\.ssh\id_ed25519 ubuntu@137.131.221.53 'cd /var/www/torquerp && git stash && git pull origin master && npx prisma db push && npm run build && pm2 restart all --update-env && pm2 status'"
 
 if %errorlevel% neq 0 (
     echo.
     echo [!] Tentando com chave secundaria oci_key...
-    powershell -Command "ssh -o StrictHostKeyChecking=no -i $env:USERPROFILE\.ssh\oci_key ubuntu@137.131.221.53 'cd /var/www/torquerp && git stash && git pull origin master && printf \"DATABASE_URL=file:./dev.db\nAPP_URL=https://torquerp.com.br\nPORT=3001\n\" > .env && npx prisma db push && npm run build && pm2 restart all && pm2 status'"
+    powershell -Command "ssh -o StrictHostKeyChecking=no -i $env:USERPROFILE\.ssh\oci_key ubuntu@137.131.221.53 'cd /var/www/torquerp && git stash && git pull origin master && npx prisma db push && npm run build && pm2 restart all --update-env && pm2 status'"
 )
 
 echo.
