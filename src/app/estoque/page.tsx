@@ -16,6 +16,7 @@ import {
   Upload,
   CheckCircle2,
   Building,
+  Lock,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { useAuth } from "@/lib/authContext";
@@ -29,6 +30,12 @@ export default function EstoquePage() {
     currentEmployee.accessLevel === "ATENDENTE";
 
   const isCostPrivileged =
+    !currentEmployee ||
+    currentEmployee.accessLevel === "ADMIN" ||
+    currentEmployee.accessLevel === "GERENTE";
+
+  // Somente ADMIN e GERENTE podem criar, editar e excluir produtos do estoque
+  const canManage =
     !currentEmployee ||
     currentEmployee.accessLevel === "ADMIN" ||
     currentEmployee.accessLevel === "GERENTE";
@@ -280,27 +287,36 @@ export default function EstoquePage() {
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            id="estoque-xml-btn"
-            onClick={() => {
-              setXmlResult(null);
-              setXmlContent("");
-              setIsXmlModalOpen(true);
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 font-bold text-xs sm:text-sm border border-purple-200 transition-all shadow-sm"
-          >
-            <FileCode className="w-4 h-4 text-purple-600" />
-            Importar XML de NF-e
-          </button>
+          {canManage ? (
+            <>
+              <button
+                id="estoque-xml-btn"
+                onClick={() => {
+                  setXmlResult(null);
+                  setXmlContent("");
+                  setIsXmlModalOpen(true);
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 font-bold text-xs sm:text-sm border border-purple-200 transition-all shadow-sm"
+              >
+                <FileCode className="w-4 h-4 text-purple-600" />
+                Importar XML de NF-e
+              </button>
 
-          <button
-            id="estoque-new-btn"
-            onClick={handleOpenNew}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-500/20 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            Novo Produto
-          </button>
+              <button
+                id="estoque-new-btn"
+                onClick={handleOpenNew}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-500/20 transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                Novo Produto
+              </button>
+            </>
+          ) : (
+            <span className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 font-bold text-xs">
+              <Lock className="w-3.5 h-3.5" />
+              Somente Consulta
+            </span>
+          )}
         </div>
       </div>
 
@@ -430,7 +446,7 @@ export default function EstoquePage() {
                   <th className="py-3 px-4 text-center">Estoque Atual</th>
                   {isCostPrivileged && <th className="py-3 px-4 text-right">Preço Custo</th>}
                   {isFinancialPrivileged && <th className="py-3 px-4 text-right">Preço Venda</th>}
-                  <th className="py-3 px-4 text-right">Ações</th>
+                  {canManage && <th className="py-3 px-4 text-right">Ações</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -487,22 +503,24 @@ export default function EstoquePage() {
                           )}
                         </td>
                       )}
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => handleOpenEdit(p)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(p.id, p.name)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
+                      {canManage && (
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => handleOpenEdit(p)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(p.id, p.name)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
