@@ -45,6 +45,56 @@ import {
   SYSTEM_MODULES,
 } from "@/lib/authContext";
 
+const ROLE_OPTIONS: {
+  level: AccessLevel;
+  label: string;
+  roleName: string;
+  icon: string;
+  desc: string;
+  badgeColor: string;
+}[] = [
+  {
+    level: "MECANICO",
+    label: "Mecânico / Técnico",
+    roleName: "Mecânico",
+    icon: "🔧",
+    desc: "Acesso focado em Ordens de Serviço, Tabela de Serviços e Estoque de Peças",
+    badgeColor: "bg-amber-100 text-amber-800 border-amber-300",
+  },
+  {
+    level: "LAVADOR",
+    label: "Operador de Lava-Jato",
+    roleName: "Lavador",
+    icon: "🧼",
+    desc: "Acesso exclusivo ao Pátio de Lavagem e fila de veículos do Lava-Jato",
+    badgeColor: "bg-cyan-100 text-cyan-800 border-cyan-300",
+  },
+  {
+    level: "ATENDENTE",
+    label: "Atendente / Caixa",
+    roleName: "Atendente",
+    icon: "🏷️",
+    desc: "Acesso ao PDV Balcão, Caixa Diário, Clientes e Recepção",
+    badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-300",
+  },
+  {
+    level: "GERENTE",
+    label: "Gerente Geral",
+    roleName: "Gerente",
+    icon: "👔",
+    desc: "Acesso a Vendas, Relatórios, Finanças e Operação Completa da Oficina",
+    badgeColor: "bg-blue-100 text-blue-800 border-blue-300",
+  },
+  {
+    level: "ADMIN",
+    label: "Administrador da Oficina",
+    roleName: "Administrador",
+    icon: "👑",
+    desc: "Acesso total e irrestrito a todos os módulos, equipe e configurações",
+    badgeColor: "bg-purple-100 text-purple-800 border-purple-300",
+  },
+];
+
 export default function EquipePage() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +109,7 @@ export default function EquipePage() {
   // Form states
   const [formData, setFormData] = useState({
     name: "",
-    role: "Mecânico",
+    role: "Mecânico / Técnico",
     accessLevel: "MECANICO" as AccessLevel,
     email: "",
     phone: "",
@@ -111,7 +161,7 @@ export default function EquipePage() {
     setEditingEmployee(null);
     setFormData({
       name: "",
-      role: "Mecânico",
+      role: "Mecânico / Técnico",
       accessLevel: "MECANICO",
       email: "",
       phone: "",
@@ -125,10 +175,12 @@ export default function EquipePage() {
 
   const handleOpenEdit = (emp: any) => {
     setEditingEmployee(emp);
+    const empLevel = (emp.accessLevel as AccessLevel) || "MECANICO";
+    const preset = ROLE_OPTIONS.find((r) => r.level === empLevel);
     setFormData({
       name: emp.name,
-      role: emp.role,
-      accessLevel: emp.accessLevel,
+      role: emp.role || (preset ? preset.label : "Mecânico / Técnico"),
+      accessLevel: empLevel,
       email: emp.email || "",
       phone: emp.phone || "",
       password: "",
@@ -570,38 +622,73 @@ export default function EquipePage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              {/* CARGO & PERFIL DE PERMISSÃO UNIFICADOS */}
+              <div className="space-y-2.5 p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Cargo na Oficina *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: Mecânico Líder"
-                    value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Perfil de Permissão *
+                  <label className="font-bold text-slate-800 block mb-1">
+                    Cargo & Perfil de Permissão *
                   </label>
                   <select
                     value={formData.accessLevel}
-                    onChange={(e) =>
-                      setFormData({ ...formData, accessLevel: e.target.value as AccessLevel })
-                    }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                    onChange={(e) => {
+                      const selectedLevel = e.target.value as AccessLevel;
+                      const preset = ROLE_OPTIONS.find((r) => r.level === selectedLevel);
+                      setFormData({
+                        ...formData,
+                        accessLevel: selectedLevel,
+                        role: preset ? preset.label : formData.role,
+                      });
+                    }}
+                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-blue-500 shadow-sm"
                   >
-                    <option value="MECANICO">🔧 Mecânico (Oficina & OS)</option>
-                    <option value="LAVADOR">🧼 Lavador (Pátio Lava-Jato)</option>
-                    <option value="ATENDENTE">🏷️ Atendente (PDV & Caixa)</option>
-                    <option value="GERENTE">👔 Gerente (Operação & Finanças)</option>
-                    <option value="ADMIN">👑 Administrador</option>
+                    {ROLE_OPTIONS.map((opt) => (
+                      <option key={opt.level} value={opt.level}>
+                        {opt.icon} {opt.label} ({opt.roleName})
+                      </option>
+                    ))}
                   </select>
+                </div>
+
+                {/* Banner de visualização e confirmação do perfil de acesso */}
+                {(() => {
+                  const currentOpt =
+                    ROLE_OPTIONS.find((r) => r.level === formData.accessLevel) || ROLE_OPTIONS[0];
+                  return (
+                    <div className="p-2.5 bg-white rounded-xl border border-slate-200/60 shadow-xs space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                          <span>{currentOpt.icon}</span>
+                          <span>{currentOpt.label}</span>
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${currentOpt.badgeColor}`}
+                        >
+                          Nível: {currentOpt.level}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-tight">
+                        🔒 <strong>Permissão vinculada:</strong> {currentOpt.desc}.
+                      </p>
+                    </div>
+                  );
+                })()}
+
+                {/* Título ou especialidade no crachá */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] font-bold text-slate-700">
+                      Nome do Cargo no Crachá / Sistema
+                    </label>
+                    <span className="text-[10px] text-slate-400">Ex: Mecânico Chefe, Eletricista</span>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: Mecânico / Técnico"
+                    value={formData.role}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-blue-500"
+                  />
                 </div>
               </div>
 
