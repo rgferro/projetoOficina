@@ -24,7 +24,7 @@ export async function GET(req: Request) {
       orderBy: { enteredAt: "asc" },
     });
 
-    // 2. Ordens de Serviço ativas
+    // 2. Ordens de Serviï¿½o ativas
     const activeServiceOrders = await prisma.serviceOrder.findMany({
       where: {
         tenantId,
@@ -47,7 +47,7 @@ export async function GET(req: Request) {
       },
     });
 
-    // 4. Configurações da oficina
+    // 4. Configuraï¿½ï¿½es da oficina
     const settings = await prisma.workshopSetting.findUnique({
       where: { tenantId },
     });
