@@ -185,6 +185,7 @@ export async function ensureTenantDefaults(tenantId: string, tenantName?: string
       const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
       await prisma.workshopSetting.create({
         data: {
+          id: tenantId,
           tenantId,
           workshopName: tenantName || tenant?.name || "Oficina & Centro Automotivo",
           cnpj: tenant?.document || "",

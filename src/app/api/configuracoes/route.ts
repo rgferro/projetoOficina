@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
     if (!settings && tenant) {
       settings = await prisma.workshopSetting.create({
         data: {
+          id: tenantId,
           tenantId,
           workshopName: tenant.name,
           cnpj: tenant.document || "",

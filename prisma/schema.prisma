@@ -436,7 +436,7 @@ model FinancialTransaction {
 }
 
 model WorkshopSetting {
-  id                          String   @id @default("default")
+  id                          String   @id @default(cuid())
   workshopName                String   @default("Oficina & Lava-Jato Central")
   cnpj                        String?  @default("12.345.678/0001-90")
   phone                       String?  @default("(11) 98765-4321")

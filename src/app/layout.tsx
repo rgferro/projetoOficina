@@ -132,6 +132,23 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         />
+        {/* Auto-recuperação transparente de versões antigas de scripts pós-deploy (ChunkLoadError) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.addEventListener('error', function(e) {
+                if (e && (e.message?.includes('ChunkLoadError') || e.message?.includes('Loading chunk') || e.target?.tagName === 'SCRIPT')) {
+                  var lastReload = sessionStorage.getItem('last_chunk_reload');
+                  var now = Date.now();
+                  if (!lastReload || now - parseInt(lastReload) > 10000) {
+                    sessionStorage.setItem('last_chunk_reload', now);
+                    window.location.reload();
+                  }
+                }
+              }, true);
+            `,
+          }}
+        />
       </head>
       <body className="antialiased font-sans bg-slate-100 text-slate-900">
         <AppShell>{children}</AppShell>
