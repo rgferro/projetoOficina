@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateWhatsappLink } from "@/lib/whatsapp";
+import { cookies } from "next/headers";
+import { verifySessionToken } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -10,8 +12,13 @@ export async function GET(request: Request) {
     const type = searchParams.get("type") || "geral"; // abc, aniversariantes, estoque, produtividade, geral
     const month = searchParams.get("month") ? Number(searchParams.get("month")) : new Date().getMonth();
 
+    const cookieStore = await cookies();
+    const token = cookieStore.get("torque_token")?.value || cookieStore.get("torque_session")?.value;
+    const session = token ? verifySessionToken(token) : null;
+    const targetTenantId = session?.tenantId || searchParams.get("tenantId");
+
     const settings = await prisma.workshopSetting.findUnique({
-      where: { id: "default" },
+      where: { id: targetTenantId || "default" },
     });
     const workshopName = settings?.workshopName || "Oficina Mecânica";
 
@@ -142,6 +149,7 @@ export async function GET(request: Request) {
 
     // 4. PRODUTIVIDADE E COMISSÕES DA EQUIPE
     const employees = await prisma.employee.findMany({
+      where: targetTenantId ? { tenantId: targetTenantId } : undefined,
       include: {
         orderItems: true,
         washTickets: { where: { status: "ENTREGUE" } },

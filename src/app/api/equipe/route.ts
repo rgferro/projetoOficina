@@ -2,11 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { sendEmployeeInviteEmail } from "@/lib/email";
-import { hashPassword } from "@/lib/auth";
+import { hashPassword, verifySessionToken } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
+    const token =
+      req.cookies.get("torque_token")?.value ||
+      req.cookies.get("torque_session")?.value ||
+      req.headers.get("authorization")?.replace("Bearer ", "");
+    const session = token ? verifySessionToken(token) : null;
+
+    const { searchParams } = new URL(req.url);
+    const paramTenantId = searchParams.get("tenantId") || req.headers.get("x-tenant-id");
+
+    let targetTenantId: string | undefined = session?.tenantId || paramTenantId || undefined;
+    if (!targetTenantId) {
+      const defaultTenant = await prisma.tenant.findFirst({
+        where: { active: true },
+        orderBy: { createdAt: "desc" },
+      });
+      targetTenantId = defaultTenant?.id;
+    }
+
     const employees = await prisma.employee.findMany({
+      where: targetTenantId ? { tenantId: targetTenantId } : undefined,
       orderBy: { createdAt: "desc" },
       include: {
         washTickets: {
@@ -68,8 +87,14 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const token =
+      req.cookies.get("torque_token")?.value ||
+      req.cookies.get("torque_session")?.value ||
+      req.headers.get("authorization")?.replace("Bearer ", "");
+    const session = token ? verifySessionToken(token) : null;
+
     const body = await req.json();
-    const { name, role, accessLevel, email, phone, commissionRate, password, tenantId } = body;
+    const { name, role, accessLevel, email, phone, commissionRate, password, tenantId: bodyTenantId } = body;
 
     if (!name || !role) {
       return NextResponse.json(
@@ -87,39 +112,48 @@ export async function POST(req: NextRequest) {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    // Verifica se já existe um funcionário com este e-mail
-    const existing = await prisma.employee.findFirst({
-      where: { email: cleanEmail },
-    });
-
-    if (existing) {
-      return NextResponse.json(
-        { error: "Já existe um membro da equipe cadastrado com este e-mail." },
-        { status: 400 }
-      );
-    }
-
-    // Busca dados da oficina
+    // Busca dados da oficina do proprietário logado
+    const targetTenantId = session?.tenantId || bodyTenantId;
     let tenant: any = null;
-    if (tenantId) {
-      tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (targetTenantId) {
+      tenant = await prisma.tenant.findUnique({ where: { id: targetTenantId } });
     } else {
       tenant = await prisma.tenant.findFirst({ where: { active: true }, orderBy: { createdAt: "desc" } });
     }
 
-    if (tenant) {
-      const activeCount = await prisma.employee.count({
-        where: { tenantId: tenant.id, active: true },
-      });
-      const maxAllowedEmployees = Math.max(1, (tenant.maxUsers || 2) - 1);
-      if (activeCount >= maxAllowedEmployees) {
-        return NextResponse.json(
-          {
-            error: `Seu plano atual (${tenant.plan}) permite até ${tenant.maxUsers} usuários no total (1 Proprietário + ${maxAllowedEmployees} Funcionário ativo). Para ativar mais funcionários, faça upgrade para o Plano Pro.`,
-          },
-          { status: 400 }
-        );
-      }
+    if (!tenant) {
+      return NextResponse.json(
+        { error: "Oficina não encontrada para cadastrar o colaborador." },
+        { status: 404 }
+      );
+    }
+
+    // Verifica se já existe um funcionário com este e-mail nesta mesma oficina
+    const existing = await prisma.employee.findFirst({
+      where: {
+        email: cleanEmail,
+        tenantId: tenant.id,
+      },
+    });
+
+    if (existing) {
+      return NextResponse.json(
+        { error: "Já existe um membro da equipe cadastrado com este e-mail nesta oficina." },
+        { status: 400 }
+      );
+    }
+
+    const activeCount = await prisma.employee.count({
+      where: { tenantId: tenant.id, active: true },
+    });
+    const maxAllowedEmployees = Math.max(1, (tenant.maxUsers || 2) - 1);
+    if (activeCount >= maxAllowedEmployees) {
+      return NextResponse.json(
+        {
+          error: `Seu plano atual (${tenant.plan}) permite até ${tenant.maxUsers} usuários no total (1 Proprietário + ${maxAllowedEmployees} Funcionário ativo). Para ativar mais funcionários, faça upgrade para o Plano Pro.`,
+        },
+        { status: 400 }
+      );
     }
 
     // Gera token de convite com validade de 48 horas
@@ -129,7 +163,7 @@ export async function POST(req: NextRequest) {
 
     const employee = await prisma.employee.create({
       data: {
-        tenantId: tenant?.id || null,
+        tenantId: tenant.id,
         name: name.trim(),
         role: role.trim(),
         accessLevel: accessLevel || "MECANICO",
@@ -156,8 +190,8 @@ export async function POST(req: NextRequest) {
       employeeName: employee.name,
       employeeEmail: cleanEmail,
       role: employee.role,
-      workshopName: tenant?.name || "Torque ERP",
-      ownerName: tenant?.ownerName || "Administração",
+      workshopName: tenant.name || "Torque ERP",
+      ownerName: tenant.ownerName || "Administração",
       inviteLink,
     }).catch((err) => console.error("Erro ao enviar e-mail de convite:", err));
 
@@ -180,6 +214,12 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
+    const token =
+      req.cookies.get("torque_token")?.value ||
+      req.cookies.get("torque_session")?.value ||
+      req.headers.get("authorization")?.replace("Bearer ", "");
+    const session = token ? verifySessionToken(token) : null;
+
     const body = await req.json();
     const { id, name, role, accessLevel, email, phone, commissionRate, password, active } = body;
 
@@ -188,10 +228,19 @@ export async function PUT(req: NextRequest) {
     }
 
     const currentEmp = await prisma.employee.findUnique({ where: { id } });
-    if (currentEmp && !currentEmp.active && active === true) {
+    if (!currentEmp) {
+      return NextResponse.json({ error: "Funcionário não encontrado" }, { status: 404 });
+    }
+
+    // Validação de Tenant: se sessão existe e não for master admin, impede modificar funcionário de outra oficina
+    if (session?.tenantId && !session.isMaster && currentEmp.tenantId && currentEmp.tenantId !== session.tenantId) {
+      return NextResponse.json({ error: "Acesso não autorizado para modificar colaborador de outra oficina" }, { status: 403 });
+    }
+
+    if (!currentEmp.active && active === true) {
       const tenant = currentEmp.tenantId
         ? await prisma.tenant.findUnique({ where: { id: currentEmp.tenantId } })
-        : await prisma.tenant.findFirst({ where: { active: true }, orderBy: { createdAt: "desc" } });
+        : (session?.tenantId ? await prisma.tenant.findUnique({ where: { id: session.tenantId } }) : await prisma.tenant.findFirst({ where: { active: true }, orderBy: { createdAt: "desc" } }));
 
       if (tenant) {
         const activeCount = await prisma.employee.count({
@@ -241,11 +290,27 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const token =
+      req.cookies.get("torque_token")?.value ||
+      req.cookies.get("torque_session")?.value ||
+      req.headers.get("authorization")?.replace("Bearer ", "");
+    const session = token ? verifySessionToken(token) : null;
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
     if (!id) {
       return NextResponse.json({ error: "ID não fornecido" }, { status: 400 });
+    }
+
+    const currentEmp = await prisma.employee.findUnique({ where: { id } });
+    if (!currentEmp) {
+      return NextResponse.json({ error: "Funcionário não encontrado" }, { status: 404 });
+    }
+
+    // Validação de Tenant: impede deletar colaborador de outra oficina
+    if (session?.tenantId && !session.isMaster && currentEmp.tenantId && currentEmp.tenantId !== session.tenantId) {
+      return NextResponse.json({ error: "Acesso não autorizado para remover colaborador de outra oficina" }, { status: 403 });
     }
 
     await prisma.employee.delete({
