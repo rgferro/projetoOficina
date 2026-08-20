@@ -4,6 +4,8 @@ import crypto from "crypto";
 import { sendEmployeeInviteEmail } from "@/lib/email";
 import { hashPassword, verifySessionToken } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const token =

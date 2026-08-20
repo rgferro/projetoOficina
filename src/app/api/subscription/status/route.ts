@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { SAAS_PLANS, getMercadoPagoPaymentStatus } from "@/lib/mercadopago";
 import { verifySessionToken } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const token = req.cookies.get("torque_token")?.value;
