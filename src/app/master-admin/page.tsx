@@ -31,6 +31,13 @@ export default function MasterAdminPage() {
   const [activeTab, setActiveTab] = useState<"TENANTS" | "PAYMENTS" | "MESSAGES" | "METRICS">("TENANTS");
   const [actionMsg, setActionMsg] = useState<string | null>(null);
 
+  // Modal para alteração profissional de plano
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+  const [selectedTenant, setSelectedTenant] = useState<any>(null);
+  const [targetPlan, setTargetPlan] = useState<"STARTER" | "PRO" | "ELITE">("PRO");
+  const [customMaxUsers, setCustomMaxUsers] = useState<number>(4);
+  const [modalLoading, setModalLoading] = useState(false);
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -63,6 +70,27 @@ export default function MasterAdminPage() {
       setLoading(false);
     }
   }, []);
+
+  const handleOpenPlanModal = (tenant: any) => {
+    setSelectedTenant(tenant);
+    const p = (tenant.plan as "STARTER" | "PRO" | "ELITE") || "STARTER";
+    setTargetPlan(p);
+    setCustomMaxUsers(tenant.maxUsers || (p === "ELITE" ? 10 : p === "PRO" ? 4 : 1));
+    setIsPlanModalOpen(true);
+  };
+
+  const handleSavePlanModal = async () => {
+    if (!selectedTenant) return;
+    setModalLoading(true);
+    await handleAction({
+      action: "UPDATE_PLAN",
+      tenantId: selectedTenant.id,
+      newPlan: targetPlan,
+      newMaxUsers: Number(customMaxUsers),
+    });
+    setModalLoading(false);
+    setIsPlanModalOpen(false);
+  };
 
   const handleAction = async (payload: any) => {
     try {
@@ -305,21 +333,16 @@ export default function MasterAdminPage() {
                       <div className="flex items-center justify-center gap-1.5">
                         <button
                           onClick={() => handleAction({ action: "ADD_DAYS", tenantId: t.id, addDays: 30 })}
-                          className="px-2 py-1 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-[10px] font-bold"
+                          className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-[11px] font-bold transition-all border border-emerald-200"
                           title="Adicionar +30 dias de acesso"
                         >
                           +30 Dias
                         </button>
                         <button
-                          onClick={() => {
-                            const newPlan = prompt("Digite o novo plano (STARTER, PRO, ELITE):", t.plan);
-                            if (newPlan) {
-                              const maxUsers = newPlan === "ELITE" ? 8 : newPlan === "PRO" ? 4 : 2;
-                              handleAction({ action: "UPDATE_PLAN", tenantId: t.id, newPlan, newMaxUsers: maxUsers });
-                            }
-                          }}
-                          className="px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 text-[10px] font-bold"
+                          onClick={() => handleOpenPlanModal(t)}
+                          className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-[11px] font-bold transition-all border border-blue-200 flex items-center gap-1"
                         >
+                          <Sparkles className="w-3 h-3 text-amber-500" />
                           Mudar Plano
                         </button>
                         <button
@@ -327,7 +350,11 @@ export default function MasterAdminPage() {
                             const newStatus = t.subscriptionStatus === "active" ? "suspended" : "active";
                             handleAction({ action: "SET_STATUS", tenantId: t.id, newStatus });
                           }}
-                          className="px-2 py-1 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 text-[10px] font-bold"
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all border ${
+                            t.subscriptionStatus === "active"
+                              ? "bg-rose-50 text-rose-700 hover:bg-rose-100 border-rose-200"
+                              : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200"
+                          }`}
                         >
                           {t.subscriptionStatus === "active" ? "Suspender" : "Reativar"}
                         </button>
@@ -403,6 +430,186 @@ export default function MasterAdminPage() {
                 <p className="text-xs text-slate-600">{m.message}</p>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: SELEÇÃO PROFISSIONAL DE PLANO & ASSENTOS (MASTER ADMIN) */}
+      {isPlanModalOpen && selectedTenant && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-6 border border-slate-100 animate-scaleUp">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full">
+                  Gerenciamento SaaS Master
+                </span>
+                <h3 className="text-lg font-black text-slate-900">
+                  Alterar Plano da Oficina
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  {selectedTenant.name} ({selectedTenant.ownerEmail})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPlanModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold flex items-center justify-center transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Seletores de Planos com Cartões Visuais */}
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-slate-700 block">
+                Selecione o Pacote SaaS:
+              </label>
+
+              <div className="grid grid-cols-1 gap-2.5">
+                {/* Starter */}
+                <div
+                  onClick={() => {
+                    setTargetPlan("STARTER");
+                    setCustomMaxUsers(1);
+                  }}
+                  className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
+                    targetPlan === "STARTER"
+                      ? "border-emerald-500 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-500/20"
+                      : "border-slate-200 hover:border-slate-300 bg-white"
+                  }`}
+                >
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-slate-900 text-xs">Torque Starter</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                        R$ 0,00 / mês
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      1 Usuário (Proprietário) • Módulos essenciais da oficina • Até 30 OS/mês
+                    </p>
+                  </div>
+                  <input
+                    type="radio"
+                    name="modalTargetPlan"
+                    checked={targetPlan === "STARTER"}
+                    onChange={() => {
+                      setTargetPlan("STARTER");
+                      setCustomMaxUsers(1);
+                    }}
+                    className="w-4 h-4 text-emerald-600 accent-emerald-600"
+                  />
+                </div>
+
+                {/* Pro */}
+                <div
+                  onClick={() => {
+                    setTargetPlan("PRO");
+                    setCustomMaxUsers(4);
+                  }}
+                  className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
+                    targetPlan === "PRO"
+                      ? "border-blue-600 bg-blue-50/50 shadow-sm ring-1 ring-blue-600/20"
+                      : "border-slate-200 hover:border-slate-300 bg-white"
+                  }`}
+                >
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-slate-900 text-xs">Torque Oficina Pro</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                        R$ 69,90 / mês
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      Até 4 Usuários • PDV, Caixa, Estoque, Lava-Jato, CRM WhatsApp e Equipe
+                    </p>
+                  </div>
+                  <input
+                    type="radio"
+                    name="modalTargetPlan"
+                    checked={targetPlan === "PRO"}
+                    onChange={() => {
+                      setTargetPlan("PRO");
+                      setCustomMaxUsers(4);
+                    }}
+                    className="w-4 h-4 text-blue-600 accent-blue-600"
+                  />
+                </div>
+
+                {/* Elite */}
+                <div
+                  onClick={() => {
+                    setTargetPlan("ELITE");
+                    setCustomMaxUsers(10);
+                  }}
+                  className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
+                    targetPlan === "ELITE"
+                      ? "border-purple-600 bg-purple-50/50 shadow-sm ring-1 ring-purple-600/20"
+                      : "border-slate-200 hover:border-slate-300 bg-white"
+                  }`}
+                >
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-slate-900 text-xs">Torque Oficina Elite</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                        R$ 129,90 / mês
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      Até 10 Usuários • Tudo do Pro + Importação de XML NF-e, Relatórios & BI Avançado
+                    </p>
+                  </div>
+                  <input
+                    type="radio"
+                    name="modalTargetPlan"
+                    checked={targetPlan === "ELITE"}
+                    onChange={() => {
+                      setTargetPlan("ELITE");
+                      setCustomMaxUsers(10);
+                    }}
+                    className="w-4 h-4 text-purple-600 accent-purple-600"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Ajuste de Limite de Usuários Personalizado */}
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
+              <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                <span>Limite Máximo de Usuários Permitidos:</span>
+                <span className="text-purple-600 font-black">{customMaxUsers} Usuário(s)</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="999"
+                value={customMaxUsers}
+                onChange={(e) => setCustomMaxUsers(Number(e.target.value) || 1)}
+                className="w-full text-xs bg-white border border-slate-300 rounded-xl p-2.5 font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+              />
+              <p className="text-[11px] text-slate-500">
+                O padrão do pacote selecionado é: <strong>{targetPlan === "ELITE" ? 10 : targetPlan === "PRO" ? 4 : 1} usuário(s)</strong>. Você pode customizar para testes ou concessões especiais.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsPlanModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 text-xs font-bold transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={modalLoading}
+                onClick={handleSavePlanModal}
+                className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black shadow-md shadow-purple-600/20 transition-all flex items-center gap-2 disabled:opacity-50"
+              >
+                {modalLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                {modalLoading ? "Salvando..." : "Confirmar e Aplicar"}
+              </button>
+            </div>
           </div>
         </div>
       )}

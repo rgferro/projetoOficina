@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: "Plano atualizado com sucesso!" });
     }
 
-    if (action === "EXTEND_DAYS" && tenantId && addDays) {
+    if ((action === "EXTEND_DAYS" || action === "ADD_DAYS") && tenantId && addDays) {
       const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
       const currentExpiry = tenant?.subscriptionExpiresAt ? new Date(tenant.subscriptionExpiresAt) : new Date();
       currentExpiry.setDate(currentExpiry.getDate() + Number(addDays));
@@ -96,9 +96,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: `Assinatura estendida em +${addDays} dias!` });
     }
 
-    if (action === "TOGGLE_STATUS" && tenantId) {
+    if ((action === "TOGGLE_STATUS" || action === "SET_STATUS") && tenantId) {
       const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
-      const newStatus = tenant?.subscriptionStatus === "active" ? "suspended" : "active";
+      const newStatus = body.newStatus || (tenant?.subscriptionStatus === "active" ? "suspended" : "active");
 
       await prisma.tenant.update({
         where: { id: tenantId },
