@@ -12,10 +12,22 @@ export function AccessGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { currentEmployee, currentPlan, canAccess, isEnforced } = useAuth();
 
-  const isPlanAllowed = isRouteAllowedForPlan(currentPlan, pathname);
-  const hasAccess = canAccess(pathname);
-  const isBlockedByPlan = !isRouteAllowedForPlan(currentPlan, pathname);
-  const defaultAllowedRoute = getDefaultRouteForRole(currentEmployee?.accessLevel);
+  const isMasterUser =
+    currentEmployee?.email === "rafael.gielow@gmail.com" ||
+    (typeof window !== "undefined" &&
+      (() => {
+        try {
+          const s = localStorage.getItem("torque_user");
+          const p = s ? JSON.parse(s) : {};
+          return p.email === "rafael.gielow@gmail.com" || p.isMaster === true;
+        } catch (e) {
+          return false;
+        }
+      })());
+
+  const hasAccess = isMasterUser || canAccess(pathname);
+  const isBlockedByPlan = !isMasterUser && !isRouteAllowedForPlan(currentPlan, pathname);
+  const defaultAllowedRoute = getDefaultRouteForRole(currentEmployee?.accessLevel, isMasterUser);
 
   useEffect(() => {
     // Se o usuário tentar acessar a rota raiz /dashboard e seu cargo não tem permissão (ex: Mecânico ou Lavador),
@@ -25,7 +37,7 @@ export function AccessGuard({ children }: { children: React.ReactNode }) {
     }
   }, [isEnforced, hasAccess, pathname, defaultAllowedRoute, router]);
 
-  if (isEnforced && !hasAccess) {
+  if (isEnforced && !hasAccess && !isMasterUser) {
     if (isBlockedByPlan) {
       return (
         <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6 space-y-6">

@@ -159,15 +159,20 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
 
           {navigation.map((item) => {
+            const isMasterItem = item.href === "/master-admin";
+            if (isMasterItem && !isMasterUser) return null;
+
             const roleAllowed =
-              !currentEmployee || currentEmployee.accessLevel === "ADMIN"
+              isMasterUser ||
+              !currentEmployee ||
+              currentEmployee.accessLevel === "ADMIN"
                 ? true
                 : (permissionsMap[currentEmployee.accessLevel] || []).some((p) =>
                     p === "/dashboard"
                       ? item.href === "/dashboard"
                       : item.href === p || item.href.startsWith(`${p}/`)
                   );
-            const planAllowed = isRouteAllowedForPlan(currentPlan, item.href);
+            const planAllowed = isMasterUser || isRouteAllowedForPlan(currentPlan, item.href);
 
             if (isEnforced && !roleAllowed) {
               return null;

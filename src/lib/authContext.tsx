@@ -275,13 +275,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     savePermissions(DEFAULT_PERMISSIONS_MAP);
   };
 
+  const isMasterUser =
+    currentEmployee?.email === "rafael.gielow@gmail.com" ||
+    (typeof window !== "undefined" &&
+      (() => {
+        try {
+          const s = localStorage.getItem("torque_user");
+          const p = s ? JSON.parse(s) : {};
+          return p.email === "rafael.gielow@gmail.com" || p.isMaster === true;
+        } catch (e) {
+          return false;
+        }
+      })());
+
   const canAccessPlan = (path: string): boolean => {
-    if (!isEnforced) return true;
+    if (!isEnforced || isMasterUser) return true;
     return isRouteAllowedForPlan(currentPlan, path);
   };
 
   const canAccess = (path: string): boolean => {
-    if (!isEnforced) return true;
+    if (!isEnforced || isMasterUser) return true;
     if (!currentEmployee) return false;
     const planAllowed = isRouteAllowedForPlan(currentPlan, path);
     if (!planAllowed) return false;

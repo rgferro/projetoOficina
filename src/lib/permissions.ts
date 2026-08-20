@@ -207,6 +207,7 @@ export const PLAN_PERMISSIONS_MAP: Record<SaaSPlan, string[]> = {
     "/financeiro",
     "/equipe",
     "/relatorios",
+    "/master-admin",
     "/sobre",
     "/contato",
     "/termos",
