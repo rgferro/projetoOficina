@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Package,
   Plus,
@@ -22,7 +23,8 @@ import { formatCurrency } from "@/lib/formatters";
 import { useAuth } from "@/lib/authContext";
 
 export default function EstoquePage() {
-  const { currentEmployee } = useAuth();
+  const { currentEmployee, currentPlan } = useAuth();
+  const isElite = currentPlan === "ELITE";
   const isFinancialPrivileged =
     !currentEmployee ||
     currentEmployee.accessLevel === "ADMIN" ||
@@ -289,18 +291,29 @@ export default function EstoquePage() {
         <div className="flex items-center gap-2.5 flex-wrap">
           {canManage ? (
             <>
-              <button
-                id="estoque-xml-btn"
-                onClick={() => {
-                  setXmlResult(null);
-                  setXmlContent("");
-                  setIsXmlModalOpen(true);
-                }}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 font-bold text-xs sm:text-sm border border-purple-200 transition-all shadow-sm"
-              >
-                <FileCode className="w-4 h-4 text-purple-600" />
-                Importar XML de NF-e
-              </button>
+              {isElite ? (
+                <button
+                  id="estoque-xml-btn"
+                  onClick={() => {
+                    setXmlResult(null);
+                    setXmlContent("");
+                    setIsXmlModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 font-bold text-xs sm:text-sm border border-purple-200 transition-all shadow-sm"
+                >
+                  <FileCode className="w-4 h-4 text-purple-600" />
+                  Importar XML de NF-e
+                </button>
+              ) : (
+                <Link
+                  href="/assinatura"
+                  className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-300 transition-all shadow-sm"
+                  title="Importador de XML de NF-e disponível no Plano Oficina Elite"
+                >
+                  <Lock className="w-3.5 h-3.5 text-purple-600" />
+                  <span>Importar XML (Elite)</span>
+                </Link>
+              )}
 
               <button
                 id="estoque-new-btn"
