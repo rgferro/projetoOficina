@@ -1,10 +1,35 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTenantContext } from "@/lib/tenant";
+import { isRouteAllowedForPlan } from "@/lib/permissions";
+
+async function ensurePlanAccessToLavajato(tenantId: string) {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { id: true, plan: true },
+  });
+
+  if (!tenant) {
+    return NextResponse.json({ error: "Oficina não encontrada." }, { status: 404 });
+  }
+
+  if (!isRouteAllowedForPlan(tenant.plan, "/lavajato")) {
+    return NextResponse.json(
+      {
+        error: "O módulo Lava-Jato não está disponível no seu plano atual. Faça upgrade para o Plano Pro.",
+      },
+      { status: 403 }
+    );
+  }
+
+  return null;
+}
 
 export async function GET(request: Request) {
   try {
     const { tenantId } = await getTenantContext(request);
+    const blocked = await ensurePlanAccessToLavajato(tenantId);
+    if (blocked) return blocked;
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const activeOnly = searchParams.get("active") === "true";
@@ -41,6 +66,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const { tenantId } = await getTenantContext(request);
+    const blocked = await ensurePlanAccessToLavajato(tenantId);
+    if (blocked) return blocked;
     const body = await request.json();
     const {
       serviceType,
@@ -97,7 +124,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validação de Cota Mensal do Plano Starter (50 Lavagens / mês)
+    // Validação de cota mensal por tenant (legado para planos com cota ativa)
     const { checkTenantMonthlyQuota } = await import("@/lib/audit");
     if (tenantId) {
       const quotaCheck = await checkTenantMonthlyQuota(tenantId, "WASH");
@@ -153,6 +180,8 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const { tenantId } = await getTenantContext(request);
+    const blocked = await ensurePlanAccessToLavajato(tenantId);
+    if (blocked) return blocked;
     const body = await request.json();
     const {
       id,

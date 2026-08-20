@@ -120,7 +120,7 @@ export async function checkIpRegistrationAbuse(ip: string): Promise<{
 }
 
 /**
- * Verifica limites de cota mensal do Plano Starter (30 OSs ou 50 Lavagens)
+ * Verifica limites de cota mensal por oficina (tenant).
  * Retorna se está permitido ou excedido.
  */
 export async function checkTenantMonthlyQuota(
@@ -160,6 +160,7 @@ export async function checkTenantMonthlyQuota(
     const limit = 30; // 30 OSs / mês no plano Starter
     const currentCount = await prisma.serviceOrder.count({
       where: {
+        tenantId,
         createdAt: { gte: startOfMonth },
       },
     });
@@ -178,9 +179,10 @@ export async function checkTenantMonthlyQuota(
   }
 
   if (type === "WASH") {
-    const limit = 50; // 50 Lavagens / mês no plano Starter
+    const limit = 50; // Limite mensal de lavagens quando a política de cota estiver ativa
     const currentCount = await prisma.washTicket.count({
       where: {
+        tenantId,
         createdAt: { gte: startOfMonth },
       },
     });

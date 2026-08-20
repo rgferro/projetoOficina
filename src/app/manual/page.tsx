@@ -362,7 +362,7 @@ export default function ManualPage() {
         {
           num: "3",
           title: "Como funciona o limite do Plano Starter?",
-          desc: "O plano Starter gratuito permite até 2 usuários, 30 Ordens de Serviço e 50 Lavagens por mês. Ao atingir o limite, você pode fazer upgrade para o Plano Pro com operações ilimitadas.",
+          desc: "O plano Starter gratuito permite 1 usuário proprietário e até 30 Ordens de Serviço por mês. Ao atingir o limite ou precisar de equipe, faça upgrade para o Plano Pro com operações ilimitadas.",
         },
         {
           num: "4",

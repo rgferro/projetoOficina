@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { generateWhatsappLink } from "@/lib/whatsapp";
+import { SAAS_PLANS } from "@/lib/mercadopago";
 
 describe("Business Logic & Financial Calculations Tests", () => {
   describe("Cálculos de Ordem de Serviço (OS)", () => {
@@ -115,6 +116,19 @@ describe("Business Logic & Financial Calculations Tests", () => {
       const link = generateWhatsappLink("11987654321", "Olá Roberto! Seu carro está pronto.");
       expect(link).toContain("https://wa.me/5511987654321");
       expect(link).toContain(encodeURIComponent("Olá Roberto! Seu carro está pronto."));
+    });
+  });
+
+  describe("Regras de Planos SaaS", () => {
+    it("deve manter os limites oficiais de usuários em 1, 4 e 10", () => {
+      expect(SAAS_PLANS.STARTER.maxUsers).toBe(1);
+      expect(SAAS_PLANS.PRO.maxUsers).toBe(4);
+      expect(SAAS_PLANS.ELITE.maxUsers).toBe(10);
+    });
+
+    it("deve manter preços oficiais dos planos Pro e Elite", () => {
+      expect(SAAS_PLANS.PRO.price).toBe(69.9);
+      expect(SAAS_PLANS.ELITE.price).toBe(129.9);
     });
   });
 });

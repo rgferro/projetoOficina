@@ -91,7 +91,7 @@ export async function sendVerificationEmail(targetEmail: string, code: string) {
         </div>
         
         <p style="font-size: 15px; line-height: 1.5; color: #334155;">Olá!</p>
-        <p style="font-size: 14px; line-height: 1.6; color: #475569;">Obrigado por escolher o <strong>Torque ERP</strong>. Para ativar seu cadastro gratuito com até 2 usuários, digite o código de confirmação abaixo:</p>
+        <p style="font-size: 14px; line-height: 1.6; color: #475569;">Obrigado por escolher o <strong>Torque ERP</strong>. Para ativar seu cadastro gratuito no plano Starter (1 usuário), digite o código de confirmação abaixo:</p>
         
         <div style="font-size: 38px; font-weight: 900; background: #f8fafc; padding: 20px; border-radius: 16px; text-align: center; letter-spacing: 10px; color: #2563eb; margin: 24px 0; border: 2px dashed #93c5fd;">
           ${code}

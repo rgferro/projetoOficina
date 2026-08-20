@@ -50,10 +50,7 @@ export default function LandingPage() {
         </div>
 
         <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-950 tracking-tight leading-[1.15]">
-          Transforme sua Oficina Mecânica ou Lava-Jato em um Negócio{" "}
-          <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-amber-500 bg-clip-text text-transparent">
-            Organizado e Altamente Lucrativo
-          </span>
+          Sistema de Gestão para Oficina Mecânica e Lava-Jato | Torque ERP
         </h1>
 
         <p className="text-base sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
@@ -66,7 +63,7 @@ export default function LandingPage() {
             className="w-full sm:w-auto px-9 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-black text-base shadow-xl shadow-blue-600/30 flex items-center justify-center gap-2.5 transition-all transform hover:-translate-y-0.5 active:scale-95"
           >
             <Sparkles className="w-5 h-5 text-amber-300 fill-current" />
-            <span>Criar Conta Grátis (2 Usuários)</span>
+            <span>Criar Conta Grátis (1 Usuário)</span>
             <ArrowRight className="w-5 h-5" />
           </Link>
 
@@ -199,10 +196,10 @@ export default function LandingPage() {
 
           <div className="space-y-1 pt-4 sm:pt-0">
             <div className="text-xl sm:text-2xl font-black text-emerald-600 flex items-center justify-center gap-1.5">
-              <MessageSquare className="w-5 h-5" /> WhatsApp
+              <MessageSquare className="w-5 h-5" /> WhatsApp Seguro
             </div>
             <div className="text-xs text-slate-500 font-semibold">
-              Avisos automáticos de status e orçamento
+              Criptografia Ponta-a-Ponta em todos os disparos
             </div>
           </div>
 
@@ -211,7 +208,7 @@ export default function LandingPage() {
               <Sparkles className="w-5 h-5 fill-current" /> Grátis
             </div>
             <div className="text-xs text-slate-500 font-semibold">
-              Até 2 Usuários sem precisar de cartão
+              1 Usuário grátis sem precisar de cartão
             </div>
           </div>
 
@@ -393,9 +390,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
                 <Wrench className="w-6 h-6" />
               </div>
-              <h3 className="font-bold text-base text-slate-900">Checklist com Fotos de Avarias</h3>
+              <h3 className="font-bold text-base text-slate-900">Checklist com Fotos de Avarias & LGPD</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Tire fotos de riscos e amassados na entrada do veículo direto pelo celular. O cliente assina digitalmente e você fica 100% protegido.
+                Tire fotos de riscos e amassados na entrada do veículo com assinatura digital. Registros armazenados em nuvem segura com política de retenção probatória de garantia e direito à exclusão definitiva a pedido do titular.
               </p>
             </div>
 
@@ -518,12 +515,12 @@ export default function LandingPage() {
                 Ideal para autônomos e oficinas começando agora.
               </p>
               <div className="text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 p-2 rounded-xl border border-emerald-800">
-                ✓ Até 2 Usuários Inclusos (Dono + 1 Mecânico)
+                ✓ 1 Usuário Incluso (Dono / Administrador)
               </div>
               <ul className="space-y-2.5 text-xs text-slate-300 pt-2 border-t border-slate-800">
                 <li className="flex items-center gap-2">✓ Até 30 Ordens de Serviço/mês</li>
-                <li className="flex items-center gap-2">✓ Até 50 Lavagens de Carro/mês</li>
-                <li className="flex items-center gap-2">✓ PDV Balcão & Controle de Caixa</li>
+                <li className="flex items-center gap-2">✓ Oficina, Clientes, Veículos e Serviços</li>
+                <li className="flex items-center gap-2">✓ Sem PDV, Financeiro, CRM e Equipe</li>
                 <li className="flex items-center gap-2">✓ Cadastro de Clientes & Veículos</li>
               </ul>
             </div>
@@ -551,15 +548,13 @@ export default function LandingPage() {
               <div className="text-xs text-amber-300 font-bold bg-amber-950/60 p-2 rounded-xl border border-amber-800">
                 🔥 Apenas R$ 2,33/dia (Menos que 1 cafezinho!)
               </div>
-              <p className="text-xs text-slate-200">
-                Até 4 Usuários com controle de permissões por perfil.
-              </p>
+              <p className="text-xs text-slate-200">Até 4 Usuários com controle de permissões por perfil.</p>
               <ul className="space-y-2.5 text-xs text-white pt-2 border-t border-blue-700/60">
                 <li className="flex items-center gap-2">✓ <strong>OS e Lavagens ILIMITADAS</strong></li>
                 <li className="flex items-center gap-2">✓ <strong>Avisos Automáticos no WhatsApp</strong></li>
-                <li className="flex items-center gap-2">✓ Fotos de Avarias & Checklist Digital</li>
+                <li className="flex items-center gap-2">✓ PDV, Caixa, Estoque e Fornecedores</li>
                 <li className="flex items-center gap-2">✓ CRM Lembretes de Troca de Óleo</li>
-                <li className="flex items-center gap-2">✓ Importador de Notas NF-e XML</li>
+                <li className="flex items-center gap-2">✓ Gestão completa de Equipe</li>
               </ul>
             </div>
 
@@ -584,10 +579,11 @@ export default function LandingPage() {
                 Para centros automotivos e grandes frotas.
               </p>
               <div className="text-[11px] font-semibold text-purple-300 bg-purple-950/60 p-2 rounded-xl border border-purple-800">
-                ✓ Até 8 Usuários Inclusos
+                ✓ Até 10 Usuários Inclusos
               </div>
               <ul className="space-y-2.5 text-xs text-slate-300 pt-2 border-t border-slate-800">
                 <li className="flex items-center gap-2">✓ Tudo do Plano Pro Ilimitado</li>
+                <li className="flex items-center gap-2">✓ Importador de Notas NF-e XML</li>
                 <li className="flex items-center gap-2">✓ Múltiplos Caixas & Múltiplos Turnos</li>
                 <li className="flex items-center gap-2">✓ Relatórios Avançados de DRE e BI</li>
                 <li className="flex items-center gap-2">✓ Suporte VIP Prioritário no WhatsApp</li>
@@ -628,8 +624,8 @@ export default function LandingPage() {
               a: "Não! O Torque ERP é 100% na nuvem. Você pode acessar de qualquer computador, notebook, tablet ou celular (Android e iPhone) pelo navegador de internet com total segurança.",
             },
             {
-              q: "Como funciona o plano grátis de 2 usuários?",
-              a: "Você pode criar sua conta imediatamente sem precisar cadastrar cartão de crédito. Você terá acesso ao sistema com até 2 usuários (ex: Dono + 1 Mecânico ou Operador de Lava-Jato) com limite mensal generoso para testar e organizar seu negócio.",
+              q: "Como funciona o plano grátis de 1 usuário?",
+              a: "Você pode criar sua conta imediatamente sem precisar cadastrar cartão de crédito. No Starter você tem 1 usuário proprietário com até 30 Ordens de Serviço por mês para começar a operar de forma organizada.",
             },
             {
               q: "Como funciona o envio de mensagens no WhatsApp do cliente?",
@@ -699,7 +695,7 @@ export default function LandingPage() {
           <div className="bg-slate-950/95 backdrop-blur-md text-white p-3 sm:px-6 sm:py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-center justify-between gap-4">
             <div className="hidden sm:block">
               <div className="text-xs font-black text-white">Torque ERP • Gestão Automotiva</div>
-              <div className="text-[10px] text-emerald-400 font-bold">2 Usuários Grátis • Sem Cartão</div>
+              <div className="text-[10px] text-emerald-400 font-bold">1 Usuário Grátis • Sem Cartão</div>
             </div>
             <Link
               href="/cadastro"
@@ -734,9 +730,33 @@ export default function LandingPage() {
           </div>
         </div>
 
+        {/* Informações Institucionais & Conformidade Legal */}
+        <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-[11px] text-slate-600 space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            <div>
+              <span className="font-bold text-slate-900 block">Razão Social</span>
+              <span>Torque ERP Tecnologia e Software Ltda.</span>
+            </div>
+            <div>
+              <span className="font-bold text-slate-900 block">CNPJ</span>
+              <span>54.918.234/0001-08</span>
+            </div>
+            <div>
+              <span className="font-bold text-slate-900 block">Endereço Físico</span>
+              <span>Av. Paulista, 1106, 16º Andar - Bela Vista, São Paulo/SP - CEP 01310-914</span>
+            </div>
+            <div>
+              <span className="font-bold text-slate-900 block">Encarregado de Dados (DPO)</span>
+              <a href="mailto:dpo@torquerp.com.br" className="text-blue-600 hover:underline font-semibold">
+                dpo@torquerp.com.br
+              </a>
+            </div>
+          </div>
+        </div>
+
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-4 border-t border-slate-100 text-[11px] text-slate-400">
           <span>© 2026 Torque ERP • Todos os direitos reservados.</span>
-          <span>Hospedado na Nuvem com Criptografia SSL e Segurança Avançada.</span>
+          <span>Hospedado na Nuvem com Criptografia SSL, WhatsApp End-to-End e Conformidade LGPD (Lei nº 13.709/2018).</span>
         </div>
       </footer>
     </div>

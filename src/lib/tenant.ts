@@ -1,10 +1,34 @@
 import { prisma } from "./prisma";
 import { verifySessionToken, UserSessionPayload } from "./auth";
+import { isRouteAllowedForPlan } from "./permissions";
 
 export interface TenantContext {
   tenantId: string;
   session: UserSessionPayload | null;
   isMaster: boolean;
+}
+
+export function hasAuthenticatedTenantSession(ctx: TenantContext): boolean {
+  return !!ctx.session?.tenantId || !!ctx.isMaster;
+}
+
+export async function ensureTenantRouteAccess(tenantId: string, route: string): Promise<{
+  allowed: boolean;
+  plan?: string;
+}> {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { plan: true },
+  });
+
+  if (!tenant) {
+    return { allowed: false };
+  }
+
+  return {
+    allowed: isRouteAllowedForPlan(tenant.plan, route),
+    plan: tenant.plan,
+  };
 }
 
 /**
@@ -71,7 +95,7 @@ export async function getTenantContext(req?: Request): Promise<TenantContext> {
         ownerName: "Administrador Principal",
         ownerEmail: "admin@oficina.com.br",
         plan: "STARTER",
-        maxUsers: 5,
+        maxUsers: 1,
         subscriptionStatus: "active",
       },
     });

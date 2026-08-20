@@ -8,6 +8,19 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
     const { tenantId } = await getTenantContext(request);
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+
+    if (!tenant) {
+      return NextResponse.json({ error: "Oficina não encontrada." }, { status: 404 });
+    }
+
+    if (tenant.plan !== "ELITE") {
+      return NextResponse.json(
+        { error: "Relatórios avançados disponíveis apenas no Plano Oficina Elite." },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type") || "geral";
     const month = searchParams.get("month") ? Number(searchParams.get("month")) : new Date().getMonth();

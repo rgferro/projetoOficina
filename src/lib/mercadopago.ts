@@ -14,8 +14,8 @@ export const SAAS_PLANS: Record<string, PlanConfig> = {
     id: "STARTER",
     name: "Torque Starter (Grátis)",
     price: 0,
-    maxUsers: 2,
-    description: "Até 2 usuários, 30 Ordens de Serviço/mês e 50 Lavagens/mês.",
+    maxUsers: 1,
+    description: "1 usuário (proprietário), até 30 Ordens de Serviço/mês e módulos essenciais da oficina.",
   },
   PRO: {
     id: "PRO",
@@ -28,8 +28,8 @@ export const SAAS_PLANS: Record<string, PlanConfig> = {
     id: "ELITE",
     name: "Torque Oficina Elite",
     price: 129.9,
-    maxUsers: 8,
-    description: "Até 8 usuários, Multi-Caixas, BI Avançado e Suporte Prioritário.",
+    maxUsers: 10,
+    description: "Até 10 usuários, Multi-Caixas, BI Avançado, XML NF-e e suporte VIP prioritário.",
   },
   EXTRA_SEAT: {
     id: "EXTRA_SEAT",

@@ -704,7 +704,7 @@ export function AuthForm({ initialTab = "LOGIN" }: { initialTab?: "LOGIN" | "REG
         {activeTab === "REGISTER" && (
           <form onSubmit={handleRegisterSubmit} className="space-y-4">
             <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-2xl text-[11px] text-blue-800 leading-snug">
-              🎁 <strong>Plano Starter Gratuito:</strong> Até 2 Usuários inclusos (Dono + 1 Operador), sem necessidade de cartão de crédito.
+              🎁 <strong>Plano Starter Gratuito:</strong> 1 Usuário proprietário incluso, sem necessidade de cartão de crédito.
             </div>
 
             {/* 1. DADOS DA OFICINA */}
@@ -1055,13 +1055,24 @@ export function AuthForm({ initialTab = "LOGIN" }: { initialTab?: "LOGIN" | "REG
               </div>
             )}
 
+            {/* Opt-in Consciente LGPD & Segurança */}
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-600 leading-snug space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span>Tratamento Seguro de Dados (LGPD • Lei nº 13.709/2018)</span>
+              </div>
+              <p>
+                Ao criar sua conta, você consente com o tratamento de dados operacionais e de clientes exclusivamente para emissão de Ordens de Serviço, envio de orçamentos e comunicações no WhatsApp com criptografia ponta-a-ponta.
+              </p>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
               className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all active:scale-95"
             >
               <CheckCircle2 className="w-4 h-4" />
-              {loading ? "Criando Conta..." : "Criar Minha Conta Grátis (2 Usuários)"}
+              {loading ? "Criando Conta..." : "Criar Minha Conta Grátis (1 Usuário)"}
             </button>
           </form>
         )}

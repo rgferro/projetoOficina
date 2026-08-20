@@ -8,6 +8,8 @@ import {
   DEFAULT_PERMISSIONS_MAP,
   SYSTEM_MODULES,
   SystemModule,
+  SaaSPlan,
+  isRouteAllowedForPlan,
 } from "./permissions";
 
 export { ROLE_CONFIG, DEFAULT_PERMISSIONS_MAP, SYSTEM_MODULES };
@@ -15,6 +17,7 @@ export type { AccessLevel, EmployeeUser, SystemModule };
 
 interface AuthContextType {
   currentEmployee: EmployeeUser | null;
+  currentPlan: SaaSPlan;
   employees: EmployeeUser[];
   isEnforced: boolean;
   setIsEnforced: (val: boolean) => void;
@@ -38,6 +41,7 @@ const DEFAULT_ADMIN: EmployeeUser = {
 
 const AuthContext = createContext<AuthContextType>({
   currentEmployee: DEFAULT_ADMIN,
+  currentPlan: "STARTER",
   employees: [],
   isEnforced: true,
   setIsEnforced: () => {},
@@ -53,6 +57,7 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentEmployee, setCurrentEmployee] = useState<EmployeeUser | null>(DEFAULT_ADMIN);
+  const [currentPlan, setCurrentPlan] = useState<SaaSPlan>("STARTER");
   const [employees, setEmployees] = useState<EmployeeUser[]>([]);
   const [isEnforced, setIsEnforced] = useState<boolean>(true);
   const [permissionsMap, setPermissionsMap] = useState<Record<AccessLevel, string[]>>(
@@ -73,6 +78,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const parsed = savedUser ? JSON.parse(savedUser) : {};
           const nextSaved = { ...parsed, ...merged };
           localStorage.setItem("torque_user", JSON.stringify(nextSaved));
+          if (nextSaved.plan === "STARTER" || nextSaved.plan === "PRO" || nextSaved.plan === "ELITE") {
+            setCurrentPlan(nextSaved.plan);
+          }
           window.dispatchEvent(new CustomEvent("torque:user-updated", { detail: nextSaved }));
         } catch (e) {}
       }
@@ -92,11 +100,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             name: u.name,
             role: u.role,
             accessLevel: u.accessLevel as AccessLevel,
+            plan: u.plan,
             email: u.email,
             phone: u.phone,
             active: u.active !== undefined ? u.active : true,
           };
           setCurrentEmployee(freshEmployee);
+          if (u.plan === "STARTER" || u.plan === "PRO" || u.plan === "ELITE") {
+            setCurrentPlan(u.plan);
+          }
           if (typeof window !== "undefined") {
             const savedUser = localStorage.getItem("torque_user");
             const parsed = savedUser ? JSON.parse(savedUser) : {};
@@ -167,10 +179,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             name: u.name || "Dono da Oficina",
             role: u.role || (u.isOwner ? "Proprietário" : "Administrador"),
             accessLevel: (u.accessLevel as AccessLevel) || (u.isOwner ? "ADMIN" : "MECANICO"),
+            plan: u.plan,
             email: u.email,
             phone: u.phone,
             active: true,
           });
+          if (u.plan === "STARTER" || u.plan === "PRO" || u.plan === "ELITE") {
+            setCurrentPlan(u.plan);
+          }
         }
       } catch (e) {}
 
@@ -189,10 +205,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             name: u.name || prev?.name || "Usuário",
             role: u.role || prev?.role || "Colaborador",
             accessLevel: (u.accessLevel as AccessLevel) || prev?.accessLevel || "MECANICO",
+            plan: (u.plan as SaaSPlan) || prev?.plan || "STARTER",
             email: u.email || prev?.email,
             phone: u.phone || prev?.phone,
             active: u.active !== undefined ? u.active : (prev?.active ?? true),
           }));
+          if (u.plan === "STARTER" || u.plan === "PRO" || u.plan === "ELITE") {
+            setCurrentPlan(u.plan);
+          }
         }
       };
 
@@ -249,6 +269,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const canAccess = (path: string): boolean => {
     if (!isEnforced) return true;
     if (!currentEmployee) return false;
+    const planAllowed = isRouteAllowedForPlan(currentPlan, path);
+    if (!planAllowed) return false;
+
     if (currentEmployee.accessLevel === "ADMIN") return true;
 
     const allowed = permissionsMap[currentEmployee.accessLevel] || [];
@@ -259,6 +282,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{
         currentEmployee,
+        currentPlan,
         employees,
         isEnforced,
         setIsEnforced,

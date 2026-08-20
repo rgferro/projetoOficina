@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
         where: { id: tenantId },
         data: {
           plan: newPlan,
-          maxUsers: Number(newMaxUsers) || (newPlan === "ELITE" ? 8 : newPlan === "PRO" ? 4 : 2),
+          maxUsers: Number(newMaxUsers) || (newPlan === "ELITE" ? 10 : newPlan === "PRO" ? 4 : 1),
         },
       });
       return NextResponse.json({ success: true, message: "Plano atualizado com sucesso!" });

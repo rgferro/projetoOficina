@@ -10,24 +10,20 @@ export async function POST(req: NextRequest) {
     const token = req.cookies.get("torque_token")?.value;
     const session = token ? verifySessionToken(token) : null;
 
+    if (!session?.tenantId && !session?.isMaster) {
+      return NextResponse.json({ success: false, error: "Sessão inválida para gerenciar assentos." }, { status: 401 });
+    }
+
     let tenant = null;
     if (session?.tenantId) {
       tenant = await prisma.tenant.findUnique({ where: { id: session.tenantId } });
-    }
-
-    if (!tenant && session?.email) {
-      tenant = await prisma.tenant.findFirst({ where: { ownerEmail: session.email } });
-    }
-
-    if (!tenant) {
-      tenant = await prisma.tenant.findFirst({ where: { active: true }, orderBy: { createdAt: "desc" } });
     }
 
     if (!tenant) {
       return NextResponse.json({ success: false, error: "Oficina não encontrada" }, { status: 404 });
     }
 
-    const baseLimit = tenant.plan === "ELITE" ? 8 : tenant.plan === "PRO" ? 4 : 2;
+    const baseLimit = tenant.plan === "ELITE" ? 10 : tenant.plan === "PRO" ? 4 : 1;
     const currentMax = tenant.maxUsers || baseLimit;
     const newMaxUsers = Math.max(baseLimit, currentMax - Number(seatsCount));
 

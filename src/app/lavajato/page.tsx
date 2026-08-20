@@ -292,7 +292,7 @@ export default function LavaJatoPage() {
         const errorData = await res.json();
         if (res.status === 403 || errorData.quotaExceeded) {
           setIsNewTicketModalOpen(false);
-          setQuotaErrorMsg(errorData.error || "Limite mensal de 50 lavagens atingido no Plano Starter.");
+          setQuotaErrorMsg(errorData.error || "Seu plano atual não permite registrar novas lavagens neste módulo.");
         } else {
           alert(errorData.error || "Erro ao criar ticket");
         }

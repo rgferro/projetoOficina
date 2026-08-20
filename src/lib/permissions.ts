@@ -1,10 +1,12 @@
 export type AccessLevel = "ADMIN" | "GERENTE" | "ATENDENTE" | "MECANICO" | "LAVADOR";
+export type SaaSPlan = "STARTER" | "PRO" | "ELITE";
 
 export interface EmployeeUser {
   id: string;
   name: string;
   role: string;
   accessLevel: AccessLevel;
+  plan?: SaaSPlan;
   pinCode?: string;
   email?: string;
   phone?: string;
@@ -152,6 +154,94 @@ export const DEFAULT_PERMISSIONS_MAP: Record<AccessLevel, string[]> = {
 };
 
 export const PERMISSIONS_MAP = DEFAULT_PERMISSIONS_MAP;
+
+export const PLAN_PERMISSIONS_MAP: Record<SaaSPlan, string[]> = {
+  STARTER: [
+    "/",
+    "/dashboard",
+    "/oficina",
+    "/clientes",
+    "/servicos",
+    "/manual",
+    "/configuracoes",
+    "/assinatura",
+    "/sobre",
+    "/contato",
+    "/termos",
+    "/privacidade",
+  ],
+  PRO: [
+    "/",
+    "/dashboard",
+    "/oficina",
+    "/clientes",
+    "/servicos",
+    "/manual",
+    "/configuracoes",
+    "/assinatura",
+    "/pdv",
+    "/lavajato",
+    "/estoque",
+    "/fornecedores",
+    "/crm",
+    "/financeiro",
+    "/equipe",
+    "/sobre",
+    "/contato",
+    "/termos",
+    "/privacidade",
+  ],
+  ELITE: [
+    "/",
+    "/dashboard",
+    "/oficina",
+    "/clientes",
+    "/servicos",
+    "/manual",
+    "/configuracoes",
+    "/assinatura",
+    "/pdv",
+    "/lavajato",
+    "/estoque",
+    "/fornecedores",
+    "/crm",
+    "/financeiro",
+    "/equipe",
+    "/relatorios",
+    "/sobre",
+    "/contato",
+    "/termos",
+    "/privacidade",
+  ],
+};
+
+export const PLAN_INCLUDED_USERS: Record<SaaSPlan, number> = {
+  STARTER: 1,
+  PRO: 4,
+  ELITE: 10,
+};
+
+function normalizePath(path: string): string {
+  if (!path) return "/";
+  const onlyPath = path.split("?")[0].split("#")[0] || "/";
+  return onlyPath.endsWith("/") && onlyPath !== "/" ? onlyPath.slice(0, -1) : onlyPath;
+}
+
+function matchesRoutePrefix(path: string, allowedRoute: string): boolean {
+  if (allowedRoute === "/") {
+    return path === "/" || path === "/dashboard";
+  }
+  return path === allowedRoute || path.startsWith(`${allowedRoute}/`);
+}
+
+export function isRouteAllowedForPlan(plan: string | null | undefined, route: string): boolean {
+  const resolvedPlan: SaaSPlan =
+    plan === "ELITE" || plan === "PRO" || plan === "STARTER" ? plan : "STARTER";
+  const normalizedRoute = normalizePath(route);
+  const allowedRoutes = PLAN_PERMISSIONS_MAP[resolvedPlan];
+
+  return allowedRoutes.some((allowedRoute) => matchesRoutePrefix(normalizedRoute, allowedRoute));
+}
 
 // Rota principal / Tela inicial de trabalho por perfil
 export const ROLE_DEFAULT_ROUTES: Record<AccessLevel, string> = {

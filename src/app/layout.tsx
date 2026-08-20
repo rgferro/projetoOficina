@@ -3,9 +3,9 @@ import "./globals.css";
 import { AppShell } from "@/components/AppShell";
 
 export const metadata: Metadata = {
-  title: "Torque ERP • Sistema de Gestão para Oficinas Mecânicas & Lava-Jato",
+  title: "Sistema de Gestão para Oficina Mecânica e Lava-Jato | Torque ERP",
   description:
-    "Torque ERP (torquerp.com.br) é o sistema SaaS completo para gestão de oficinas mecânicas, autocenters e lava-jatos. Controle de ordens de serviço, pátio kanban, PDV de peças, CRM WhatsApp e livro caixa.",
+    "Sistema completo para gestão de oficinas mecânicas e lava-jatos. Ordens de serviço, controle de pátio, PDV, integração WhatsApp e financeiro 100% na nuvem.",
   keywords: [
     "sistema para oficina mecanica",
     "software lava jato",
@@ -52,6 +52,16 @@ export default function RootLayout({
     name: "Torque ERP",
     operatingSystem: "Web, Android, iOS, Windows, macOS, Linux",
     applicationCategory: "BusinessApplication",
+    featureList: [
+      "Ordens de Serviço Digitais",
+      "Controle de Pátio e Kanban para Lava-Jato",
+      "WhatsApp Integration",
+      "PDV Balcão de Peças",
+      "Controle de Caixa e Financeiro",
+      "Gestão de Equipe e Comissões",
+      "Importação de NF-e XML",
+      "Relatórios e BI Avançado"
+    ],
     description:
       "Sistema de Gestão Completo para Oficinas Mecânicas, Centros Automotivos e Lava-Jatos com Ordens de Serviço, Kanban de Pátio, PDV Balcão e CRM WhatsApp.",
     url: "https://torquerp.com.br",
@@ -96,7 +106,7 @@ export default function RootLayout({
         name: "O Torque ERP realmente tem versão gratuita?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Sim! O plano Starter é 100% gratuito para sempre, inclui até 2 usuários, 30 ordens de serviço por mês e PDV de peças.",
+          text: "Sim! O plano Starter é 100% gratuito para sempre, inclui 1 usuário e até 30 ordens de serviço por mês com os módulos essenciais da oficina.",
         },
       },
       {

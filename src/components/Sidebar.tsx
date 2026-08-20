@@ -26,7 +26,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAuth, ROLE_CONFIG } from "@/lib/authContext";
-import { getDefaultRouteForRole } from "@/lib/permissions";
+import { getDefaultRouteForRole, isRouteAllowedForPlan } from "@/lib/permissions";
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -35,7 +35,7 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const { currentEmployee, canAccess, isEnforced } = useAuth();
+  const { currentEmployee, currentPlan, permissionsMap, isEnforced } = useAuth();
   const [isMasterUser, setIsMasterUser] = useState(false);
 
   useEffect(() => {
@@ -152,9 +152,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
 
           {navigation.map((item) => {
-            const hasAccess = canAccess(item.href);
+            const roleAllowed =
+              !currentEmployee || currentEmployee.accessLevel === "ADMIN"
+                ? true
+                : (permissionsMap[currentEmployee.accessLevel] || []).some((p) =>
+                    p === "/dashboard"
+                      ? item.href === "/dashboard"
+                      : item.href === p || item.href.startsWith(`${p}/`)
+                  );
+            const planAllowed = isRouteAllowedForPlan(currentPlan, item.href);
 
-            if (isEnforced && !hasAccess) {
+            if (isEnforced && !roleAllowed) {
               return null;
             }
 
@@ -163,6 +171,25 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 ? pathname === "/"
                 : pathname.startsWith(item.href);
             const Icon = item.icon;
+
+            if (isEnforced && !planAllowed) {
+              return (
+                <Link
+                  key={item.name}
+                  href="/assinatura"
+                  onClick={onClose}
+                  className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all text-slate-500 bg-slate-900/40 border border-slate-800 hover:bg-slate-800"
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className="w-4 h-4 text-slate-500" />
+                    <span>{item.name}</span>
+                  </div>
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    Upgrade
+                  </span>
+                </Link>
+              );
+            }
 
             return (
               <Link

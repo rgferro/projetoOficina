@@ -6,6 +6,19 @@ import { getTenantContext } from "@/lib/tenant";
 export async function POST(request: Request) {
   try {
     const { tenantId } = await getTenantContext(request);
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+
+    if (!tenant) {
+      return NextResponse.json({ error: "Oficina não encontrada." }, { status: 404 });
+    }
+
+    if (tenant.plan !== "ELITE") {
+      return NextResponse.json(
+        { error: "A importação de XML NF-e está disponível apenas no Plano Oficina Elite." },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { xmlContent, defaultProfitMargin, generateAccountPayable } = body;
 

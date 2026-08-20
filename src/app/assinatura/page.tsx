@@ -297,8 +297,9 @@ export default function AssinaturaPage() {
 
   const tenant = tenantInfo?.tenant;
   const currentPlan = tenant?.plan || "STARTER";
-  const maxUsers = tenant?.maxUsers || 2;
+  const maxUsers = tenant?.maxUsers || SAAS_PLANS.STARTER.maxUsers;
   const currentUsers = tenant?.currentUsersCount || 1;
+  const includedUsers = currentPlan === "ELITE" ? 10 : currentPlan === "PRO" ? 4 : 1;
 
   return (
     <div className="space-y-8 pb-12 max-w-6xl mx-auto">
@@ -445,7 +446,7 @@ export default function AssinaturaPage() {
             <ul className="space-y-2.5 text-xs text-slate-700 pt-2 border-t border-slate-100">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span>Até <strong>2 Usuários</strong> (Dono + 1 Operador)</span>
+                <span><strong>1 Usuário</strong> (Proprietário / Administrador)</span>
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
@@ -453,11 +454,11 @@ export default function AssinaturaPage() {
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span>Até 50 Lavagens de Veículos/mês</span>
+                <span>Clientes, Veículos, Serviços e Oficina liberados</span>
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span>PDV Balcão & Caixa Básico</span>
+                <span>Sem PDV, Financeiro, Equipe e CRM</span>
               </li>
             </ul>
           </div>
@@ -520,11 +521,11 @@ export default function AssinaturaPage() {
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                <span>CRM WhatsApp Automático (Revisão de Óleo)</span>
+                <span>PDV, Caixa, Estoque, Fornecedores e CRM WhatsApp</span>
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                <span>Importação de Notas Fiscais XML (NF-e)</span>
+                <span>Equipe com cargos: ADMIN, GERENTE, ATENDENTE, MECÂNICO e LAVADOR</span>
               </li>
             </ul>
           </div>
@@ -628,11 +629,15 @@ export default function AssinaturaPage() {
             <ul className="space-y-2.5 text-xs text-slate-700 pt-2 border-t border-slate-100">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                <span>Até <strong>8 Usuários Inclusos</strong></span>
+                <span>Até <strong>10 Usuários Inclusos</strong></span>
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-purple-600 flex-shrink-0" />
                 <span>Multi-Caixas e Múltiplos Turnos</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                <span>Importação de Notas Fiscais XML (NF-e)</span>
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-purple-600 flex-shrink-0" />
@@ -748,10 +753,10 @@ export default function AssinaturaPage() {
               <p className="text-xs text-slate-600 leading-relaxed">
                 Adicione assentos extras para mecânicos, atendentes ou lavadores por apenas <strong>R$ 14,90 / mês</strong> cada.
               </p>
-              {maxUsers > (currentPlan === "ELITE" ? 8 : 4) && (
+              {maxUsers > includedUsers && (
                 <div className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl inline-flex items-center gap-2">
                   <Users className="w-4 h-4 text-emerald-600" />
-                  Sua oficina possui <strong>+{maxUsers - (currentPlan === "ELITE" ? 8 : 4)} assento(s) adicional(is)</strong> ativo(s) ({maxUsers} usuários no total).
+                  Sua oficina possui <strong>+{maxUsers - includedUsers} assento(s) adicional(is)</strong> ativo(s) ({maxUsers} usuários no total).
                 </div>
               )}
             </div>
@@ -801,7 +806,7 @@ export default function AssinaturaPage() {
             </div>
           </div>
 
-          {maxUsers > (currentPlan === "ELITE" ? 8 : 4) && (
+          {maxUsers > includedUsers && (
             <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
               <span className="text-slate-500">
                 Deseja reduzir a capacidade de assentos da sua equipe?
@@ -1089,7 +1094,7 @@ export default function AssinaturaPage() {
                   • <strong>Sem novas cobranças:</strong> A renovação automática no cartão/PIX será suspensa imediatamente.
                 </span>
                 <span className="block text-slate-600">
-                  • <strong>Após o término do período:</strong> O plano retornará ao <em>Starter gratuito</em> (2 usuários) e seus colaboradores serão pausados sem nenhuma perda de histórico.
+                  • <strong>Após o término do período:</strong> O plano retornará ao <em>Starter gratuito</em> (1 usuário) e seus colaboradores serão pausados sem nenhuma perda de histórico.
                 </span>
               </div>
             </div>

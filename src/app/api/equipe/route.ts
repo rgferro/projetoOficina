@@ -12,16 +12,19 @@ export async function GET(req: NextRequest) {
       req.headers.get("authorization")?.replace("Bearer ", "");
     const session = token ? verifySessionToken(token) : null;
 
-    const { searchParams } = new URL(req.url);
-    const paramTenantId = searchParams.get("tenantId") || req.headers.get("x-tenant-id");
+    if (!session?.tenantId && !session?.isMaster) {
+      return NextResponse.json({ error: "Sessão inválida para consultar equipe." }, { status: 401 });
+    }
 
-    let targetTenantId: string | undefined = session?.tenantId || paramTenantId || undefined;
+    const { searchParams } = new URL(req.url);
+    const paramTenantId = searchParams.get("tenantId");
+
+    const targetTenantId = session?.isMaster
+      ? paramTenantId || session.tenantId
+      : session?.tenantId;
+
     if (!targetTenantId) {
-      const defaultTenant = await prisma.tenant.findFirst({
-        where: { active: true },
-        orderBy: { createdAt: "desc" },
-      });
-      targetTenantId = defaultTenant?.id;
+      return NextResponse.json({ error: "Tenant da oficina não identificado." }, { status: 400 });
     }
 
     const employees = await prisma.employee.findMany({
@@ -93,6 +96,10 @@ export async function POST(req: NextRequest) {
       req.headers.get("authorization")?.replace("Bearer ", "");
     const session = token ? verifySessionToken(token) : null;
 
+    if (!session?.tenantId && !session?.isMaster) {
+      return NextResponse.json({ error: "Sessão inválida para cadastrar colaborador." }, { status: 401 });
+    }
+
     const body = await req.json();
     const { name, role, accessLevel, email, phone, commissionRate, password, tenantId: bodyTenantId } = body;
 
@@ -113,12 +120,17 @@ export async function POST(req: NextRequest) {
     const cleanEmail = email.trim().toLowerCase();
 
     // Busca dados da oficina do proprietário logado
-    const targetTenantId = session?.tenantId || bodyTenantId;
+    if (bodyTenantId && !session?.isMaster && bodyTenantId !== session?.tenantId) {
+      return NextResponse.json(
+        { error: "Acesso não autorizado para cadastrar colaborador em outra oficina." },
+        { status: 403 }
+      );
+    }
+
+    const targetTenantId = session?.isMaster ? bodyTenantId || session?.tenantId : session?.tenantId;
     let tenant: any = null;
     if (targetTenantId) {
       tenant = await prisma.tenant.findUnique({ where: { id: targetTenantId } });
-    } else {
-      tenant = await prisma.tenant.findFirst({ where: { active: true }, orderBy: { createdAt: "desc" } });
     }
 
     if (!tenant) {
@@ -143,14 +155,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (tenant.plan === "STARTER") {
+      return NextResponse.json(
+        {
+          error:
+            "O Plano Starter permite apenas 1 usuário proprietário e não aceita membros de equipe. Faça upgrade para o Plano Pro para adicionar colaboradores.",
+        },
+        { status: 403 }
+      );
+    }
+
     const activeCount = await prisma.employee.count({
       where: { tenantId: tenant.id, active: true },
     });
-    const maxAllowedEmployees = Math.max(1, (tenant.maxUsers || 2) - 1);
-    if (activeCount >= maxAllowedEmployees) {
+    const maxUsersAllowed = Math.max(1, tenant.maxUsers || 1);
+    if (activeCount >= maxUsersAllowed) {
       return NextResponse.json(
         {
-          error: `Seu plano atual (${tenant.plan}) permite até ${tenant.maxUsers} usuários no total (1 Proprietário + ${maxAllowedEmployees} Funcionário ativo). Para ativar mais funcionários, faça upgrade para o Plano Pro.`,
+          error: `Seu plano atual (${tenant.plan}) permite até ${maxUsersAllowed} usuário(s) ativo(s) no total. Faça upgrade para ampliar sua equipe.`,
         },
         { status: 400 }
       );
@@ -220,6 +242,10 @@ export async function PUT(req: NextRequest) {
       req.headers.get("authorization")?.replace("Bearer ", "");
     const session = token ? verifySessionToken(token) : null;
 
+    if (!session?.tenantId && !session?.isMaster) {
+      return NextResponse.json({ error: "Sessão inválida para atualizar colaborador." }, { status: 401 });
+    }
+
     const body = await req.json();
     const { id, name, role, accessLevel, email, phone, commissionRate, password, active } = body;
 
@@ -240,17 +266,27 @@ export async function PUT(req: NextRequest) {
     if (!currentEmp.active && active === true) {
       const tenant = currentEmp.tenantId
         ? await prisma.tenant.findUnique({ where: { id: currentEmp.tenantId } })
-        : (session?.tenantId ? await prisma.tenant.findUnique({ where: { id: session.tenantId } }) : await prisma.tenant.findFirst({ where: { active: true }, orderBy: { createdAt: "desc" } }));
+        : (session?.tenantId ? await prisma.tenant.findUnique({ where: { id: session.tenantId } }) : null);
 
       if (tenant) {
+        if (tenant.plan === "STARTER") {
+          return NextResponse.json(
+            {
+              error:
+                "O Plano Starter permite apenas 1 usuário proprietário. Faça upgrade para o Plano Pro para reativar ou incluir colaboradores.",
+            },
+            { status: 403 }
+          );
+        }
+
         const activeCount = await prisma.employee.count({
           where: { tenantId: tenant.id, active: true },
         });
-        const maxAllowedEmployees = Math.max(1, (tenant.maxUsers || 2) - 1);
-        if (activeCount >= maxAllowedEmployees) {
+        const maxUsersAllowed = Math.max(1, tenant.maxUsers || 1);
+        if (activeCount >= maxUsersAllowed) {
           return NextResponse.json(
             {
-              error: `Limite de usuários atingido! Seu plano atual (${tenant.plan}) permite no máximo ${maxAllowedEmployees} funcionário ativo (+ 1 Proprietário). Desative outro colaborador ou faça upgrade para o Plano Pro.`,
+              error: `Limite de usuários atingido! Seu plano atual (${tenant.plan}) permite no máximo ${maxUsersAllowed} usuário(s) ativo(s). Desative outro colaborador ou faça upgrade para ampliar a equipe.`,
             },
             { status: 400 }
           );
@@ -295,6 +331,10 @@ export async function DELETE(req: NextRequest) {
       req.cookies.get("torque_session")?.value ||
       req.headers.get("authorization")?.replace("Bearer ", "");
     const session = token ? verifySessionToken(token) : null;
+
+    if (!session?.tenantId && !session?.isMaster) {
+      return NextResponse.json({ error: "Sessão inválida para remover colaborador." }, { status: 401 });
+    }
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");

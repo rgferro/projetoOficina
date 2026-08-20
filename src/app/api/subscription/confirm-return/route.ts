@@ -11,6 +11,10 @@ export async function POST(req: NextRequest) {
     const token = req.cookies.get("torque_token")?.value;
     const session = token ? verifySessionToken(token) : null;
 
+    if (!session?.tenantId && !session?.isMaster) {
+      return NextResponse.json({ success: false, error: "Sessão inválida para confirmar pagamento." }, { status: 401 });
+    }
+
     const cleanExtRef =
       externalReference &&
       externalReference !== "null" &&
@@ -19,28 +23,17 @@ export async function POST(req: NextRequest) {
         ? String(externalReference).trim()
         : null;
 
-    let targetTenant = null;
-
-    if (cleanExtRef) {
-      targetTenant = await prisma.tenant.findUnique({ where: { id: cleanExtRef } });
+    if (cleanExtRef && !session?.isMaster && cleanExtRef !== session?.tenantId) {
+      return NextResponse.json(
+        { success: false, error: "Pagamento não pertence à oficina autenticada." },
+        { status: 403 }
+      );
     }
 
-    if (!targetTenant && session?.tenantId) {
-      targetTenant = await prisma.tenant.findUnique({ where: { id: session.tenantId } });
-    }
-
-    if (!targetTenant && session?.email) {
-      targetTenant = await prisma.tenant.findFirst({
-        where: { ownerEmail: session.email },
-      });
-    }
-
-    if (!targetTenant) {
-      targetTenant = await prisma.tenant.findFirst({
-        where: { active: true },
-        orderBy: { createdAt: "desc" },
-      });
-    }
+    const targetTenantId = session?.isMaster ? cleanExtRef || session?.tenantId : session?.tenantId;
+    const targetTenant = targetTenantId
+      ? await prisma.tenant.findUnique({ where: { id: targetTenantId } })
+      : null;
 
     if (!targetTenant) {
       return NextResponse.json(
@@ -73,6 +66,12 @@ export async function POST(req: NextRequest) {
         const recordedPayment = await prisma.subscriptionPayment.findFirst({
           where: { paymentId: String(paymentId) },
         });
+        if (recordedPayment && recordedPayment.tenantId !== targetTenant.id && !session?.isMaster) {
+          return NextResponse.json(
+            { success: false, error: "Pagamento não vinculado à sua oficina." },
+            { status: 403 }
+          );
+        }
         if (recordedPayment && recordedPayment.plan === "EXTRA_SEAT") {
           const extraSeatsCount = Math.round(amount / SAAS_PLANS.EXTRA_SEAT.price) || 1;
           const updatedTenant = await prisma.tenant.update({
@@ -95,7 +94,7 @@ export async function POST(req: NextRequest) {
 
       if (amount >= SAAS_PLANS.ELITE.price - 1 || resolvedPlan === "ELITE") {
         targetPlan = "ELITE";
-        targetMaxUsers = 8;
+        targetMaxUsers = 10;
       } else {
         targetPlan = "PRO";
         targetMaxUsers = 4;

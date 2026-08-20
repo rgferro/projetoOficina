@@ -10,7 +10,19 @@ export async function POST(req: NextRequest) {
 
     const token = req.cookies.get("torque_token")?.value;
     const session = token ? verifySessionToken(token) : null;
-    const resolvedTenantId = tenantId || session?.tenantId;
+
+    if (!session?.tenantId && !session?.isMaster) {
+      return NextResponse.json({ success: false, error: "Sessão inválida para assinatura." }, { status: 401 });
+    }
+
+    if (tenantId && !session?.isMaster && tenantId !== session?.tenantId) {
+      return NextResponse.json(
+        { success: false, error: "Acesso não autorizado para assinar por outra oficina." },
+        { status: 403 }
+      );
+    }
+
+    const resolvedTenantId = session?.isMaster ? tenantId || session?.tenantId : session?.tenantId;
 
     let tenant = null;
     if (resolvedTenantId) {
@@ -19,33 +31,8 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (!tenant && session?.email) {
-      tenant = await prisma.tenant.findFirst({
-        where: { ownerEmail: session.email },
-      });
-    }
-
     if (!tenant) {
-      tenant = await prisma.tenant.findFirst({
-        where: { active: true },
-        orderBy: { createdAt: "desc" },
-      });
-    }
-
-    if (!tenant) {
-      const setting = await prisma.workshopSetting.findUnique({ where: { id: "default" } });
-      tenant = await prisma.tenant.create({
-        data: {
-          name: setting?.workshopName || "Minha Oficina Automotiva",
-          document: setting?.cnpj || "12.345.678/0001-90",
-          ownerName: "Administrador da Oficina",
-          ownerEmail: "admin@torquerp.com.br",
-          ownerPhone: setting?.phone || "(11) 98765-4321",
-          plan: "STARTER",
-          maxUsers: 2,
-          subscriptionStatus: "active",
-        },
-      });
+      return NextResponse.json({ success: false, error: "Oficina não encontrada." }, { status: 404 });
     }
 
     const now = new Date();

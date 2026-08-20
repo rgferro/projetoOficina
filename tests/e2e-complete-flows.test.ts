@@ -437,13 +437,13 @@ describe("E2E & UI Flow Heavy Integration Tests Suite", () => {
   describe("Fluxo 6: Assinaturas SaaS & Mercado Pago", () => {
     it("deve carregar os planos STARTER, PRO, ELITE e EXTRA_SEAT com valores corretos", () => {
       expect(SAAS_PLANS.STARTER.price).toBe(0);
-      expect(SAAS_PLANS.STARTER.maxUsers).toBe(2);
+      expect(SAAS_PLANS.STARTER.maxUsers).toBe(1);
 
       expect(SAAS_PLANS.PRO.price).toBe(69.9);
       expect(SAAS_PLANS.PRO.maxUsers).toBe(4);
 
       expect(SAAS_PLANS.ELITE.price).toBe(129.9);
-      expect(SAAS_PLANS.ELITE.maxUsers).toBe(8);
+      expect(SAAS_PLANS.ELITE.maxUsers).toBe(10);
 
       expect(SAAS_PLANS.EXTRA_SEAT.price).toBe(14.9);
     });
