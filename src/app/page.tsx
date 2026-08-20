@@ -515,16 +515,17 @@ export default function LandingPage() {
                 R$ 0,00 <span className="text-xs font-normal text-slate-400">/mês</span>
               </div>
               <p className="text-xs text-slate-300">
-                Ideal para autônomos e oficinas começando agora.
+                Ideal para mecânicos solo e oficinas começando agora.
               </p>
               <div className="text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 p-2 rounded-xl border border-emerald-800">
-                ✓ Até 2 Usuários Inclusos (Dono + 1 Mecânico)
+                ✓ 1 Usuário único (Dono / Proprietário)
               </div>
               <ul className="space-y-2.5 text-xs text-slate-300 pt-2 border-t border-slate-800">
                 <li className="flex items-center gap-2">✓ Até 30 Ordens de Serviço/mês</li>
-                <li className="flex items-center gap-2">✓ Até 50 Lavagens de Carro/mês</li>
-                <li className="flex items-center gap-2">✓ PDV Balcão & Controle de Caixa</li>
-                <li className="flex items-center gap-2">✓ Cadastro de Clientes & Veículos</li>
+                <li className="flex items-center gap-2">✓ Oficina &amp; Ordens de Serviço</li>
+                <li className="flex items-center gap-2">✓ Cadastro de Clientes &amp; Veículos</li>
+                <li className="flex items-center gap-2">✓ Tabela de Serviços</li>
+                <li className="flex items-center gap-2 opacity-40 line-through">✗ PDV &amp; Caixa (Plano Pro)</li>
               </ul>
             </div>
             <Link
@@ -584,7 +585,7 @@ export default function LandingPage() {
                 Para centros automotivos e grandes frotas.
               </p>
               <div className="text-[11px] font-semibold text-purple-300 bg-purple-950/60 p-2 rounded-xl border border-purple-800">
-                ✓ Até 8 Usuários Inclusos
+                ✓ Até 10 Usuários Inclusos
               </div>
               <ul className="space-y-2.5 text-xs text-slate-300 pt-2 border-t border-slate-800">
                 <li className="flex items-center gap-2">✓ Tudo do Plano Pro Ilimitado</li>
@@ -628,8 +629,8 @@ export default function LandingPage() {
               a: "Não! O Torque ERP é 100% na nuvem. Você pode acessar de qualquer computador, notebook, tablet ou celular (Android e iPhone) pelo navegador de internet com total segurança.",
             },
             {
-              q: "Como funciona o plano grátis de 2 usuários?",
-              a: "Você pode criar sua conta imediatamente sem precisar cadastrar cartão de crédito. Você terá acesso ao sistema com até 2 usuários (ex: Dono + 1 Mecânico ou Operador de Lava-Jato) com limite mensal generoso para testar e organizar seu negócio.",
+              q: "Como funciona o plano grátis?",
+              a: "Você pode criar sua conta imediatamente sem precisar cadastrar cartão de crédito. O Plano Starter é 100% gratuito e permite 1 Usuário único (o próprio Dono ou Proprietário) com acesso à Oficina & OS, Clientes, Veículos e Tabela de Serviços — ideal para organizar seu negócio do zero sem custo.",
             },
             {
               q: "Como funciona o envio de mensagens no WhatsApp do cliente?",

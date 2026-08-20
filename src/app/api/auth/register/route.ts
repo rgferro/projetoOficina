@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
         city: city ? city.trim() : null,
         state: state ? state.trim() : null,
         plan: "STARTER",
-        maxUsers: 2,
+        maxUsers: 1,
         subscriptionStatus: "active",
         registrationIp: clientIp,
         lastLoginIp: clientIp,

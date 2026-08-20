@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
             if (amount >= SAAS_PLANS.ELITE.price - 1) {
               targetPlan = "ELITE";
-              targetMaxUsers = 8;
+              targetMaxUsers = 10;
             } else if (amount >= SAAS_PLANS.PRO.price - 1) {
               targetPlan = "PRO";
               targetMaxUsers = 4;

@@ -8,13 +8,25 @@ import {
   DEFAULT_PERMISSIONS_MAP,
   SYSTEM_MODULES,
   SystemModule,
+  SaaSPlan,
+  PLAN_PERMISSIONS_MAP,
+  MODULE_PLAN_REQUIREMENTS,
+  isRouteAllowedForPlan,
 } from "./permissions";
 
-export { ROLE_CONFIG, DEFAULT_PERMISSIONS_MAP, SYSTEM_MODULES };
-export type { AccessLevel, EmployeeUser, SystemModule };
+export {
+  ROLE_CONFIG,
+  DEFAULT_PERMISSIONS_MAP,
+  SYSTEM_MODULES,
+  PLAN_PERMISSIONS_MAP,
+  MODULE_PLAN_REQUIREMENTS,
+  isRouteAllowedForPlan,
+};
+export type { AccessLevel, EmployeeUser, SystemModule, SaaSPlan };
 
 interface AuthContextType {
   currentEmployee: EmployeeUser | null;
+  currentPlan: SaaSPlan;
   employees: EmployeeUser[];
   isEnforced: boolean;
   setIsEnforced: (val: boolean) => void;
@@ -23,6 +35,7 @@ interface AuthContextType {
   setRolePermissions: (role: AccessLevel, routes: string[]) => void;
   resetPermissions: () => void;
   canAccess: (path: string) => boolean;
+  canAccessPlan: (path: string) => boolean;
   reloadEmployees: () => Promise<void>;
   updateCurrentUser: (user: Partial<EmployeeUser>) => void;
   syncUserProfile: () => Promise<void>;
@@ -38,6 +51,7 @@ const DEFAULT_ADMIN: EmployeeUser = {
 
 const AuthContext = createContext<AuthContextType>({
   currentEmployee: DEFAULT_ADMIN,
+  currentPlan: "STARTER",
   employees: [],
   isEnforced: true,
   setIsEnforced: () => {},
@@ -46,6 +60,7 @@ const AuthContext = createContext<AuthContextType>({
   setRolePermissions: () => {},
   resetPermissions: () => {},
   canAccess: () => true,
+  canAccessPlan: () => true,
   reloadEmployees: async () => {},
   updateCurrentUser: () => {},
   syncUserProfile: async () => {},
@@ -53,6 +68,7 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentEmployee, setCurrentEmployee] = useState<EmployeeUser | null>(DEFAULT_ADMIN);
+  const [currentPlan, setCurrentPlan] = useState<SaaSPlan>("STARTER");
   const [employees, setEmployees] = useState<EmployeeUser[]>([]);
   const [isEnforced, setIsEnforced] = useState<boolean>(true);
   const [permissionsMap, setPermissionsMap] = useState<Record<AccessLevel, string[]>>(
@@ -97,10 +113,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             active: u.active !== undefined ? u.active : true,
           };
           setCurrentEmployee(freshEmployee);
+          if (u.plan) {
+            setCurrentPlan(u.plan as SaaSPlan);
+          }
           if (typeof window !== "undefined") {
             const savedUser = localStorage.getItem("torque_user");
             const parsed = savedUser ? JSON.parse(savedUser) : {};
-            const nextSaved = { ...parsed, ...u, accessLevel: u.accessLevel, role: u.role };
+            const nextSaved = { ...parsed, ...u, accessLevel: u.accessLevel, role: u.role, plan: u.plan };
             localStorage.setItem("torque_user", JSON.stringify(nextSaved));
             window.dispatchEvent(new CustomEvent("torque:user-updated", { detail: nextSaved }));
           }
@@ -171,6 +190,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             phone: u.phone,
             active: true,
           });
+          if (u.plan) {
+            setCurrentPlan(u.plan as SaaSPlan);
+          }
         }
       } catch (e) {}
 
@@ -193,6 +215,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             phone: u.phone || prev?.phone,
             active: u.active !== undefined ? u.active : (prev?.active ?? true),
           }));
+          if (u.plan) {
+            setCurrentPlan(u.plan as SaaSPlan);
+          }
         }
       };
 
@@ -246,11 +271,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     savePermissions(DEFAULT_PERMISSIONS_MAP);
   };
 
+  const canAccessPlan = (path: string): boolean => {
+    if (!isEnforced) return true;
+    return isRouteAllowedForPlan(currentPlan, path);
+  };
+
   const canAccess = (path: string): boolean => {
     if (!isEnforced) return true;
     if (!currentEmployee) return false;
+
+    // 1. Validação do Plano SaaS (Se o plano contratado não contempla o módulo, bloqueia)
+    if (!isRouteAllowedForPlan(currentPlan, path)) {
+      return false;
+    }
+
+    // 2. Se for Administrador/Dono, tem acesso a todos os módulos liberados pelo plano
     if (currentEmployee.accessLevel === "ADMIN") return true;
 
+    // 3. Validação do Cargo do colaborador
     const allowed = permissionsMap[currentEmployee.accessLevel] || [];
     return allowed.some((p) => (p === "/dashboard" ? path === "/dashboard" : path.startsWith(p)));
   };
@@ -259,6 +297,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{
         currentEmployee,
+        currentPlan,
         employees,
         isEnforced,
         setIsEnforced,
@@ -267,6 +306,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setRolePermissions,
         resetPermissions,
         canAccess,
+        canAccessPlan,
         reloadEmployees,
         updateCurrentUser,
         syncUserProfile,

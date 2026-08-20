@@ -2,28 +2,90 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth, ROLE_CONFIG } from "@/lib/authContext";
+import { useAuth, ROLE_CONFIG, MODULE_PLAN_REQUIREMENTS, isRouteAllowedForPlan } from "@/lib/authContext";
 import { getDefaultRouteForRole } from "@/lib/permissions";
-import { ShieldAlert, ArrowLeft } from "lucide-react";
+import { ShieldAlert, ArrowLeft, Sparkles, Lock, Zap } from "lucide-react";
 import Link from "next/link";
 
 export function AccessGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentEmployee, canAccess, isEnforced } = useAuth();
+  const { currentEmployee, currentPlan, canAccess, isEnforced } = useAuth();
 
+  const isPlanAllowed = isRouteAllowedForPlan(currentPlan, pathname);
   const hasAccess = canAccess(pathname);
-  const defaultAllowedRoute = getDefaultRouteForRole(currentEmployee?.accessLevel);
+  const defaultAllowedRoute = getDefaultRouteForRole(currentEmployee?.accessLevel, false, currentPlan);
 
   useEffect(() => {
     // Se o usuário tentar acessar a rota raiz /dashboard e seu cargo não tem permissão (ex: Mecânico ou Lavador),
-    // redireciona automaticamente e sem fricção para a tela de trabalho principal dele
+    // redireciona automaticamente para a tela de trabalho principal dele
     if (isEnforced && !hasAccess && (pathname === "/dashboard" || pathname === "/")) {
       router.replace(defaultAllowedRoute);
     }
   }, [isEnforced, hasAccess, pathname, defaultAllowedRoute, router]);
 
   if (isEnforced && !hasAccess) {
+    // 1. Caso o bloqueio seja do PLANO SAAS (ex: Plano Starter tentando acessar PDV, Financeiro, Lava-Jato, Relatórios)
+    if (!isPlanAllowed) {
+      const requirement = Object.entries(MODULE_PLAN_REQUIREMENTS).find(([routeKey]) =>
+        pathname.startsWith(routeKey)
+      )?.[1];
+
+      const requiredPlanName =
+        requirement?.requiredPlan === "ELITE" ? "Torque Oficina Elite" : "Torque Oficina Pro";
+      const moduleTitle = requirement?.moduleName || "Módulo Premium";
+      const explanation =
+        requirement?.reason ||
+        `O recurso ${pathname} está disponível nos planos pagos do Torque ERP.`;
+
+      return (
+        <div className="min-h-[75vh] flex flex-col items-center justify-center text-center p-6 space-y-6 animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-xl shadow-orange-500/20">
+            <Lock className="w-10 h-10" />
+          </div>
+
+          <div className="max-w-lg space-y-3">
+            <div className="inline-flex items-center gap-1.5 text-xs font-black px-3.5 py-1.5 rounded-full bg-amber-500/10 text-amber-700 border border-amber-500/30">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-current" />
+              <span>Disponível no {requiredPlanName}</span>
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              {moduleTitle}
+            </h1>
+
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-md mx-auto">
+              {explanation}
+            </p>
+
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-500 max-w-md mx-auto">
+              Seu plano atual é o <strong className="text-slate-800">Torque Starter (Gratuito)</strong>.
+              Faça upgrade para liberar múltiplos usuários, controle de caixa, PDV balcão e muito mais.
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <Link
+              href="/assinatura"
+              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs shadow-lg shadow-blue-600/20 transition-all flex items-center gap-2 active:scale-95"
+            >
+              <Zap className="w-4 h-4 text-amber-300 fill-current" />
+              Ver Planos & Fazer Upgrade
+            </Link>
+
+            <Link
+              href={defaultAllowedRoute}
+              className="px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Voltar para {defaultAllowedRoute === "/oficina" ? "Oficina & OS" : "Início"}
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
+    // 2. Caso o bloqueio seja de PERFIL/CARGO DO COLABORADOR
     const roleConfig = currentEmployee
       ? ROLE_CONFIG[currentEmployee.accessLevel]
       : ROLE_CONFIG.MECANICO;
@@ -39,7 +101,7 @@ export function AccessGuard({ children }: { children: React.ReactNode }) {
 
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6 space-y-6">
-        <div className="w-20 h-20 rounded-3xl bg-amber-100 border-2 border-amber-200 flex items-center justify-center text-amber-700 shadow-xl shadow-amber-500/10 animate-bounce">
+        <div className="w-20 h-20 rounded-3xl bg-amber-100 border-2 border-amber-200 flex items-center justify-center text-amber-700 shadow-xl shadow-amber-500/10">
           <ShieldAlert className="w-10 h-10" />
         </div>
 
@@ -55,10 +117,6 @@ export function AccessGuard({ children }: { children: React.ReactNode }) {
 
           <p className="text-xs text-slate-500 leading-relaxed">
             O usuário <strong className="text-slate-800">{currentEmployee?.name}</strong> não possui permissão de acesso ao módulo <strong className="text-slate-800 font-mono">{pathname}</strong>.
-          </p>
-
-          <p className="text-[11px] text-slate-400 italic">
-            Redirecionando para sua tela principal de trabalho...
           </p>
         </div>
 

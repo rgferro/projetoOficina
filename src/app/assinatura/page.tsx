@@ -297,7 +297,7 @@ export default function AssinaturaPage() {
 
   const tenant = tenantInfo?.tenant;
   const currentPlan = tenant?.plan || "STARTER";
-  const maxUsers = tenant?.maxUsers || 2;
+  const maxUsers = tenant?.maxUsers || 1;
   const currentUsers = tenant?.currentUsersCount || 1;
 
   return (
@@ -369,7 +369,12 @@ export default function AssinaturaPage() {
             Plano Atual: <span className="text-amber-400">{tenant?.planName || "Starter (Grátis)"}</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Sua oficina está utilizando <strong className="text-white">{currentUsers} de {maxUsers} usuários</strong> permitidos. Faça upgrade para liberar ordens de serviço ilimitadas, CRM WhatsApp e mais acessos.
+            {currentPlan === "STARTER"
+              ? "Você está no plano gratuito com 1 Usuário único. Faça upgrade para o Pro e ganhe PDV Balcão, Lava-Jato, Caixa & Financeiro, Estoque e equipe com até 4 usuários."
+              : `Sua oficina está utilizando `}
+            {currentPlan !== "STARTER" && (
+              <><strong className="text-white">{currentUsers} de {maxUsers} usuários</strong> permitidos.</>
+            )}
           </p>
         </div>
 
@@ -379,9 +384,11 @@ export default function AssinaturaPage() {
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-slate-400 font-medium">Assentos da Equipe:</div>
+              <div className="text-slate-400 font-medium">
+                {currentPlan === "STARTER" ? "Plano Gratuito:" : "Assentos da Equipe:"}
+              </div>
               <div className="text-base font-black text-white">
-                {currentUsers} / {maxUsers} Ativos
+                {currentPlan === "STARTER" ? "1 Usuário Único" : `${currentUsers} / ${maxUsers} Ativos`}
               </div>
             </div>
           </div>
@@ -439,13 +446,13 @@ export default function AssinaturaPage() {
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
-              Ideal para oficinas autônomas que desejam organizar as primeiras operações.
+              Ideal para oficinas autônomas e mecânicos solo que querem organizar as primeiras OS sem custo algum.
             </p>
 
             <ul className="space-y-2.5 text-xs text-slate-700 pt-2 border-t border-slate-100">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span>Até <strong>2 Usuários</strong> (Dono + 1 Operador)</span>
+                <span><strong>1 Usuário único</strong> (Dono / Proprietário)</span>
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
@@ -453,11 +460,23 @@ export default function AssinaturaPage() {
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span>Até 50 Lavagens de Veículos/mês</span>
+                <span>Oficina & Ordens de Serviço</span>
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span>PDV Balcão & Caixa Básico</span>
+                <span>Clientes & Veículos</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span>Tabela de Serviços</span>
+              </li>
+              <li className="flex items-center gap-2 opacity-40">
+                <X className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                <span className="line-through">PDV Balcão de Vendas</span>
+              </li>
+              <li className="flex items-center gap-2 opacity-40">
+                <X className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                <span className="line-through">Caixa & Financeiro</span>
               </li>
             </ul>
           </div>
@@ -628,7 +647,7 @@ export default function AssinaturaPage() {
             <ul className="space-y-2.5 text-xs text-slate-700 pt-2 border-t border-slate-100">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                <span>Até <strong>8 Usuários Inclusos</strong></span>
+                <span>Até <strong>10 Usuários Inclusos</strong></span>
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-purple-600 flex-shrink-0" />
@@ -748,10 +767,10 @@ export default function AssinaturaPage() {
               <p className="text-xs text-slate-600 leading-relaxed">
                 Adicione assentos extras para mecânicos, atendentes ou lavadores por apenas <strong>R$ 14,90 / mês</strong> cada.
               </p>
-              {maxUsers > (currentPlan === "ELITE" ? 8 : 4) && (
+              {maxUsers > (currentPlan === "ELITE" ? 10 : 4) && (
                 <div className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl inline-flex items-center gap-2">
                   <Users className="w-4 h-4 text-emerald-600" />
-                  Sua oficina possui <strong>+{maxUsers - (currentPlan === "ELITE" ? 8 : 4)} assento(s) adicional(is)</strong> ativo(s) ({maxUsers} usuários no total).
+                  Sua oficina possui <strong>+{maxUsers - (currentPlan === "ELITE" ? 10 : 4)} assento(s) adicional(is)</strong> ativo(s) ({maxUsers} usuários no total).
                 </div>
               )}
             </div>
@@ -801,7 +820,7 @@ export default function AssinaturaPage() {
             </div>
           </div>
 
-          {maxUsers > (currentPlan === "ELITE" ? 8 : 4) && (
+          {maxUsers > (currentPlan === "ELITE" ? 10 : 4) && (
             <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
               <span className="text-slate-500">
                 Deseja reduzir a capacidade de assentos da sua equipe?
@@ -1089,7 +1108,7 @@ export default function AssinaturaPage() {
                   • <strong>Sem novas cobranças:</strong> A renovação automática no cartão/PIX será suspensa imediatamente.
                 </span>
                 <span className="block text-slate-600">
-                  • <strong>Após o término do período:</strong> O plano retornará ao <em>Starter gratuito</em> (2 usuários) e seus colaboradores serão pausados sem nenhuma perda de histórico.
+                  • <strong>Após o término do período:</strong> O plano retornará ao <em>Starter gratuito</em> (1 usuário único) e seus colaboradores serão pausados sem nenhuma perda de histórico.
                 </span>
               </div>
             </div>

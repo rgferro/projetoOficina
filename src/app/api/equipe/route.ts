@@ -146,11 +146,19 @@ export async function POST(req: NextRequest) {
     const activeCount = await prisma.employee.count({
       where: { tenantId: tenant.id, active: true },
     });
-    const maxAllowedEmployees = Math.max(1, (tenant.maxUsers || 2) - 1);
+    const maxAllowedEmployees = Math.max(0, (tenant.maxUsers || 1) - 1);
     if (activeCount >= maxAllowedEmployees) {
+      if (maxAllowedEmployees === 0) {
+        return NextResponse.json(
+          {
+            error: "Seu plano atual (Torque Starter) permite apenas 1 Usuário único (Proprietário). Para adicionar e convidar membros para a sua equipe, faça upgrade para o Plano Torque Oficina Pro.",
+          },
+          { status: 400 }
+        );
+      }
       return NextResponse.json(
         {
-          error: `Seu plano atual (${tenant.plan}) permite até ${tenant.maxUsers} usuários no total (1 Proprietário + ${maxAllowedEmployees} Funcionário ativo). Para ativar mais funcionários, faça upgrade para o Plano Pro.`,
+          error: `Seu plano atual (${tenant.plan}) permite até ${tenant.maxUsers} usuários no total (1 Proprietário + ${maxAllowedEmployees} Colaborador(es) ativos). Para cadastrar mais membros, faça upgrade de plano ou adicione assentos extras.`,
         },
         { status: 400 }
       );

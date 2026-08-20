@@ -122,7 +122,6 @@ export const DEFAULT_PERMISSIONS_MAP: Record<AccessLevel, string[]> = {
     "/oficina",
     "/servicos",
     "/clientes",
-    "/financeiro",
     "/crm",
     "/manual",
     "/sobre",
@@ -153,6 +152,127 @@ export const DEFAULT_PERMISSIONS_MAP: Record<AccessLevel, string[]> = {
 
 export const PERMISSIONS_MAP = DEFAULT_PERMISSIONS_MAP;
 
+// ==========================================
+// MATRIZ DE MÓDULOS E RECURSOS POR PLANO SAAS
+// ==========================================
+export type SaaSPlan = "STARTER" | "PRO" | "ELITE";
+
+export const PLAN_PERMISSIONS_MAP: Record<string, string[]> = {
+  STARTER: [
+    "/",
+    "/dashboard",
+    "/oficina",
+    "/clientes",
+    "/servicos",
+    "/manual",
+    "/assinatura",
+    "/configuracoes",
+    "/sobre",
+    "/contato",
+    "/termos",
+    "/privacidade",
+  ],
+  PRO: [
+    "/",
+    "/dashboard",
+    "/oficina",
+    "/clientes",
+    "/servicos",
+    "/pdv",
+    "/lavajato",
+    "/estoque",
+    "/fornecedores",
+    "/crm",
+    "/financeiro",
+    "/equipe",
+    "/manual",
+    "/assinatura",
+    "/configuracoes",
+    "/sobre",
+    "/contato",
+    "/termos",
+    "/privacidade",
+  ],
+  ELITE: [
+    "/",
+    "/dashboard",
+    "/oficina",
+    "/clientes",
+    "/servicos",
+    "/pdv",
+    "/lavajato",
+    "/estoque",
+    "/fornecedores",
+    "/crm",
+    "/financeiro",
+    "/relatorios",
+    "/equipe",
+    "/manual",
+    "/assinatura",
+    "/master-admin",
+    "/configuracoes",
+    "/sobre",
+    "/contato",
+    "/termos",
+    "/privacidade",
+  ],
+};
+
+export interface PlanFeatureInfo {
+  requiredPlan: SaaSPlan;
+  moduleName: string;
+  reason: string;
+}
+
+export const MODULE_PLAN_REQUIREMENTS: Record<string, PlanFeatureInfo> = {
+  "/pdv": {
+    requiredPlan: "PRO",
+    moduleName: "PDV Balcão de Vendas",
+    reason: "O PDV de Balcão com vendas rápidas de peças está disponível a partir do Plano Torque Oficina Pro.",
+  },
+  "/financeiro": {
+    requiredPlan: "PRO",
+    moduleName: "Caixa & Financeiro",
+    reason: "O controle financeiro, fluxo de caixa diário e gestão de pagamentos estão disponíveis a partir do Plano Torque Oficina Pro.",
+  },
+  "/lavajato": {
+    requiredPlan: "PRO",
+    moduleName: "Lava-Jato & Pátio",
+    reason: "O módulo de Lava-Jato com controle de pátio e quadro Kanban está disponível a partir do Plano Torque Oficina Pro.",
+  },
+  "/estoque": {
+    requiredPlan: "PRO",
+    moduleName: "Estoque de Peças",
+    reason: "O controle de estoque de peças e produtos com baixa automática está disponível a partir do Plano Torque Oficina Pro.",
+  },
+  "/fornecedores": {
+    requiredPlan: "PRO",
+    moduleName: "Fornecedores",
+    reason: "O cadastro e gestão de fornecedores de peças está disponível a partir do Plano Torque Oficina Pro.",
+  },
+  "/crm": {
+    requiredPlan: "PRO",
+    moduleName: "CRM WhatsApp Alertas",
+    reason: "Os alertas automáticos de revisão de óleo e mensagens de WhatsApp estão disponíveis a partir do Plano Torque Oficina Pro.",
+  },
+  "/equipe": {
+    requiredPlan: "PRO",
+    moduleName: "Equipe & Controle de Usuários",
+    reason: "A gestão de colaboradores e múltiplos usuários está disponível a partir do Plano Torque Oficina Pro (até 4 usuários inclusos).",
+  },
+  "/relatorios": {
+    requiredPlan: "ELITE",
+    moduleName: "Relatórios & BI Avançados",
+    reason: "A inteligência de negócios (BI), DRE avançado e produtividade de equipe são exclusivos do Plano Torque Oficina Elite.",
+  },
+};
+
+export function isRouteAllowedForPlan(plan: string | null | undefined, route: string): boolean {
+  const effectivePlan = (plan?.toUpperCase() as SaaSPlan) || "STARTER";
+  const allowedList = PLAN_PERMISSIONS_MAP[effectivePlan] || PLAN_PERMISSIONS_MAP.STARTER;
+  return allowedList.some((p) => (p === "/dashboard" || p === "/" ? route === "/" || route === "/dashboard" : route.startsWith(p)));
+}
+
 // Rota principal / Tela inicial de trabalho por perfil
 export const ROLE_DEFAULT_ROUTES: Record<AccessLevel, string> = {
   ADMIN: "/dashboard",
@@ -162,8 +282,16 @@ export const ROLE_DEFAULT_ROUTES: Record<AccessLevel, string> = {
   LAVADOR: "/lavajato",
 };
 
-export function getDefaultRouteForRole(accessLevel?: string | null, isMaster?: boolean): string {
+export function getDefaultRouteForRole(accessLevel?: string | null, isMaster?: boolean, plan?: string | null): string {
   if (isMaster) return "/master-admin";
+  
+  // Se estiver no plano Starter e for tentar ir para uma rota bloqueada, manda para Oficina
+  if (plan === "STARTER") {
+    if (accessLevel === "ADMIN" || accessLevel === "GERENTE") return "/dashboard";
+    return "/oficina";
+  }
+
   if (!accessLevel) return "/dashboard";
   return ROLE_DEFAULT_ROUTES[accessLevel as AccessLevel] || "/dashboard";
 }
+

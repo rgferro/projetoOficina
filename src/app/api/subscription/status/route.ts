@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
           ownerEmail: "admin@torquerp.com.br",
           ownerPhone: setting?.phone || "(11) 98765-4321",
           plan: "STARTER",
-          maxUsers: 2,
+          maxUsers: 1,
           subscriptionStatus: "active",
         },
       });
@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
           nextExpiry.setDate(nextExpiry.getDate() + 30);
 
           let newPlan = pendingPayment.plan === "ELITE" ? "ELITE" : "PRO";
-          let newMax = newPlan === "ELITE" ? 8 : 4;
+          let newMax = newPlan === "ELITE" ? 10 : 4;
 
           if (pendingPayment.plan === "EXTRA_SEAT") {
             const extraCount = Math.round(pendingPayment.amount / SAAS_PLANS.EXTRA_SEAT.price) || 1;
@@ -112,7 +112,7 @@ export async function GET(req: NextRequest) {
     // - Durante os 30 dias contratados: Plano 100% ativo.
     // - Se a fatura/PIX vencer:
     //    * Dias 1 e 2 após vencimento: Mantém acesso integral com AVISO URGENTE DE COBRANÇA.
-    //    * A partir do Dia 3: Rebaixa automaticamente para o Plano Starter (2 usuários) e pausa funcionários adicionais com todo histórico preservado.
+    //    * A partir do Dia 3: Rebaixa automaticamente para o Plano Starter (1 usuário) e pausa funcionários adicionais com todo histórico preservado.
     let effectivePlan = tenant.plan;
     let effectiveMaxUsers = tenant.maxUsers;
     let effectiveStatus = tenant.subscriptionStatus || "active";
@@ -140,7 +140,7 @@ export async function GET(req: NextRequest) {
             where: { id: tenant.id },
             data: {
               plan: "STARTER",
-              maxUsers: 2,
+              maxUsers: 1,
               subscriptionStatus: "expired",
             },
           });
@@ -152,7 +152,7 @@ export async function GET(req: NextRequest) {
           });
 
           effectivePlan = "STARTER";
-          effectiveMaxUsers = 2;
+          effectiveMaxUsers = 1;
           effectiveStatus = "expired";
           paymentOverdueNotice = {
             daysOverdue,

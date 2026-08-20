@@ -71,7 +71,7 @@ export async function getTenantContext(req?: Request): Promise<TenantContext> {
         ownerName: "Administrador Principal",
         ownerEmail: "admin@oficina.com.br",
         plan: "STARTER",
-        maxUsers: 5,
+        maxUsers: 1,
         subscriptionStatus: "active",
       },
     });
