@@ -12,13 +12,14 @@ export function AccessGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { currentEmployee, currentPlan, canAccess, isEnforced } = useAuth();
 
+  const isPlanAllowed = isRouteAllowedForPlan(currentPlan, pathname);
   const hasAccess = canAccess(pathname);
   const isBlockedByPlan = !isRouteAllowedForPlan(currentPlan, pathname);
   const defaultAllowedRoute = getDefaultRouteForRole(currentEmployee?.accessLevel);
 
   useEffect(() => {
     // Se o usuário tentar acessar a rota raiz /dashboard e seu cargo não tem permissão (ex: Mecânico ou Lavador),
-    // redireciona automaticamente e sem fricção para a tela de trabalho principal dele
+    // redireciona automaticamente para a tela de trabalho principal dele
     if (isEnforced && !hasAccess && (pathname === "/dashboard" || pathname === "/")) {
       router.replace(defaultAllowedRoute);
     }
@@ -81,7 +82,7 @@ export function AccessGuard({ children }: { children: React.ReactNode }) {
 
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6 space-y-6">
-        <div className="w-20 h-20 rounded-3xl bg-amber-100 border-2 border-amber-200 flex items-center justify-center text-amber-700 shadow-xl shadow-amber-500/10 animate-bounce">
+        <div className="w-20 h-20 rounded-3xl bg-amber-100 border-2 border-amber-200 flex items-center justify-center text-amber-700 shadow-xl shadow-amber-500/10">
           <ShieldAlert className="w-10 h-10" />
         </div>
 
@@ -97,10 +98,6 @@ export function AccessGuard({ children }: { children: React.ReactNode }) {
 
           <p className="text-xs text-slate-500 leading-relaxed">
             O usuário <strong className="text-slate-800">{currentEmployee?.name}</strong> não possui permissão de acesso ao módulo <strong className="text-slate-800 font-mono">{pathname}</strong>.
-          </p>
-
-          <p className="text-[11px] text-slate-400 italic">
-            Redirecionando para sua tela principal de trabalho...
           </p>
         </div>
 

@@ -512,7 +512,7 @@ export default function LandingPage() {
                 R$ 0,00 <span className="text-xs font-normal text-slate-400">/mês</span>
               </div>
               <p className="text-xs text-slate-300">
-                Ideal para autônomos e oficinas começando agora.
+                Ideal para mecânicos solo e oficinas começando agora.
               </p>
               <div className="text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 p-2 rounded-xl border border-emerald-800">
                 ✓ 1 Usuário Incluso (Dono / Administrador)

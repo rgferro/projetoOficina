@@ -124,7 +124,6 @@ export const DEFAULT_PERMISSIONS_MAP: Record<AccessLevel, string[]> = {
     "/oficina",
     "/servicos",
     "/clientes",
-    "/financeiro",
     "/crm",
     "/manual",
     "/sobre",
@@ -252,8 +251,16 @@ export const ROLE_DEFAULT_ROUTES: Record<AccessLevel, string> = {
   LAVADOR: "/lavajato",
 };
 
-export function getDefaultRouteForRole(accessLevel?: string | null, isMaster?: boolean): string {
+export function getDefaultRouteForRole(accessLevel?: string | null, isMaster?: boolean, plan?: string | null): string {
   if (isMaster) return "/master-admin";
+  
+  // Se estiver no plano Starter e for tentar ir para uma rota bloqueada, manda para Oficina
+  if (plan === "STARTER") {
+    if (accessLevel === "ADMIN" || accessLevel === "GERENTE") return "/dashboard";
+    return "/oficina";
+  }
+
   if (!accessLevel) return "/dashboard";
   return ROLE_DEFAULT_ROUTES[accessLevel as AccessLevel] || "/dashboard";
 }
+

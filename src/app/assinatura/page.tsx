@@ -370,7 +370,12 @@ export default function AssinaturaPage() {
             Plano Atual: <span className="text-amber-400">{tenant?.planName || "Starter (Grátis)"}</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Sua oficina está utilizando <strong className="text-white">{currentUsers} de {maxUsers} usuários</strong> permitidos. Faça upgrade para liberar ordens de serviço ilimitadas, CRM WhatsApp e mais acessos.
+            {currentPlan === "STARTER"
+              ? "Você está no plano gratuito com 1 Usuário único. Faça upgrade para o Pro e ganhe PDV Balcão, Lava-Jato, Caixa & Financeiro, Estoque e equipe com até 4 usuários."
+              : `Sua oficina está utilizando `}
+            {currentPlan !== "STARTER" && (
+              <><strong className="text-white">{currentUsers} de {maxUsers} usuários</strong> permitidos.</>
+            )}
           </p>
         </div>
 
@@ -380,9 +385,11 @@ export default function AssinaturaPage() {
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-slate-400 font-medium">Assentos da Equipe:</div>
+              <div className="text-slate-400 font-medium">
+                {currentPlan === "STARTER" ? "Plano Gratuito:" : "Assentos da Equipe:"}
+              </div>
               <div className="text-base font-black text-white">
-                {currentUsers} / {maxUsers} Ativos
+                {currentPlan === "STARTER" ? "1 Usuário Único" : `${currentUsers} / ${maxUsers} Ativos`}
               </div>
             </div>
           </div>
@@ -440,7 +447,7 @@ export default function AssinaturaPage() {
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
-              Ideal para oficinas autônomas que desejam organizar as primeiras operações.
+              Ideal para oficinas autônomas e mecânicos solo que querem organizar as primeiras OS sem custo algum.
             </p>
 
             <ul className="space-y-2.5 text-xs text-slate-700 pt-2 border-t border-slate-100">

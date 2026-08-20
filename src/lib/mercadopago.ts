@@ -22,7 +22,7 @@ export const SAAS_PLANS: Record<string, PlanConfig> = {
     name: "Torque Oficina Pro",
     price: 69.9,
     maxUsers: 4,
-    description: "Até 4 usuários, Ordens de Serviço e Lavagens ilimitadas + CRM WhatsApp.",
+    description: "Até 4 usuários, OSs e Lavagens ilimitadas, PDV Balcão, Caixa & Financeiro, Estoque, Fornecedores e CRM WhatsApp.",
   },
   ELITE: {
     id: "ELITE",

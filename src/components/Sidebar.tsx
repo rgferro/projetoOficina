@@ -100,7 +100,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* Brand Header */}
         <div className="h-16 px-6 flex items-center justify-between border-b border-slate-800 bg-slate-950">
           <Link
-            href={getDefaultRouteForRole(currentEmployee?.accessLevel, isMasterUser)}
+            href={getDefaultRouteForRole(currentEmployee?.accessLevel, isMasterUser, currentPlan)}
             className="flex items-center gap-3 font-bold text-lg tracking-tight"
           >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
@@ -136,12 +136,19 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </div>
               </div>
             </div>
-            {isEnforced && (
-              <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                <Lock className="w-2.5 h-2.5" />
-                Restrito
+            <div className="flex items-center gap-1">
+              <span
+                className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${
+                  currentPlan === "ELITE"
+                    ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
+                    : currentPlan === "PRO"
+                    ? "bg-blue-500/20 text-blue-300 border-blue-500/30"
+                    : "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                }`}
+              >
+                {currentPlan === "ELITE" ? "Elite" : currentPlan === "PRO" ? "Pro" : "Starter"}
               </span>
-            )}
+            </div>
           </div>
         </div>
 
