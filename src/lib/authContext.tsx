@@ -9,6 +9,7 @@ import {
   SYSTEM_MODULES,
   SystemModule,
   SaaSPlan,
+  PLAN_PERMISSIONS_MAP,
   isRouteAllowedForPlan,
 } from "./permissions";
 
@@ -17,7 +18,6 @@ export {
   DEFAULT_PERMISSIONS_MAP,
   SYSTEM_MODULES,
   PLAN_PERMISSIONS_MAP,
-  MODULE_PLAN_REQUIREMENTS,
   isRouteAllowedForPlan,
 };
 export type { AccessLevel, EmployeeUser, SystemModule, SaaSPlan };
