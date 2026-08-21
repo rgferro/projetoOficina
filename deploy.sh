@@ -10,7 +10,7 @@ cd /var/www/torquerp
 
 echo "[1/4] Puxando atualizações do GitHub..."
 git stash || true
-git pull origin master
+git pull origin main
 
 echo "[2/4] Configurando variáveis de ambiente..."
 cat << 'EOF' > .env
