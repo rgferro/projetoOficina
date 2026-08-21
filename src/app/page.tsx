@@ -515,17 +515,19 @@ export default function LandingPage() {
                 R$ 0,00 <span className="text-xs font-normal text-slate-400">/mês</span>
               </div>
               <p className="text-xs text-slate-300">
-                Ideal para mecânicos solo e oficinas começando agora.
+                Ideal para mecânicos solo, oficinas e lava-jatos começando agora.
               </p>
               <div className="text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 p-2 rounded-xl border border-emerald-800">
                 ✓ 1 Usuário único (Dono / Proprietário)
               </div>
               <ul className="space-y-2.5 text-xs text-slate-300 pt-2 border-t border-slate-800">
                 <li className="flex items-center gap-2">✓ Até 30 Ordens de Serviço/mês</li>
+                <li className="flex items-center gap-2">✓ <strong>Lava-Jato (Até 50 Lavagens/mês)</strong></li>
+                <li className="flex items-center gap-2">✓ <strong>Caixa Diário &amp; Financeiro</strong></li>
                 <li className="flex items-center gap-2">✓ Oficina &amp; Ordens de Serviço</li>
                 <li className="flex items-center gap-2">✓ Cadastro de Clientes &amp; Veículos</li>
                 <li className="flex items-center gap-2">✓ Tabela de Serviços</li>
-                <li className="flex items-center gap-2 opacity-40 line-through">✗ PDV &amp; Caixa (Plano Pro)</li>
+                <li className="flex items-center gap-2 opacity-40 line-through">✗ PDV Balcão de Peças (Plano Pro)</li>
               </ul>
             </div>
             <Link
@@ -558,7 +560,8 @@ export default function LandingPage() {
               <ul className="space-y-2.5 text-xs text-white pt-2 border-t border-blue-700/60">
                 <li className="flex items-center gap-2">✓ <strong>OS e Lavagens ILIMITADAS</strong></li>
                 <li className="flex items-center gap-2">✓ <strong>Avisos Automáticos no WhatsApp</strong></li>
-                <li className="flex items-center gap-2">✓ Fotos de Avarias & Checklist Digital</li>
+                <li className="flex items-center gap-2">✓ PDV Balcão &amp; Controle de Estoque</li>
+                <li className="flex items-center gap-2">✓ Fotos de Avarias &amp; Checklist Digital</li>
                 <li className="flex items-center gap-2">✓ CRM Lembretes de Troca de Óleo</li>
                 <li className="flex items-center gap-2">✓ Importador de Notas NF-e XML</li>
               </ul>
@@ -630,7 +633,7 @@ export default function LandingPage() {
             },
             {
               q: "Como funciona o plano grátis?",
-              a: "Você pode criar sua conta imediatamente sem precisar cadastrar cartão de crédito. O Plano Starter é 100% gratuito e permite 1 Usuário único (o próprio Dono ou Proprietário) com acesso à Oficina & OS, Clientes, Veículos e Tabela de Serviços — ideal para organizar seu negócio do zero sem custo.",
+              a: "Você pode criar sua conta imediatamente sem precisar cadastrar cartão de crédito. O Plano Starter é 100% gratuito e permite 1 Usuário único (o próprio Dono ou Proprietário) com acesso à Lava-Jato (até 50 lavagens/mês), Caixa & Financeiro, Oficina & OS (até 30 OS/mês), Clientes, Veículos e Serviços — ideal para organizar seu negócio do zero sem custo.",
             },
             {
               q: "Como funciona o envio de mensagens no WhatsApp do cliente?",

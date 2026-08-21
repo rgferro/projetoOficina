@@ -15,7 +15,7 @@ export const SAAS_PLANS: Record<string, PlanConfig> = {
     name: "Torque Starter (Grátis)",
     price: 0,
     maxUsers: 1,
-    description: "1 Usuário único (Dono), até 30 OSs/mês, Oficina, Clientes, Veículos e Serviços.",
+    description: "1 Usuário único (Dono), até 30 OSs/mês, até 50 Lavagens/mês, Lava-Jato com Kanban, Caixa & Financeiro, Clientes, Veículos e Serviços.",
   },
   PRO: {
     id: "PRO",

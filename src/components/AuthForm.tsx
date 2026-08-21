@@ -704,7 +704,7 @@ export function AuthForm({ initialTab = "LOGIN" }: { initialTab?: "LOGIN" | "REG
         {activeTab === "REGISTER" && (
           <form onSubmit={handleRegisterSubmit} className="space-y-4">
             <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-2xl text-[11px] text-blue-800 leading-snug">
-              🎁 <strong>Plano Starter Gratuito:</strong> Até 2 Usuários inclusos (Dono + 1 Operador), sem necessidade de cartão de crédito.
+              🎁 <strong>Plano Starter Gratuito:</strong> 1 Usuário único incluso (Dono), Lava-Jato (50 lavagens/mês), Caixa &amp; Financeiro e Ordens de Serviço (30 OS/mês) sem pedir cartão de crédito.
             </div>
 
             {/* 1. DADOS DA OFICINA */}

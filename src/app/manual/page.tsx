@@ -362,7 +362,7 @@ export default function ManualPage() {
         {
           num: "3",
           title: "Como funciona o limite do Plano Starter?",
-          desc: "O plano Starter gratuito permite até 2 usuários, 30 Ordens de Serviço e 50 Lavagens por mês. Ao atingir o limite, você pode fazer upgrade para o Plano Pro com operações ilimitadas.",
+          desc: "O plano Starter gratuito permite 1 usuário único (Dono), até 30 Ordens de Serviço e até 50 Lavagens de Lava-Jato por mês, com controle completo de Caixa & Financeiro. Ao atingir a cota mensal, você pode fazer upgrade para o Plano Pro para operações e lavagens ilimitadas.",
         },
         {
           num: "4",

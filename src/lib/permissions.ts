@@ -162,6 +162,8 @@ export const PLAN_PERMISSIONS_MAP: Record<string, string[]> = {
     "/",
     "/dashboard",
     "/oficina",
+    "/lavajato",
+    "/financeiro",
     "/clientes",
     "/servicos",
     "/manual",
@@ -229,16 +231,6 @@ export const MODULE_PLAN_REQUIREMENTS: Record<string, PlanFeatureInfo> = {
     requiredPlan: "PRO",
     moduleName: "PDV Balcão de Vendas",
     reason: "O PDV de Balcão com vendas rápidas de peças está disponível a partir do Plano Torque Oficina Pro.",
-  },
-  "/financeiro": {
-    requiredPlan: "PRO",
-    moduleName: "Caixa & Financeiro",
-    reason: "O controle financeiro, fluxo de caixa diário e gestão de pagamentos estão disponíveis a partir do Plano Torque Oficina Pro.",
-  },
-  "/lavajato": {
-    requiredPlan: "PRO",
-    moduleName: "Lava-Jato & Pátio",
-    reason: "O módulo de Lava-Jato com controle de pátio e quadro Kanban está disponível a partir do Plano Torque Oficina Pro.",
   },
   "/estoque": {
     requiredPlan: "PRO",

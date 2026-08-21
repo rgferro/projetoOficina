@@ -370,7 +370,7 @@ export default function AssinaturaPage() {
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
             {currentPlan === "STARTER"
-              ? "Você está no plano gratuito com 1 Usuário único. Faça upgrade para o Pro e ganhe PDV Balcão, Lava-Jato, Caixa & Financeiro, Estoque e equipe com até 4 usuários."
+              ? "Você está no plano gratuito com 1 Usuário único. Faça upgrade para o Pro e ganhe PDV Balcão de Vendas, Estoque com baixa automática, CRM WhatsApp e equipe com até 4 usuários."
               : `Sua oficina está utilizando `}
             {currentPlan !== "STARTER" && (
               <><strong className="text-white">{currentUsers} de {maxUsers} usuários</strong> permitidos.</>
@@ -446,7 +446,7 @@ export default function AssinaturaPage() {
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
-              Ideal para oficinas autônomas e mecânicos solo que querem organizar as primeiras OS sem custo algum.
+              Ideal para oficinas autônomas, mecânicos e lava-jatos solo que querem organizar suas operações e caixa sem custo algum.
             </p>
 
             <ul className="space-y-2.5 text-xs text-slate-700 pt-2 border-t border-slate-100">
@@ -460,23 +460,23 @@ export default function AssinaturaPage() {
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span>Oficina & Ordens de Serviço</span>
+                <span><strong>Lava-Jato (Até 50 Lavagens/mês)</strong></span>
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span>Clientes & Veículos</span>
+                <span><strong>Caixa Diário &amp; Financeiro</strong></span>
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span>Tabela de Serviços</span>
+                <span>Oficina &amp; Ordens de Serviço</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span>Clientes, Veículos &amp; Serviços</span>
               </li>
               <li className="flex items-center gap-2 opacity-40">
                 <X className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                <span className="line-through">PDV Balcão de Vendas</span>
-              </li>
-              <li className="flex items-center gap-2 opacity-40">
-                <X className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                <span className="line-through">Caixa & Financeiro</span>
+                <span className="line-through">PDV Balcão de Peças</span>
               </li>
             </ul>
           </div>

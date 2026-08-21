@@ -60,7 +60,7 @@ export function AccessGuard({ children }: { children: React.ReactNode }) {
 
             <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-500 max-w-md mx-auto">
               Seu plano atual é o <strong className="text-slate-800">Torque Starter (Gratuito)</strong>.
-              Faça upgrade para liberar múltiplos usuários, controle de caixa, PDV balcão e muito mais.
+              Faça upgrade para liberar múltiplos usuários, PDV balcão, estoque de peças com baixa automática, CRM WhatsApp e relatórios.
             </div>
           </div>
 
