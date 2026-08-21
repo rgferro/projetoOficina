@@ -18,16 +18,16 @@ echo.
 echo [1/4] Enviando alteracoes locais para o GitHub...
 git add .
 git commit -m "deploy: atualizacao automatica de producao"
-git push origin master
+git push origin main
 
 echo.
 echo [2/4] Conectando na VM via SSH e atualizando com Zero-Downtime...
-powershell -Command "ssh -o StrictHostKeyChecking=no -i $env:USERPROFILE\.ssh\id_ed25519 ubuntu@137.131.221.53 'cd /var/www/torquerp && git stash && git pull origin master && npx prisma generate && npx prisma db push && npm run build && pm2 reload torquerp --update-env && pm2 status torquerp'"
+powershell -Command "ssh -o StrictHostKeyChecking=no -i $env:USERPROFILE\.ssh\id_ed25519 ubuntu@137.131.221.53 'cd /var/www/torquerp && git stash && git checkout main && git pull origin main && npm install && npx prisma generate && npx prisma db push && npm run build && pm2 reload torquerp --update-env && pm2 status torquerp'"
 
 if %errorlevel% neq 0 (
     echo.
     echo [!] Tentando com chave secundaria oci_key...
-    powershell -Command "ssh -o StrictHostKeyChecking=no -i $env:USERPROFILE\.ssh\oci_key ubuntu@137.131.221.53 'cd /var/www/torquerp && git stash && git pull origin master && npx prisma generate && npx prisma db push && npm run build && pm2 reload torquerp --update-env && pm2 status torquerp'"
+    powershell -Command "ssh -o StrictHostKeyChecking=no -i $env:USERPROFILE\.ssh\oci_key ubuntu@137.131.221.53 'cd /var/www/torquerp && git stash && git checkout main && git pull origin main && npm install && npx prisma generate && npx prisma db push && npm run build && pm2 reload torquerp --update-env && pm2 status torquerp'"
 )
 
 echo.
