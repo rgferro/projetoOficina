@@ -359,7 +359,7 @@ export default function AssinaturaPage() {
       )}
 
       {/* Top Banner de Status da Assinatura */}
-      <div className="bg-slate-900 rounded-3xl p-6 sm:p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xl relative overflow-hidden">
+      <div id="assinatura-status-banner" className="bg-slate-900 rounded-3xl p-6 sm:p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xl relative overflow-hidden">
         <div className="space-y-2 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-bold">
             <Zap className="w-3.5 h-3.5" />
@@ -379,7 +379,7 @@ export default function AssinaturaPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <div className="bg-slate-800/80 border border-slate-700 p-4 rounded-2xl flex items-center gap-4 text-xs">
+          <div id="assinatura-seats-card" className="bg-slate-800/80 border border-slate-700 p-4 rounded-2xl flex items-center gap-4 text-xs">
             <div className="w-10 h-10 rounded-xl bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-blue-400">
               <Users className="w-5 h-5" />
             </div>
@@ -419,7 +419,7 @@ export default function AssinaturaPage() {
       </div>
 
       {/* Grade de Planos */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div id="assinatura-plans-grid" className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Plano Starter */}
         <div
           className={`bg-white rounded-3xl p-6 sm:p-8 border-2 transition-all space-y-6 flex flex-col justify-between ${

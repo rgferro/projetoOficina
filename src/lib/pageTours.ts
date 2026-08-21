@@ -364,14 +364,14 @@ export const PAGE_TOURS: Record<string, PageTourDefinition> = {
 
   // 9. CAIXA & FINANCEIRO
   "/financeiro": {
-    title: "Tutorial de Caixa & Livro Financeiro",
+    title: "Tutorial de Caixa Diário & Gestão Financeira",
     steps: [
       {
         element: "#fin-balance-cards",
         popover: {
-          title: "1. Saldo do Dia & Entradas/Saídas",
+          title: "1. Saldo do Dia & Indicadores de Fluxo",
           description:
-            "Veja o saldo consolidado em dinheiro, PIX e cartão, além do total de receitas e despesas lançadas no período.",
+            "Acompanhe o faturamento total em tempo real: Total de Entradas / Receitas (PDV, OS e Lavagens), Despesas do dia, Saldo Líquido e Contas a Pagar / Receber pendentes.",
           side: "bottom",
           align: "start",
         },
@@ -379,19 +379,29 @@ export const PAGE_TOURS: Record<string, PageTourDefinition> = {
       {
         element: "#fin-actions-bar",
         popover: {
-          title: "2. Sangrias & Suprimentos de Caixa",
+          title: "2. Abertura de Turno, Sangrias e Suprimentos",
           description:
-            "Lance retiradas para pagamento de fornecedores (Sangria) ou aportes de troco inicial (Suprimento) mantendo o caixa 100% auditável.",
+            "Abra o turno de caixa informando o valor de troco inicial. Lance retiradas imediatas para despesas operacionais (Sangria) ou aportes de dinheiro (Suprimento) para manter o caixa auditável.",
           side: "bottom",
           align: "end",
         },
       },
       {
+        element: "#fin-tabs",
+        popover: {
+          title: "3. Abas de Gestão: Livro Caixa, Contas a Pagar e Receber",
+          description:
+            "Alterne entre o extrato do Livro Caixa (entradas/saídas em tempo real), contas a pagar para distribuidores de autopeças e contas a receber de clientes a prazo.",
+          side: "top",
+          align: "start",
+        },
+      },
+      {
         element: "#fin-transactions-table",
         popover: {
-          title: "3. Extrato Detalhado de Movimentações",
+          title: "4. Extrato Completo e Baixa Automática",
           description:
-            "Todas as vendas de PDV, OS concluídas e lavagens entregues aparecem aqui em ordem cronológica com filtros por método de pagamento.",
+            "Cada serviço entregue no Lava-Jato, OS finalizada na Oficina ou venda feita no PDV Balcão entra automaticamente neste extrato com a forma de pagamento (PIX, Cartão ou Dinheiro).",
           side: "top",
           align: "start",
         },
@@ -399,16 +409,90 @@ export const PAGE_TOURS: Record<string, PageTourDefinition> = {
     ],
   },
 
-  // 10. CRM WHATSAPP
+  // 10. CLIENTES & VEÍCULOS
+  "/clientes": {
+    title: "Tutorial de Gestão de Clientes & Veículos (Frota)",
+    steps: [
+      {
+        element: "#clientes-new-btn",
+        popover: {
+          title: "1. Cadastrar Novo Cliente",
+          description:
+            "Clique para cadastrar um novo cliente informando Nome, Telefone/WhatsApp, CPF ou CNPJ, Endereço e o primeiro veículo da frota com placa, modelo e quilometragem.",
+          side: "bottom",
+          align: "end",
+        },
+      },
+      {
+        element: "#clientes-search-bar",
+        popover: {
+          title: "2. Busca Rápida Inteligente",
+          description:
+            "Localize qualquer cliente em segundos digitando o nome, número de WhatsApp, CPF/CNPJ ou a placa do veículo.",
+          side: "bottom",
+          align: "start",
+        },
+      },
+      {
+        element: "#clientes-cards-grid",
+        popover: {
+          title: "3. Ficha do Cliente & Histórico de Manutenções",
+          description:
+            "Clique no card do cliente para abrir a ficha completa: adicione múltiplos veículos à mesma família/empresa e consulte o histórico de todas as OS e lavagens anteriores.",
+          side: "top",
+          align: "start",
+        },
+      },
+    ],
+  },
+
+  // 11. FORNECEDORES & DISTRIBUIDORES
+  "/fornecedores": {
+    title: "Tutorial de Gestão de Fornecedores & Distribuidores",
+    steps: [
+      {
+        element: "#fornecedores-new-btn",
+        popover: {
+          title: "1. Cadastrar Distribuidor de Autopeças",
+          description:
+            "Cadastre seus distribuidores de peças, fornecedores de óleos, filtros e ferramentas informando CNPJ, vendedor, telefone e Chave PIX.",
+          side: "bottom",
+          align: "end",
+        },
+      },
+      {
+        element: "#fornecedores-search-bar",
+        popover: {
+          title: "2. Busca por Fornecedor ou Vendedor",
+          description:
+            "Filtre rapidamente sua lista de parceiros comerciais por Razão Social, Nome Fantasia, CNPJ ou nome do vendedor de contato.",
+          side: "bottom",
+          align: "start",
+        },
+      },
+      {
+        element: "#fornecedores-grid",
+        popover: {
+          title: "3. Dados de Contato & Chave PIX",
+          description:
+            "Visualize instantaneamente o telefone comercial para pedidos rápidos e a chave PIX salva para pagamentos rápidos sem burocracia.",
+          side: "top",
+          align: "start",
+        },
+      },
+    ],
+  },
+
+  // 12. CRM WHATSAPP & RETENÇÃO
   "/crm": {
-    title: "Tutorial de CRM & Retenção de Clientes no WhatsApp",
+    title: "Tutorial de CRM & Reengajamento no WhatsApp",
     steps: [
       {
         element: "#crm-retention-tabs",
         popover: {
-          title: "1. Segmentos de Retenção Inteligente",
+          title: "1. Segmentos Automáticos de Retenção",
           description:
-            "O sistema monitora automaticamente 3 grupos vitais: [Troca de Óleo Vencendo (6 meses)], [Clientes Sumidos (>60 dias)] e [Aniversariantes do Mês].",
+            "O sistema monitora a base de clientes automaticamente: [Retorno de Lava-Jato (+15 dias sem lavar)] e [Troca de Óleo / Revisão Preventiva (6 meses da última OS)].",
           side: "bottom",
           align: "start",
         },
@@ -416,9 +500,9 @@ export const PAGE_TOURS: Record<string, PageTourDefinition> = {
       {
         element: "#crm-clients-list",
         popover: {
-          title: "2. Disparo em 1 Clique com Template Personalizado",
+          title: "2. Disparo no WhatsApp em 1 Clique",
           description:
-            "Clique em 'Enviar Lembrete' para disparar uma mensagem cordial pelo WhatsApp oficial da oficina com o nome do cliente e placa do carro.",
+            "Clique em 'Enviar WhatsApp' no card do cliente. Uma mensagem cordial personalizada com o nome do cliente, placa e modelo do veículo é disparada instantaneamente!",
           side: "top",
           align: "start",
         },
@@ -426,26 +510,63 @@ export const PAGE_TOURS: Record<string, PageTourDefinition> = {
     ],
   },
 
-  // 11. RELATÓRIOS & BI
+  // 13. RELATÓRIOS ESTRATÉGICOS & BI
   "/relatorios": {
-    title: "Tutorial de Relatórios Gerenciais & Comissões",
+    title: "Tutorial de Relatórios Estratégicos & BI",
     steps: [
       {
-        element: "#rel-commissions-card",
+        element: "#rel-tabs",
         popover: {
-          title: "1. Comissões da Equipe",
+          title: "1. Abas de Indicadores Estratégicos",
           description:
-            "Apure exatamente o valor gerado por cada mecânico e lavador no mês para facilitar o fechamento de folha e bonificação.",
+            "Navegue entre: [Curva ABC de Produtos], [Aniversariantes do Mês com WhatsApp], [Produtividade & Comissões de Mecânicos/Lavadores] e [Posição de Estoque Crítico].",
           side: "bottom",
           align: "start",
         },
       },
       {
-        element: "#rel-top-services",
+        element: "#rel-abc-section",
         popover: {
-          title: "2. Serviços & Peças Mais Vendidos",
+          title: "2. Curva ABC e Margem de Lucro",
           description:
-            "Identifique quais serviços trazem mais lucro para sua oficina e quais peças têm maior giro de estoque.",
+            "Descubra quais são os 20% dos produtos e serviços que geram 70% de todo o faturamento da sua oficina para focar suas compras e estoque.",
+          side: "top",
+          align: "start",
+        },
+      },
+    ],
+  },
+
+  // 14. ASSINATURA & PLANOS
+  "/assinatura": {
+    title: "Tutorial de Gestão da Assinatura & Assentos SaaS",
+    steps: [
+      {
+        element: "#assinatura-status-banner",
+        popover: {
+          title: "1. Status do Plano & Licença",
+          description:
+            "Consulte seu plano atual (Starter Gratuito, Pro ou Elite), data de renovação e status ativo da conta da oficina.",
+          side: "bottom",
+          align: "start",
+        },
+      },
+      {
+        element: "#assinatura-seats-card",
+        popover: {
+          title: "2. Assentos da Equipe de Usuários",
+          description:
+            "Acompanhe quantos colaboradores ativos sua oficina possui em relação ao limite contratado. Você pode contratar assentos adicionais a qualquer momento.",
+          side: "bottom",
+          align: "center",
+        },
+      },
+      {
+        element: "#assinatura-plans-grid",
+        popover: {
+          title: "3. Upgrade Imediato com PIX Automático ou Cartão",
+          description:
+            "Escolha o plano ideal: gere QR Code PIX com confirmação automática em segundos ou assine no cartão de crédito recorrente para desbloquear PDV, CRM e múltiplos usuários.",
           side: "top",
           align: "start",
         },

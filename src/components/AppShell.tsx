@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { Header } from "@/components/Header";
@@ -15,6 +15,16 @@ import { CookieConsent } from "@/components/CookieConsent";
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    const handleOpenSidebar = () => {
+      setSidebarOpen(true);
+    };
+    window.addEventListener("torque:open-mobile-sidebar", handleOpenSidebar);
+    return () => {
+      window.removeEventListener("torque:open-mobile-sidebar", handleOpenSidebar);
+    };
+  }, []);
 
   // Rotas públicas institucionais (Site de apresentação, SEO e AdSense)
   const publicRoutes = [

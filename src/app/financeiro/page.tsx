@@ -251,10 +251,11 @@ export default function FinanceiroPage() {
         </div>
 
         {/* Status do Turno de Caixa e Botões */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div id="fin-actions-bar" className="flex items-center gap-2 flex-wrap">
           {activeShift ? (
             <>
               <button
+                id="fin-sangria-btn"
                 onClick={() => {
                   setShiftAction("SANGRIA");
                   setShiftAmount("");
@@ -267,6 +268,7 @@ export default function FinanceiroPage() {
               </button>
 
               <button
+                id="fin-suprimento-btn"
                 onClick={() => {
                   setShiftAction("SUPRIMENTO");
                   setShiftAmount("");
@@ -279,6 +281,7 @@ export default function FinanceiroPage() {
               </button>
 
               <button
+                id="fin-fechar-caixa-btn"
                 onClick={() => {
                   setShiftAction("FECHAR");
                   setShiftAmount("");
@@ -292,6 +295,7 @@ export default function FinanceiroPage() {
             </>
           ) : (
             <button
+              id="fin-abrir-caixa-btn"
               onClick={() => {
                 setShiftAction("ABRIR");
                 setShiftAmount("150");
@@ -305,6 +309,7 @@ export default function FinanceiroPage() {
           )}
 
           <button
+            id="fin-nova-conta-btn"
             onClick={() => {
               setBillType("PAGAR");
               setIsBillModalOpen(true);
@@ -319,7 +324,7 @@ export default function FinanceiroPage() {
 
       {/* Alerta de Caixa Aberto */}
       {activeShift && (
-        <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+        <div id="fin-shift-alert" className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-3">
             <div className="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></div>
             <div>
@@ -340,7 +345,7 @@ export default function FinanceiroPage() {
       )}
 
       {/* Cards de Métricas Financeiras */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div id="fin-balance-cards" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
@@ -409,7 +414,7 @@ export default function FinanceiroPage() {
       </div>
 
       {/* Navegação por Abas */}
-      <div className="flex border-b border-slate-200 gap-6 text-xs font-bold">
+      <div id="fin-tabs" className="flex border-b border-slate-200 gap-6 text-xs font-bold">
         <button
           onClick={() => setActiveTab("caixa")}
           className={`pb-3 transition-colors border-b-2 flex items-center gap-2 ${
@@ -449,7 +454,7 @@ export default function FinanceiroPage() {
 
       {/* Conteúdo Aba 1: Livro Caixa */}
       {activeTab === "caixa" && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div id="fin-transactions-table" className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-slate-100 flex items-center justify-between">
             <h3 className="font-bold text-sm text-slate-900">Histórico de Transações de Caixa</h3>
             <span className="text-xs text-slate-500">Últimas 50 movimentações</span>

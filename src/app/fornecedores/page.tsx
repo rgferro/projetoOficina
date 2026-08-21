@@ -147,6 +147,7 @@ export default function FornecedoresPage() {
         </div>
 
         <button
+          id="fornecedores-new-btn"
           onClick={handleOpenNew}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all"
         >
@@ -156,7 +157,7 @@ export default function FornecedoresPage() {
       </div>
 
       {/* Barra de Busca */}
-      <div className="relative">
+      <div id="fornecedores-search-bar" className="relative">
         <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
           type="text"
@@ -176,7 +177,7 @@ export default function FornecedoresPage() {
           <h3 className="font-bold text-slate-700">Nenhum fornecedor cadastrado</h3>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div id="fornecedores-grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {suppliers.map((s) => (
             <div
               key={s.id}

@@ -105,8 +105,9 @@ export default function RelatoriosPage() {
       )}
 
       {/* Navegação por Abas */}
-      <div className="flex border-b border-slate-200 gap-6 text-xs font-bold flex-wrap">
+      <div id="rel-tabs" className="flex border-b border-slate-200 gap-6 text-xs font-bold flex-wrap">
         <button
+          id="rel-tab-abc"
           onClick={() => setActiveTab("abc")}
           className={`pb-3 transition-colors border-b-2 flex items-center gap-2 ${
             activeTab === "abc"
@@ -119,6 +120,7 @@ export default function RelatoriosPage() {
         </button>
 
         <button
+          id="rel-tab-aniversariantes"
           onClick={() => setActiveTab("aniversariantes")}
           className={`pb-3 transition-colors border-b-2 flex items-center gap-2 ${
             activeTab === "aniversariantes"
@@ -131,6 +133,7 @@ export default function RelatoriosPage() {
         </button>
 
         <button
+          id="rel-tab-produtividade"
           onClick={() => setActiveTab("produtividade")}
           className={`pb-3 transition-colors border-b-2 flex items-center gap-2 ${
             activeTab === "produtividade"
@@ -143,6 +146,7 @@ export default function RelatoriosPage() {
         </button>
 
         <button
+          id="rel-tab-estoque"
           onClick={() => setActiveTab("estoque")}
           className={`pb-3 transition-colors border-b-2 flex items-center gap-2 ${
             activeTab === "estoque"
@@ -157,8 +161,8 @@ export default function RelatoriosPage() {
 
       {/* ABA 1: CURVA ABC */}
       {activeTab === "abc" && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div id="rel-abc-section" className="space-y-4">
+          <div id="rel-abc-summary" className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
               <span className="text-xs font-bold text-emerald-900 uppercase">Classe A (Alta Rentabilidade)</span>
               <p className="text-2xl font-black text-emerald-700 mt-1">70% da Receita</p>

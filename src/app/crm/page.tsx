@@ -102,8 +102,9 @@ function CRMContent() {
       )}
 
       {/* Tabs */}
-      <div className="flex items-center gap-3 border-b border-slate-200 pb-2">
+      <div id="crm-retention-tabs" className="flex items-center gap-3 border-b border-slate-200 pb-2">
         <button
+          id="crm-tab-lavajato"
           onClick={() => setActiveTab("lavajato")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all ${
             activeTab === "lavajato"
@@ -123,6 +124,7 @@ function CRMContent() {
         </button>
 
         <button
+          id="crm-tab-oficina"
           onClick={() => setActiveTab("oficina")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all ${
             activeTab === "oficina"
@@ -157,12 +159,12 @@ function CRMContent() {
           </div>
 
           {washAlerts.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 p-8">
+            <div id="crm-clients-list" className="text-center py-16 bg-white rounded-2xl border border-slate-200 p-8">
               <Droplets className="w-12 h-12 text-slate-300 mx-auto mb-3" />
               <h3 className="font-bold text-slate-700">Todos os clientes estão com lavagem recente!</h3>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div id="crm-clients-list" className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {washAlerts.map((alert: any) => (
                 <div
                   key={alert.vehicleId}

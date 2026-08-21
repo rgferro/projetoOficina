@@ -421,6 +421,7 @@ export default function ClientesPage() {
 
         {canManage ? (
           <button
+            id="clientes-new-btn"
             onClick={() => setIsNewCustomerModalOpen(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all"
           >
@@ -443,7 +444,7 @@ export default function ClientesPage() {
       )}
 
       {/* Barra de Busca */}
-      <div className="relative">
+      <div id="clientes-search-bar" className="relative">
         <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
           type="text"
@@ -466,7 +467,7 @@ export default function ClientesPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div id="clientes-cards-grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {customers.map((c) => (
             <div
               key={c.id}

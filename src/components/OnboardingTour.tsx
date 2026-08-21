@@ -134,64 +134,14 @@ export default function OnboardingTour() {
         },
       ];
     } else {
-      // ADMIN & GERENTE (Fluxo sequencial completo)
+      // ADMIN & GERENTE (Fluxo sequencial completo de todos os módulos)
       rawSteps = [
         {
-          element: "#tour-nav-configuracoes",
+          element: "#tour-nav-dashboard",
           popover: {
-            title: "1. Dados Oficiais & Ajustes da Oficina",
+            title: "1. Dashboard & Faturamento Geral",
             description:
-              "Comece conferindo os dados da sua empresa: Nome da Oficina, CNPJ/CPF, Telefone e Endereço Completo. Eles saem impressos nas OS, ordens de serviço e recibos térmicos.",
-            side: "right",
-            align: "start",
-          },
-        },
-        {
-          element: "#tour-nav-servicos",
-          popover: {
-            title: "2. Tabela de Serviços & Mão de Obra",
-            description:
-              "Cadastre seus serviços padronizados e lavagens (Troca de Óleo, Alinhamento, Lavagem Completa) com valores pré-definidos para agilizar a abertura de OS e vendas no PDV em 1 clique.",
-            side: "right",
-            align: "start",
-          },
-        },
-        {
-          element: "#tour-nav-equipe",
-          popover: {
-            title: "3. Equipe & Colaboradores",
-            description:
-              "Cadastre seus mecânicos, atendentes e lavadores por e-mail ou definindo a senha diretamente, controlando permissões de cada perfil.",
-            side: "right",
-            align: "start",
-          },
-        },
-        {
-          element: "#tour-nav-estoque",
-          popover: {
-            title: "4. Estoque & Importação de XML",
-            description:
-              "Cadastre peças e insumos com preço de custo e estoque mínimo, ou suba o arquivo XML da nota fiscal (NF-e) do fornecedor para dar entrada automática em lote.",
-            side: "right",
-            align: "start",
-          },
-        },
-        {
-          element: "#tour-nav-oficina",
-          popover: {
-            title: "5. Oficina Mecânica & Ordens de Serviço",
-            description:
-              "Abra e gerencie ordens de serviço com registro de placa, checklist digital de avarias, fotos do veículo, peças utilizadas e atribuição direta ao mecânico.",
-            side: "right",
-            align: "start",
-          },
-        },
-        {
-          element: "#tour-nav-lavajato",
-          popover: {
-            title: "6. Estética Automotiva & Lava-Jato",
-            description:
-              "Acompanhe a esteira de lavagens do pátio em tempo real no Kanban [Aguardando ➔ Em Lavagem ➔ Pronto] e avise o cliente pelo WhatsApp com 1 clique.",
+              "Visão geral dos números da oficina: faturamento do dia, lavagens ativas no pátio e ordens de serviço em andamento em tempo real.",
             side: "right",
             align: "start",
           },
@@ -199,9 +149,99 @@ export default function OnboardingTour() {
         {
           element: "#tour-nav-pdv",
           popover: {
-            title: "7. PDV Balcão & Caixa",
+            title: "2. PDV Balcão & Venda Rápida",
             description:
-              "Realize vendas rápidas no balcão, receba pagamentos por PIX automático, Cartão ou Dinheiro e faça o controle de sangrias, suprimentos e comissões.",
+              "Atendimento ágil de balcão para venda de peças e serviços com leitor de código de barras e pagamento em PIX Copia e Cola automático.",
+            side: "right",
+            align: "start",
+          },
+        },
+        {
+          element: "#tour-nav-lavajato",
+          popover: {
+            title: "3. Estética Automotiva & Lava-Jato",
+            description:
+              "Acompanhe a esteira de lavagens do pátio em tempo real no Kanban [Aguardando ➔ Em Lavagem ➔ Pronto] e avise o cliente pelo WhatsApp com 1 clique.",
+            side: "right",
+            align: "start",
+          },
+        },
+        {
+          element: "#tour-nav-oficina",
+          popover: {
+            title: "4. Oficina Mecânica & Ordens de Serviço (OS)",
+            description:
+              "Abra e gerencie ordens de serviço completas com checklist de avarias, fotos do veículo, peças utilizadas e atribuição direta aos mecânicos.",
+            side: "right",
+            align: "start",
+          },
+        },
+        {
+          element: "#tour-nav-estoque",
+          popover: {
+            title: "5. Estoque & Importador XML NF-e",
+            description:
+              "Controle pastilhas, óleos e filtros. Importe arquivos XML das notas fiscais de autopeças para alimentar quantidades e preços em lote com 1 clique.",
+            side: "right",
+            align: "start",
+          },
+        },
+        {
+          element: "#tour-nav-servicos",
+          popover: {
+            title: "6. Tabela de Serviços & Mão de Obra",
+            description:
+              "Cadastre serviços padronizados (Troca de Óleo, Alinhamento, Lavagens) com preços de tabela para puxar automaticamente nas OS e no PDV.",
+            side: "right",
+            align: "start",
+          },
+        },
+        {
+          element: "#tour-nav-fornecedores",
+          popover: {
+            title: "7. Fornecedores & Distribuidores",
+            description:
+              "Cadastre distribuidoras de autopeças com dados de contato dos vendedores e chaves PIX salvas para agilizar pagamentos.",
+            side: "right",
+            align: "start",
+          },
+        },
+        {
+          element: "#tour-nav-clientes",
+          popover: {
+            title: "8. Clientes & Veículos (Frota)",
+            description:
+              "Cadastro unificado com histórico completo de ordens de serviço anteriores, histórico de lavagens e múltiplos veículos por cliente.",
+            side: "right",
+            align: "start",
+          },
+        },
+        {
+          element: "#tour-nav-equipe",
+          popover: {
+            title: "9. Equipe & Permissões por Cargo",
+            description:
+              "Cadastre mecânicos, atendentes e lavadores controlando níveis de acesso para proteger o caixa e relatórios financeiros.",
+            side: "right",
+            align: "start",
+          },
+        },
+        {
+          element: "#tour-nav-financeiro",
+          popover: {
+            title: "10. Caixa Diário & Gestão Financeira",
+            description:
+              "Abertura de turno com fundo de troco, sangrias de despesas, suprimentos, contas a pagar a fornecedores e extrato detalhado de transações.",
+            side: "right",
+            align: "start",
+          },
+        },
+        {
+          element: "#tour-nav-relatorios",
+          popover: {
+            title: "11. Relatórios Estratégicos & BI",
+            description:
+              "Curva ABC dos produtos mais lucrativos, apuração de comissões de mecânicos e lavadores e lembrete de aniversariantes do mês.",
             side: "right",
             align: "start",
           },
@@ -209,9 +249,29 @@ export default function OnboardingTour() {
         {
           element: "#tour-nav-crm",
           popover: {
-            title: "8. CRM & Lembretes no WhatsApp",
+            title: "12. CRM & Retenção no WhatsApp",
             description:
-              "Monitore clientes inativos e envie lembretes preventivos de troca de óleo (6 meses) e lavagem com templates inteligentes.",
+              "Dispare lembretes preventivos de troca de óleo (6 meses) e convite de lavagem para clientes ausentes (+15 dias) em 1 clique.",
+            side: "right",
+            align: "start",
+          },
+        },
+        {
+          element: "#tour-nav-assinatura",
+          popover: {
+            title: "13. Assinatura & Planos SaaS",
+            description:
+              "Gerencie seu plano (Starter Grátis, Pro ou Elite), adicione assentos de usuários e faça upgrades imediatos via PIX automático.",
+            side: "right",
+            align: "start",
+          },
+        },
+        {
+          element: "#tour-nav-configuracoes",
+          popover: {
+            title: "14. Dados Oficiais da Oficina & WhatsApp",
+            description:
+              "Configure o nome, CNPJ e endereço da oficina para impressão em recibos térmicos, conecte o WhatsApp por QR Code e gere backups em nuvem.",
             side: "right",
             align: "start",
           },
@@ -219,39 +279,49 @@ export default function OnboardingTour() {
       ];
     }
 
-    // Filtra apenas passos cujos elementos existem na tela
-    const validSteps = rawSteps.filter((s) => {
-      if (typeof s.element === "string") {
-        return !!document.querySelector(s.element);
-      }
-      return true;
-    });
+    // Se estiver no mobile e os elementos do menu da sidebar não estiverem visíveis, tenta abrir o menu
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
+    if (isMobile) {
+      // Dispara evento para abrir o sidebar mobile caso esteja fechado
+      window.dispatchEvent(new CustomEvent("torque:open-mobile-sidebar"));
+    }
 
-    if (validSteps.length === 0) return;
-
-    const driverInstance = driver({
-      showProgress: true,
-      animate: true,
-      allowClose: true,
-      overlayColor: "rgba(15, 23, 42, 0.75)",
-      stagePadding: 6,
-      stageRadius: 14,
-      popoverClass: "torque-driver-popover",
-      nextBtnText: "Próximo →",
-      prevBtnText: "← Anterior",
-      doneBtnText: "✓ Concluir Guia",
-      steps: validSteps,
-      onDestroyed: () => {
-        driverObjRef.current = null;
-        if (typeof window !== "undefined") {
-          const userKey = currentEmployee?.id || "guest";
-          localStorage.setItem(`torque_tour_seen_${userKey}`, "true");
+    // Aguarda um tick para garantir renderização dos elementos do menu
+    setTimeout(() => {
+      // Filtra apenas passos cujos elementos existem na tela
+      const validSteps = rawSteps.filter((s) => {
+        if (typeof s.element === "string") {
+          return !!document.querySelector(s.element);
         }
-      },
-    });
+        return true;
+      });
 
-    driverObjRef.current = driverInstance;
-    driverInstance.drive();
+      if (validSteps.length === 0) return;
+
+      const driverInstance = driver({
+        showProgress: true,
+        animate: true,
+        allowClose: true,
+        overlayColor: "rgba(15, 23, 42, 0.75)",
+        stagePadding: 6,
+        stageRadius: 14,
+        popoverClass: "torque-driver-popover",
+        nextBtnText: "Próximo →",
+        prevBtnText: "← Anterior",
+        doneBtnText: "✓ Concluir Guia",
+        steps: validSteps,
+        onDestroyed: () => {
+          driverObjRef.current = null;
+          if (typeof window !== "undefined") {
+            const userKey = currentEmployee?.id || "guest";
+            localStorage.setItem(`torque_tour_seen_${userKey}`, "true");
+          }
+        },
+      });
+
+      driverObjRef.current = driverInstance;
+      driverInstance.drive();
+    }, isMobile ? 250 : 50);
   };
 
   useEffect(() => {
