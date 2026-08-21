@@ -1,8 +1,9 @@
 export interface WhatsAppSession {
-  status: "CONNECTED" | "DISCONNECTED" | "QR_READY" | "CONNECTING";
+  status: "CONNECTED" | "DISCONNECTED" | "QR_READY" | "QR_EXPIRED" | "CONNECTING";
   connectedNumber: string | null;
   qrCodeUrl: string | null;
   lastConnectedAt: string | null;
+  qrGeneratedAt?: number | null;
 }
 
 const DAEMON_URL = "http://127.0.0.1:3005";

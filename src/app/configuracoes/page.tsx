@@ -25,8 +25,16 @@ import {
   Trash2,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/formatters";
+import { useAuth } from "@/lib/authContext";
 
 export default function ConfiguracoesPage() {
+  const { currentEmployee } = useAuth();
+  const isAdminUser =
+    !currentEmployee ||
+    currentEmployee.accessLevel === "ADMIN" ||
+    currentEmployee.role === "Administrador" ||
+    currentEmployee.role === "Proprietário";
+
   const [settings, setSettings] = useState({
     workshopName: "",
     cnpj: "",
@@ -62,6 +70,7 @@ export default function ConfiguracoesPage() {
   const [testPhone, setTestPhone] = useState("");
   const [sendingTest, setSendingTest] = useState(false);
   const [connectingWa, setConnectingWa] = useState(false);
+  const [qrTimeLeft, setQrTimeLeft] = useState<number>(45);
 
   const loadData = async () => {
     try {
@@ -98,6 +107,25 @@ export default function ConfiguracoesPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Timer regressivo de 45 segundos para expiração do QR Code
+  useEffect(() => {
+    let timer: any;
+    if (isQrModalOpen && waStatus?.status === "QR_READY") {
+      setQrTimeLeft(45);
+      timer = setInterval(() => {
+        setQrTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setWaStatus((s: any) => ({ ...s, status: "QR_EXPIRED", qrCodeUrl: null }));
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [isQrModalOpen, waStatus?.qrCodeUrl]);
 
   // Polling automático para atualizar QR Code e detectar pareamento do celular continuamente
   useEffect(() => {
@@ -369,31 +397,43 @@ export default function ConfiguracoesPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setIsQrModalOpen(true)}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all"
-            >
-              <QrCode className="w-4 h-4" />
-              <span>{isConnected ? "Ver / Trocar QR Code" : "Escanear QR Code"}</span>
-            </button>
+            {!isAdminUser ? (
+              <div className="px-3.5 py-2 bg-slate-100 text-slate-500 font-bold text-xs rounded-xl flex items-center gap-1.5 border border-slate-200">
+                <Lock className="w-3.5 h-3.5 text-slate-400" />
+                <span>Restrito ao Administrador</span>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQrTimeLeft(45);
+                    setIsQrModalOpen(true);
+                  }}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all"
+                >
+                  <QrCode className="w-4 h-4" />
+                  <span>{isConnected ? "Ver / Trocar QR Code" : "Escanear QR Code"}</span>
+                </button>
 
-            {isConnected && (
-              <button
-                type="button"
-                onClick={handleDisconnectWhatsApp}
-                className="px-3 py-2 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 font-bold rounded-xl text-xs flex items-center gap-1 border border-slate-200 transition-all"
-                title="Desconectar este aparelho"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Desconectar</span>
-              </button>
+                {isConnected && (
+                  <button
+                    type="button"
+                    onClick={handleDisconnectWhatsApp}
+                    className="px-3 py-2 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 font-bold rounded-xl text-xs flex items-center gap-1 border border-slate-200 transition-all"
+                    title="Desconectar este aparelho"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Desconectar</span>
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
 
-        {/* QR Code Inline se não estiver conectado */}
-        {!isConnected && waStatus?.qrCodeUrl && (
+        {/* QR Code Inline se não estiver conectado e for Admin */}
+        {!isConnected && isAdminUser && waStatus?.qrCodeUrl && (
           <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row items-center gap-6">
             <div className="p-3 bg-white rounded-2xl border-2 border-slate-200 shadow-md">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -402,6 +442,10 @@ export default function ConfiguracoesPage() {
                 alt="QR Code WhatsApp"
                 className="w-48 h-48 rounded-lg"
               />
+              <div className="mt-2 flex items-center justify-center gap-1.5 text-[11px] font-black text-amber-700 bg-amber-50 border border-amber-200 py-1 px-2.5 rounded-lg">
+                <RefreshCw className={`w-3.5 h-3.5 ${qrTimeLeft <= 10 ? "text-red-500 animate-spin" : "text-amber-500"}`} />
+                <span>Expira em: <strong className="font-mono">{qrTimeLeft}s</strong></span>
+              </div>
             </div>
 
             <div className="space-y-3 flex-1 text-xs text-slate-600">
@@ -468,7 +512,7 @@ export default function ConfiguracoesPage() {
                 </div>
                 <div>
                   <h3 className="font-black text-slate-900 text-base">Escanear QR Code do WhatsApp</h3>
-                  <p className="text-xs text-slate-500">Conecte o número oficial da oficina</p>
+                  <p className="text-xs text-slate-500">Acesso restrito ao Administrador</p>
                 </div>
               </div>
               <button
@@ -480,14 +524,44 @@ export default function ConfiguracoesPage() {
             </div>
 
             <div className="flex flex-col items-center justify-center space-y-4 py-2">
-              {waStatus?.qrCodeUrl ? (
-                <div className="p-4 bg-white rounded-2xl border-2 border-slate-200 shadow-md">
+              {waStatus?.status === "QR_EXPIRED" ? (
+                <div className="w-56 h-56 rounded-2xl border-2 border-dashed border-red-300 bg-red-50/50 flex flex-col items-center justify-center p-4 text-center space-y-3">
+                  <Lock className="w-8 h-8 text-red-500" />
+                  <p className="text-xs font-bold text-red-700">
+                    QR Code Expirado (45s)
+                  </p>
+                  <p className="text-[10px] text-slate-500 leading-tight">
+                    Por motivos de segurança, o código expira automaticamente.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setWaStatus((prev: any) => ({ ...prev, qrCodeUrl: null, status: "CONNECTING" }));
+                      setQrTimeLeft(45);
+                      await fetch("/api/whatsapp/disconnect", { method: "POST" });
+                      setTimeout(async () => {
+                        const res = await fetch("/api/whatsapp/status");
+                        if (res.ok) setWaStatus(await res.json());
+                      }, 1000);
+                    }}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm flex items-center gap-1.5 transition-all"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Gerar Novo Código
+                  </button>
+                </div>
+              ) : waStatus?.qrCodeUrl ? (
+                <div className="p-4 bg-white rounded-2xl border-2 border-slate-200 shadow-md relative">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={waStatus.qrCodeUrl}
                     alt="QR Code WhatsApp"
                     className="w-56 h-56 rounded-lg shadow-inner"
                   />
+                  <div className="mt-2 flex items-center justify-center gap-1.5 text-[11px] font-black text-amber-700 bg-amber-50 border border-amber-200 py-1 px-2.5 rounded-lg">
+                    <RefreshCw className={`w-3.5 h-3.5 ${qrTimeLeft <= 10 ? "text-red-500 animate-spin" : "text-amber-500"}`} />
+                    <span>Expira em: <strong className="font-mono">{qrTimeLeft}s</strong></span>
+                  </div>
                 </div>
               ) : (
                 <div className="w-56 h-56 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center p-4 text-center space-y-3">
@@ -508,6 +582,7 @@ export default function ConfiguracoesPage() {
                     type="button"
                     onClick={async () => {
                       setWaStatus((prev: any) => ({ ...prev, qrCodeUrl: null, status: "CONNECTING" }));
+                      setQrTimeLeft(45);
                       await fetch("/api/whatsapp/disconnect", { method: "POST" });
                       setTimeout(async () => {
                         const res = await fetch("/api/whatsapp/status");

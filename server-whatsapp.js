@@ -21,6 +21,7 @@ let sessionState = {
   connectedNumber: null,
   qrCodeUrl: null,
   lastConnectedAt: null,
+  qrGeneratedAt: null,
 };
 
 // Evita que erros não tratados derrubem o processo
@@ -71,8 +72,9 @@ async function startWhatsAppService() {
             connectedNumber: null,
             qrCodeUrl: qrDataUrl,
             lastConnectedAt: null,
+            qrGeneratedAt: Date.now(),
           };
-          console.log('⚡ [WhatsApp Daemon] QR Code oficial emitido e pronto para escaneamento!');
+          console.log('⚡ [WhatsApp Daemon] QR Code oficial emitido (TTL: 45s)!');
         } catch (err) {
           console.error('Erro ao gerar QR Code:', err);
         }
@@ -143,6 +145,15 @@ const server = http.createServer(async (req, res) => {
 
   // GET /status
   if (req.method === 'GET' && (req.url === '/status' || req.url === '/')) {
+    // Validação de TTL de 45 segundos para o QR Code
+    if (sessionState.status === 'QR_READY' && sessionState.qrGeneratedAt) {
+      const ageSeconds = (Date.now() - sessionState.qrGeneratedAt) / 1000;
+      if (ageSeconds > 45) {
+        sessionState.status = 'QR_EXPIRED';
+        sessionState.qrCodeUrl = null;
+      }
+    }
+
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(sessionState));
     return;
