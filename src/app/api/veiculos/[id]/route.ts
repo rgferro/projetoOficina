@@ -5,12 +5,13 @@ import { getTenantContext } from "@/lib/tenant";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { tenantId } = await getTenantContext(request);
     const vehicle = await prisma.vehicle.findFirst({
-      where: { id: params.id, tenantId },
+      where: { id, tenantId },
       include: {
         customer: true,
         serviceOrders: {
@@ -36,15 +37,16 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { tenantId } = await getTenantContext(request);
     const body = await request.json();
     const { plate, brand, model, year, color, currentKm, category, notes, customerId } = body;
 
     const existing = await prisma.vehicle.findFirst({
-      where: { id: params.id, tenantId },
+      where: { id, tenantId },
     });
 
     if (!existing) {
@@ -52,7 +54,7 @@ export async function PUT(
     }
 
     const updated = await prisma.vehicle.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         plate: plate ? plate.toUpperCase().trim() : existing.plate,
         brand: brand !== undefined ? brand : existing.brand,
@@ -74,12 +76,13 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { tenantId } = await getTenantContext(request);
     const existing = await prisma.vehicle.findFirst({
-      where: { id: params.id, tenantId },
+      where: { id, tenantId },
     });
 
     if (!existing) {
@@ -87,7 +90,7 @@ export async function DELETE(
     }
 
     await prisma.vehicle.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });

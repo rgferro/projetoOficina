@@ -5,12 +5,13 @@ import { getTenantContext } from "@/lib/tenant";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { tenantId } = await getTenantContext(request);
     const customer = await prisma.customer.findFirst({
-      where: { id: params.id, tenantId },
+      where: { id, tenantId },
       include: {
         vehicles: {
           include: {
@@ -47,9 +48,10 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { tenantId } = await getTenantContext(request);
     const body = await request.json();
     const {
@@ -65,7 +67,7 @@ export async function PUT(
     } = body;
 
     const existing = await prisma.customer.findFirst({
-      where: { id: params.id, tenantId },
+      where: { id, tenantId },
     });
 
     if (!existing) {
@@ -73,7 +75,7 @@ export async function PUT(
     }
 
     const updated = await prisma.customer.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name,
         type: type || "PF",
@@ -98,12 +100,13 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { tenantId } = await getTenantContext(request);
     const existing = await prisma.customer.findFirst({
-      where: { id: params.id, tenantId },
+      where: { id, tenantId },
     });
 
     if (!existing) {
@@ -111,7 +114,7 @@ export async function DELETE(
     }
 
     await prisma.customer.delete({
-      where: { id: params.id },
+      where: { id },
     });
     return NextResponse.json({ success: true });
   } catch (error: any) {

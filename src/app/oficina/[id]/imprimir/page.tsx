@@ -10,13 +10,12 @@ import {
 } from "@/lib/formatters";
 import { Printer, ArrowLeft, Wrench, FileText, CheckSquare } from "lucide-react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 
-export default function ImprimirOSPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function ImprimirOSPage() {
+  const routeParams = useParams();
+  const id = typeof routeParams?.id === "string" ? routeParams.id : Array.isArray(routeParams?.id) ? routeParams.id[0] : "";
   const { currentEmployee } = useAuth();
   const isMechanicOrWasher =
     currentEmployee?.accessLevel === "MECANICO" ||
@@ -39,9 +38,10 @@ export default function ImprimirOSPage({
 
   useEffect(() => {
     async function loadData() {
+      if (!id) return;
       try {
         setLoading(true);
-        const res = await fetch(`/api/oficina/${params.id}`);
+        const res = await fetch(`/api/oficina/${id}`);
         if (res.ok) {
           const data = await res.json();
           setOrder(data);
@@ -58,8 +58,9 @@ export default function ImprimirOSPage({
         setLoading(false);
       }
     }
+
     loadData();
-  }, [params.id]);
+  }, [id]);
 
   if (loading) {
     return (

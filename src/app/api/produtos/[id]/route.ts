@@ -5,12 +5,13 @@ import { getTenantContext } from "@/lib/tenant";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { tenantId } = await getTenantContext(request);
     const product = await prisma.product.findFirst({
-      where: { id: params.id, tenantId },
+      where: { id, tenantId },
       include: {
         supplier: true,
         stockMovements: {
@@ -32,9 +33,10 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { tenantId } = await getTenantContext(request);
     const body = await request.json();
     const {
@@ -55,7 +57,7 @@ export async function PUT(
     } = body;
 
     const existing = await prisma.product.findFirst({
-      where: { id: params.id, tenantId },
+      where: { id, tenantId },
     });
 
     if (!existing) {
@@ -63,7 +65,7 @@ export async function PUT(
     }
 
     const updated = await prisma.product.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name,
         sku: sku || null,
@@ -90,12 +92,13 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { tenantId } = await getTenantContext(request);
     const existing = await prisma.product.findFirst({
-      where: { id: params.id, tenantId },
+      where: { id, tenantId },
     });
 
     if (!existing) {
@@ -103,7 +106,7 @@ export async function DELETE(
     }
 
     await prisma.product.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });

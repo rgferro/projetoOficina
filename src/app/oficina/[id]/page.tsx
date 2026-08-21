@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import {
   Wrench,
@@ -42,12 +42,10 @@ interface OSItem {
   commissionRate?: number;
 }
 
-export default function DetalhesOrdemServicoPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function DetalhesOrdemServicoPage() {
   const router = useRouter();
+  const routeParams = useParams();
+  const id = typeof routeParams?.id === "string" ? routeParams.id : Array.isArray(routeParams?.id) ? routeParams.id[0] : "";
   const { currentEmployee } = useAuth();
   const canSeeFinancials =
     !currentEmployee ||
@@ -83,10 +81,11 @@ export default function DetalhesOrdemServicoPage({
   const [photoCaption, setPhotoCaption] = useState("");
 
   const loadData = async () => {
+    if (!id) return;
     try {
       setLoading(true);
       const [orderRes, empRes, prodRes, servRes] = await Promise.all([
-        fetch(`/api/oficina/${params.id}`),
+        fetch(`/api/oficina/${id}`),
         fetch("/api/equipe"),
         fetch("/api/produtos"),
         fetch("/api/servicos-padrao"),
@@ -133,7 +132,7 @@ export default function DetalhesOrdemServicoPage({
 
   useEffect(() => {
     loadData();
-  }, [params.id]);
+  }, [id]);
 
   const handleAddItem = (type: "PECA" | "SERVICO") => {
     const newItem: OSItem = {
@@ -256,7 +255,7 @@ export default function DetalhesOrdemServicoPage({
         ...extraFields,
       };
 
-      const res = await fetch(`/api/oficina/${params.id}`, {
+      const res = await fetch(`/api/oficina/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -288,7 +287,7 @@ export default function DetalhesOrdemServicoPage({
     reader.onload = async (event) => {
       const base64 = event.target?.result as string;
       try {
-        const res = await fetch(`/api/oficina/${params.id}/fotos`, {
+        const res = await fetch(`/api/oficina/${id}/fotos`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -310,7 +309,7 @@ export default function DetalhesOrdemServicoPage({
 
   const handleDeletePhoto = async (photoId: string) => {
     try {
-      await fetch(`/api/oficina/${params.id}/fotos?photoId=${photoId}`, { method: "DELETE" });
+      await fetch(`/api/oficina/${id}/fotos?photoId=${photoId}`, { method: "DELETE" });
       loadData();
     } catch (err) {
       console.error(err);
@@ -322,7 +321,7 @@ export default function DetalhesOrdemServicoPage({
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await fetch(`/api/oficina/${params.id}/pagamentos`, {
+      const res = await fetch(`/api/oficina/${id}/pagamentos`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -368,7 +367,7 @@ export default function DetalhesOrdemServicoPage({
       return;
     }
     try {
-      await fetch(`/api/oficina/${params.id}`, { method: "DELETE" });
+      await fetch(`/api/oficina/${id}`, { method: "DELETE" });
       router.push("/oficina");
     } catch (err) {
       alert("Erro ao excluir OS");

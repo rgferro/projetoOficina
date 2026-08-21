@@ -4,9 +4,10 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { imageUrl, type, caption } = body;
 
@@ -41,7 +42,7 @@ export async function POST(
     const { tenantId } = await (await import("@/lib/tenant")).getTenantContext(request);
 
     const order = await prisma.serviceOrder.findFirst({
-      where: { id: params.id, tenantId },
+      where: { id, tenantId },
     });
 
     if (!order) {
@@ -50,7 +51,7 @@ export async function POST(
 
     const photo = await prisma.serviceOrderPhoto.create({
       data: {
-        serviceOrderId: params.id,
+        serviceOrderId: id,
         imageUrl,
         type: type || "AVARIA",
         caption: caption || null,
@@ -65,7 +66,7 @@ export async function POST(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { searchParams } = new URL(request.url);

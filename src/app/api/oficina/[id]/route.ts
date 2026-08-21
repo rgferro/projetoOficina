@@ -5,12 +5,13 @@ import { getTenantContext } from "@/lib/tenant";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { tenantId } = await getTenantContext(request);
     const order = await prisma.serviceOrder.findFirst({
-      where: { id: params.id, tenantId },
+      where: { id, tenantId },
       include: {
         customer: true,
         vehicle: true,
@@ -38,9 +39,10 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { tenantId } = await getTenantContext(request);
     const body = await request.json();
     const {
@@ -89,7 +91,7 @@ export async function PUT(
     const grandTotal = Math.max(0, totalParts + totalServices - parsedDiscount);
 
     const current = await prisma.serviceOrder.findFirst({
-      where: { id: params.id, tenantId },
+      where: { id, tenantId },
       include: { items: true },
     });
 
@@ -98,7 +100,7 @@ export async function PUT(
     }
 
     await prisma.serviceOrderItem.deleteMany({
-      where: { serviceOrderId: params.id },
+      where: { serviceOrderId: id },
     });
 
     let completedAt = current.completedAt;
@@ -168,7 +170,7 @@ export async function PUT(
     }
 
     const updated = await prisma.serviceOrder.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status: status || current.status,
         entryKm: entryKm ? Number(entryKm) : current.entryKm,
@@ -211,12 +213,13 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { tenantId } = await getTenantContext(request);
     const existing = await prisma.serviceOrder.findFirst({
-      where: { id: params.id, tenantId },
+      where: { id, tenantId },
     });
 
     if (!existing) {
@@ -224,7 +227,7 @@ export async function DELETE(
     }
 
     await prisma.serviceOrder.delete({
-      where: { id: params.id },
+      where: { id },
     });
     return NextResponse.json({ success: true });
   } catch (error: any) {

@@ -4,9 +4,10 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { amount, paymentMethod, notes, date } = body;
 
@@ -18,7 +19,7 @@ export async function POST(
     const { tenantId } = await (await import("@/lib/tenant")).getTenantContext(request);
 
     const order = await prisma.serviceOrder.findFirst({
-      where: { id: params.id, tenantId },
+      where: { id, tenantId },
       include: { payments: true, vehicle: true },
     });
 
@@ -29,7 +30,7 @@ export async function POST(
     // 1. Cria o registro de pagamento
     const payment = await prisma.serviceOrderPayment.create({
       data: {
-        serviceOrderId: params.id,
+        serviceOrderId: id,
         amount: numAmount,
         paymentMethod: paymentMethod || "PIX",
         notes: notes || null,
@@ -43,7 +44,7 @@ export async function POST(
     const newPaymentStatus = newRemaining <= 0.01 ? "PAGO" : "PARCIAL";
 
     const updatedOrder = await prisma.serviceOrder.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         paidAmount: newPaidAmount,
         remainingBalance: newRemaining,
