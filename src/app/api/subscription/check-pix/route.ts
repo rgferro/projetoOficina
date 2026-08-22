@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
     let targetPlan = "PRO";
     let targetMaxUsers = 4;
 
-    if (amount >= SAAS_PLANS.ELITE.price - 1) {
+    if (amount >= SAAS_PLANS.ELITE.price - 1 || recordedPayment?.plan === "ELITE") {
       targetPlan = "ELITE";
       targetMaxUsers = 10;
     } else {
@@ -97,13 +97,26 @@ export async function POST(req: NextRequest) {
       targetMaxUsers = 4;
     }
 
+    // Se for upgrade de um plano existente com vencimento ativo (método pix_upgrade ou plano anterior ativo)
+    const isProRata =
+      recordedPayment?.method === "pix_upgrade" ||
+      (targetTenant.plan !== targetPlan &&
+        targetTenant.subscriptionExpiresAt &&
+        new Date(targetTenant.subscriptionExpiresAt) > new Date());
+
+    // Se for upgrade proporcional, MANTÉM a data de vencimento atual contratada.
+    // Se for nova contratação / renovação de ciclo, define +30 dias a partir de hoje.
+    const finalExpiry = isProRata && targetTenant.subscriptionExpiresAt
+      ? targetTenant.subscriptionExpiresAt
+      : nextExpiry;
+
     const updatedTenant = await prisma.tenant.update({
       where: { id: targetTenant.id },
       data: {
         plan: targetPlan,
         maxUsers: targetMaxUsers,
         subscriptionStatus: "active",
-        subscriptionExpiresAt: nextExpiry,
+        subscriptionExpiresAt: finalExpiry,
       },
     });
 
@@ -117,8 +130,11 @@ export async function POST(req: NextRequest) {
       status: "approved",
       plan: targetPlan,
       maxUsers: targetMaxUsers,
-      expiresAt: nextExpiry,
-      message: `🎉 Pagamento PIX Aprovado com Sucesso! Seu plano ${targetPlan} está ativo por 30 dias!`,
+      expiresAt: finalExpiry,
+      isProRata,
+      message: isProRata
+        ? `🎉 Upgrade para o plano ${targetPlan} realizado com sucesso! Sua data de vencimento foi mantida para ${new Date(finalExpiry).toLocaleDateString("pt-BR")}.`
+        : `🎉 Pagamento PIX Aprovado com Sucesso! Seu plano ${targetPlan} está ativo por 30 dias!`,
     });
   } catch (error: any) {
     console.error("Erro ao checar status do PIX:", error);

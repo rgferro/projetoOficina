@@ -94,7 +94,11 @@ export async function POST(req: NextRequest) {
       let targetPlan = "PRO";
       let targetMaxUsers = 4;
 
-      if (amount >= SAAS_PLANS.ELITE.price - 1 || resolvedPlan === "ELITE") {
+      const recordedPayment = paymentId ? await prisma.subscriptionPayment.findFirst({
+        where: { paymentId: String(paymentId) },
+      }) : null;
+
+      if (recordedPayment?.plan === "ELITE" || amount >= SAAS_PLANS.ELITE.price - 1 || resolvedPlan === "ELITE") {
         targetPlan = "ELITE";
         targetMaxUsers = 10;
       } else {
@@ -102,13 +106,24 @@ export async function POST(req: NextRequest) {
         targetMaxUsers = 4;
       }
 
+      const isProRata =
+        recordedPayment?.method === "pix_upgrade" ||
+        (targetTenant.plan !== targetPlan &&
+          targetTenant.subscriptionExpiresAt &&
+          new Date(targetTenant.subscriptionExpiresAt) > new Date());
+
+      const finalExpiry =
+        isProRata && targetTenant.subscriptionExpiresAt
+          ? targetTenant.subscriptionExpiresAt
+          : nextExpiry;
+
       const updatedTenant = await prisma.tenant.update({
         where: { id: targetTenant.id },
         data: {
           plan: targetPlan,
           maxUsers: targetMaxUsers,
           subscriptionStatus: "active",
-          subscriptionExpiresAt: nextExpiry,
+          subscriptionExpiresAt: finalExpiry,
         },
       });
 
@@ -116,7 +131,11 @@ export async function POST(req: NextRequest) {
         success: true,
         plan: targetPlan,
         maxUsers: targetMaxUsers,
-        message: "Assinatura ativada com sucesso!",
+        expiresAt: finalExpiry,
+        isProRata,
+        message: isProRata
+          ? `Upgrade para o plano ${targetPlan} realizado com sucesso! Sua data de vencimento continua mantida em ${new Date(finalExpiry).toLocaleDateString("pt-BR")}.`
+          : "Assinatura ativada com sucesso!",
       });
     }
 

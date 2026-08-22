@@ -634,10 +634,27 @@ export default function AssinaturaPage() {
             </div>
 
             <div>
-              <div className="text-3xl font-black text-slate-900">
-                R$ 129,90 <span className="text-xs font-bold text-slate-500">/ mês</span>
-              </div>
-              <p className="text-xs text-slate-500 mt-1">Para grandes centros automotivos</p>
+              {tenant?.availableUpgrades?.ELITE?.isProRata ? (
+                <div>
+                  <div className="text-3xl font-black text-purple-700 flex items-baseline gap-1">
+                    R$ {Number(tenant.availableUpgrades.ELITE.amountToPay).toFixed(2).replace(".", ",")}
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">/ Proporcional</span>
+                  </div>
+                  <div className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-100/80 text-purple-900 border border-purple-200 text-[11px] font-bold">
+                    <Sparkles className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
+                    <span>
+                      Pague a diferença para os <strong>{tenant.availableUpgrades.ELITE.daysRemaining} dias restantes</strong> mantendo seu vencimento.
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-3xl font-black text-slate-900">
+                    R$ 129,90 <span className="text-xs font-bold text-slate-500">/ mês</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Para grandes centros automotivos</p>
+                </div>
+              )}
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
@@ -713,7 +730,11 @@ export default function AssinaturaPage() {
                   className="w-full py-3 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black flex items-center justify-center gap-2 shadow-md shadow-purple-500/20 transition-all active:scale-95"
                 >
                   <QrCode className="w-4 h-4" />
-                  {actionLoading === "pix_ELITE" ? "Gerando..." : "Assinar com PIX (R$ 129,90)"}
+                  {actionLoading === "pix_ELITE"
+                    ? "Gerando..."
+                    : tenant?.availableUpgrades?.ELITE?.isProRata
+                    ? `Fazer Upgrade com PIX (R$ ${Number(tenant.availableUpgrades.ELITE.amountToPay).toFixed(2).replace(".", ",")})`
+                    : "Assinar com PIX (R$ 129,90)"}
                 </button>
 
                 <button
@@ -1020,6 +1041,11 @@ export default function AssinaturaPage() {
               <p className="text-xs text-slate-500 mt-1">
                 Valor: <strong className="text-slate-900">R$ {Number(pixData.amount).toFixed(2).replace(".", ",")}</strong> • {pixData.planName}
               </p>
+              {pixData.isProRataUpgrade && (
+                <div className="mt-2 text-xs bg-purple-50 text-purple-700 p-2.5 rounded-xl border border-purple-200 font-medium text-left">
+                  ✨ <strong>Upgrade Proporcional:</strong> Você está pagando apenas o valor residual referente aos dias restantes do seu ciclo. Sua data de vencimento será mantida inalterada após a confirmação.
+                </div>
+              )}
             </div>
 
             {/* Imagem do QR Code */}

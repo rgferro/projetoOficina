@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createMercadoPagoPixPayment, SAAS_PLANS } from "@/lib/mercadopago";
+import { calculateProRataUpgrade } from "@/lib/subscription-calculator";
 import { verifySessionToken } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
@@ -73,8 +74,19 @@ export async function POST(req: NextRequest) {
     }
 
     const plan = SAAS_PLANS[planId] || SAAS_PLANS.PRO;
-    const amount = seatsCount > 0 ? SAAS_PLANS.EXTRA_SEAT.price * seatsCount : plan.price;
-    const planName = seatsCount > 0 ? `+${seatsCount} Usuário(s) Adicional(is)` : plan.name;
+    let amount = seatsCount > 0 ? SAAS_PLANS.EXTRA_SEAT.price * seatsCount : plan.price;
+    let planName = seatsCount > 0 ? `+${seatsCount} Usuário(s) Adicional(is)` : plan.name;
+    let isProRataUpgrade = false;
+
+    // Se for alteração para um plano superior durante vigência ativa (ex: PRO -> ELITE)
+    if (seatsCount === 0 && tenant.plan !== planId && tenant.plan !== "STARTER") {
+      const upgradeInfo = calculateProRataUpgrade(tenant.plan, planId, tenant.subscriptionExpiresAt);
+      if (upgradeInfo.isEligible) {
+        amount = upgradeInfo.proRataAmount;
+        planName = `Upgrade Proporcional (${tenant.plan} -> ${planId}) - ${upgradeInfo.daysRemaining} dias restantes`;
+        isProRataUpgrade = true;
+      }
+    }
 
     const pixData = await createMercadoPagoPixPayment(tenant, amount, planName);
 
@@ -85,7 +97,7 @@ export async function POST(req: NextRequest) {
         paymentId: pixData.payment_id,
         amount,
         status: "pending",
-        method: "pix",
+        method: isProRataUpgrade ? "pix_upgrade" : "pix",
         plan: seatsCount > 0 ? "EXTRA_SEAT" : planId,
         qrCode: pixData.qr_code,
         qrCodeBase64: pixData.qr_code_base64,
@@ -100,6 +112,7 @@ export async function POST(req: NextRequest) {
       qrCodeBase64: pixData.qr_code_base64,
       amount,
       planName,
+      isProRataUpgrade,
     });
   } catch (error: any) {
     console.error("Erro ao gerar PIX para assinatura:", error);

@@ -38,17 +38,30 @@ export async function POST(req: NextRequest) {
               },
             });
           } else {
-            // Identifica o plano com base no valor pago
+            // Identifica o plano com base no registro de pagamento ou valor
             let targetPlan = "PRO";
             let targetMaxUsers = 4;
 
-            if (amount >= SAAS_PLANS.ELITE.price - 1) {
+            if (recordedPayment?.plan === "ELITE" || amount >= SAAS_PLANS.ELITE.price - 1) {
               targetPlan = "ELITE";
               targetMaxUsers = 10;
-            } else if (amount >= SAAS_PLANS.PRO.price - 1) {
+            } else if (recordedPayment?.plan === "PRO" || amount >= SAAS_PLANS.PRO.price - 1) {
               targetPlan = "PRO";
               targetMaxUsers = 4;
             }
+
+            const currentTenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+            const isProRata =
+              recordedPayment?.method === "pix_upgrade" ||
+              (currentTenant &&
+                currentTenant.plan !== targetPlan &&
+                currentTenant.subscriptionExpiresAt &&
+                new Date(currentTenant.subscriptionExpiresAt) > new Date());
+
+            const finalExpiry =
+              isProRata && currentTenant?.subscriptionExpiresAt
+                ? currentTenant.subscriptionExpiresAt
+                : nextExpiry;
 
             await prisma.tenant.update({
               where: { id: tenantId },
@@ -56,7 +69,7 @@ export async function POST(req: NextRequest) {
                 plan: targetPlan,
                 maxUsers: targetMaxUsers,
                 subscriptionStatus: "active",
-                subscriptionExpiresAt: nextExpiry,
+                subscriptionExpiresAt: finalExpiry,
               },
             });
           }

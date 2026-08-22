@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { SAAS_PLANS, getMercadoPagoPaymentStatus } from "@/lib/mercadopago";
+import { calculateProRataUpgrade } from "@/lib/subscription-calculator";
 import { verifySessionToken } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
@@ -166,6 +167,40 @@ export async function GET(req: NextRequest) {
 
     const planConfig = SAAS_PLANS[effectivePlan] || SAAS_PLANS.STARTER;
 
+    // Calcula simulações de upgrade pro-rata para planos superiores
+    const availableUpgrades: Record<string, any> = {};
+    if (effectivePlan !== "ELITE") {
+      if (effectivePlan === "STARTER") {
+        availableUpgrades.PRO = {
+          planId: "PRO",
+          name: SAAS_PLANS.PRO.name,
+          price: SAAS_PLANS.PRO.price,
+          isProRata: false,
+          amountToPay: SAAS_PLANS.PRO.price,
+        };
+        availableUpgrades.ELITE = {
+          planId: "ELITE",
+          name: SAAS_PLANS.ELITE.name,
+          price: SAAS_PLANS.ELITE.price,
+          isProRata: false,
+          amountToPay: SAAS_PLANS.ELITE.price,
+        };
+      } else if (effectivePlan === "PRO") {
+        const proRataElite = calculateProRataUpgrade("PRO", "ELITE", tenant.subscriptionExpiresAt);
+        availableUpgrades.ELITE = {
+          planId: "ELITE",
+          name: SAAS_PLANS.ELITE.name,
+          price: SAAS_PLANS.ELITE.price,
+          isProRata: proRataElite.isEligible,
+          amountToPay: proRataElite.proRataAmount,
+          daysRemaining: proRataElite.daysRemaining,
+          unusedCredit: proRataElite.unusedCredit,
+          targetCostForRemaining: proRataElite.targetCostForRemaining,
+          currentExpiry: tenant.subscriptionExpiresAt,
+        };
+      }
+    }
+
     return NextResponse.json({
       success: true,
       tenant: {
@@ -181,6 +216,7 @@ export async function GET(req: NextRequest) {
         ownerEmail: tenant.ownerEmail,
         ownerName: tenant.ownerName,
         paymentOverdueNotice,
+        availableUpgrades,
       },
       recentPayments,
     });
