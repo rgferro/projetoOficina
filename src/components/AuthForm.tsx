@@ -1061,7 +1061,7 @@ export function AuthForm({ initialTab = "LOGIN" }: { initialTab?: "LOGIN" | "REG
               className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all active:scale-95"
             >
               <CheckCircle2 className="w-4 h-4" />
-              {loading ? "Criando Conta..." : "Criar Minha Conta Grátis (2 Usuários)"}
+              {loading ? "Criando Conta..." : "Criar Minha Conta Grátis"}
             </button>
           </form>
         )}

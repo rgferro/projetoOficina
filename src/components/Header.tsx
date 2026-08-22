@@ -15,6 +15,7 @@ import {
   Sparkles,
   Settings,
   KeyRound,
+  Bot,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/authContext";
@@ -129,6 +130,20 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
         <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
           {/* Botão Contextual de Tutorial da Tela Atual */}
           <PageTourButton />
+
+          {/* Botão Assistente IA */}
+          <button
+            id="header-btn-torque-ia"
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent("torque:open-ai-chat"));
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold shadow-sm transition-all active:scale-95 flex-shrink-0"
+            title="Abrir Assistente Inteligente IA"
+          >
+            <Bot className="w-3.5 h-3.5 text-blue-200" />
+            <span className="hidden sm:inline">Torque IA</span>
+          </button>
 
           {/* Botão de Guia Geral do Fluxo */}
           <button

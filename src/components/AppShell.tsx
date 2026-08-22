@@ -12,6 +12,7 @@ import { PublicNavbar } from "@/components/PublicNavbar";
 import OnboardingTour from "@/components/OnboardingTour";
 import { CookieConsent } from "@/components/CookieConsent";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
+import { AiChatbot } from "@/components/AiChatbot";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -50,6 +51,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
         <CookieConsent />
+        <AiChatbot />
       </div>
     );
   }
@@ -73,6 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <MobileBottomNav onOpenSidebar={() => setSidebarOpen(true)} />
         </div>
         <OnboardingTour />
+        <AiChatbot />
       </AuthProvider>
     </ActivationGate>
   );

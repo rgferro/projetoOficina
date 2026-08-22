@@ -66,7 +66,7 @@ export default function LandingPage() {
             className="w-full sm:w-auto px-9 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-black text-base shadow-xl shadow-blue-600/30 flex items-center justify-center gap-2.5 transition-all transform hover:-translate-y-0.5 active:scale-95"
           >
             <Sparkles className="w-5 h-5 text-amber-300 fill-current" />
-            <span>Criar Conta Grátis (2 Usuários)</span>
+            <span>Criar Conta Grátis</span>
             <ArrowRight className="w-5 h-5" />
           </Link>
 
@@ -211,7 +211,7 @@ export default function LandingPage() {
               <Sparkles className="w-5 h-5 fill-current" /> Grátis
             </div>
             <div className="text-xs text-slate-500 font-semibold">
-              Até 2 Usuários sem precisar de cartão
+              Plano Starter Grátis sem cartão
             </div>
           </div>
 
@@ -703,7 +703,7 @@ export default function LandingPage() {
           <div className="bg-slate-950/95 backdrop-blur-md text-white p-3 sm:px-6 sm:py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-center justify-between gap-4">
             <div className="hidden sm:block">
               <div className="text-xs font-black text-white">Torque ERP • Gestão Automotiva</div>
-              <div className="text-[10px] text-emerald-400 font-bold">2 Usuários Grátis • Sem Cartão</div>
+              <div className="text-[10px] text-emerald-400 font-bold">Comece Grátis • Sem Cartão</div>
             </div>
             <Link
               href="/cadastro"

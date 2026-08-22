@@ -98,7 +98,7 @@ export default function LandingPage() {
             className="w-full sm:w-auto px-9 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-black text-base shadow-xl shadow-blue-600/30 flex items-center justify-center gap-2.5 transition-all transform hover:-translate-y-0.5 active:scale-95"
           >
             <Sparkles className="w-5 h-5 text-amber-300 fill-current" />
-            <span>Criar Conta Grátis (2 Usuários)</span>
+            <span>Criar Conta Grátis</span>
             <ArrowRight className="w-5 h-5" />
           </Link>
 
@@ -216,7 +216,7 @@ export default function LandingPage() {
             <div className="text-xl sm:text-2xl font-black text-amber-500 flex items-center justify-center gap-1.5">
               <Sparkles className="w-5 h-5 fill-current" /> Grátis
             </div>
-            <div className="text-xs text-slate-500 font-semibold">Até 2 Usuários sem precisar de cartão</div>
+            <div className="text-xs text-slate-500 font-semibold">Plano Starter Grátis sem cartão</div>
           </div>
           <div className="space-y-1 pt-4 sm:pt-0">
             <div className="text-xl sm:text-2xl font-black text-indigo-600 flex items-center justify-center gap-1.5">
@@ -318,7 +318,7 @@ export default function LandingPage() {
               <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Plano Starter</div>
               <div className="text-3xl font-black text-white">R$ 0,00 <span className="text-xs font-normal text-slate-400">/mês</span></div>
               <div className="text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 p-2 rounded-xl border border-emerald-800">
-                ✓ Até 2 Usuários Inclusos
+                ✓ 1 Usuário único (Dono / Proprietário)
               </div>
             </div>
             <Link href="/cadastro" className="w-full py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs text-center">
@@ -370,7 +370,7 @@ export default function LandingPage() {
         <div className="space-y-3">
           {[
             { q: "Preciso instalar algum programa?", a: "Não! É 100% web e roda no celular, tablet e PC." },
-            { q: "Como funciona o plano grátis?", a: "Acesso imediato sem cartão para até 2 usuários testarem." },
+            { q: "Como funciona o plano grátis?", a: "Acesso imediato sem cartão para o proprietário organizar seu negócio com Lava-Jato, Caixa & OSs." },
             { q: "Posso cancelar quando quiser?", a: "Sim, cancelamento em 1 clique sem taxas ou multas." },
           ].map((faq, idx) => (
             <div key={idx} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
@@ -396,7 +396,7 @@ export default function LandingPage() {
           <div className="bg-slate-950/95 backdrop-blur-md text-white p-3 sm:px-6 sm:py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-center justify-between gap-4">
             <div className="hidden sm:block">
               <div className="text-xs font-black text-white">Torque ERP • Gestão Automotiva</div>
-              <div className="text-[10px] text-emerald-400 font-bold">2 Usuários Grátis • Sem Cartão</div>
+              <div className="text-[10px] text-emerald-400 font-bold">Comece Grátis • Sem Cartão</div>
             </div>
             <Link
               href="/cadastro"
