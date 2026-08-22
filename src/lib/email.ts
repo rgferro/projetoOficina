@@ -222,4 +222,66 @@ export async function sendContactEmail(data: {
   });
 }
 
+/**
+ * Despacha notificação de segurança e auditoria ao dono da oficina quando uma sessão de suporte por personificação é iniciada
+ */
+export async function sendSupportAccessNotificationEmail(data: {
+  ownerEmail: string;
+  ownerName: string;
+  workshopName: string;
+  adminEmail: string;
+  reason: string;
+  ipAddress: string;
+  timestamp: Date;
+}) {
+  const formattedDate = data.timestamp.toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    dateStyle: "full",
+    timeStyle: "medium",
+  });
+
+  console.log(`🛡️ [Torque ERP] Despachando alerta de suporte para [${data.ownerEmail}]...`);
+
+  return sendBrevoEmail({
+    to: [{ email: data.ownerEmail, name: data.ownerName }],
+    subject: `[Segurança] Sessão de Suporte Técnico Iniciada - ${data.workshopName}`,
+    htmlContent: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 32px; color: #1e293b; max-width: 560px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 20px; background: #ffffff;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <div style="display: inline-block; width: 50px; height: 50px; line-height: 50px; background: linear-gradient(135deg, #d97706, #b45309); color: #ffffff; font-size: 24px; font-weight: bold; border-radius: 16px; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);">🛡️</div>
+          <h2 style="color: #0f172a; margin: 12px 0 0 0; font-size: 20px; font-weight: 800; letter-spacing: -0.5px;">Aviso de Segurança & Suporte</h2>
+          <p style="color: #d97706; font-size: 12px; margin-top: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Torque ERP • Atendimento Técnico</p>
+        </div>
+        
+        <p style="font-size: 15px; line-height: 1.5; color: #334155;">Olá, <strong>${data.ownerName}</strong> (${data.workshopName}),</p>
+        <p style="font-size: 14px; line-height: 1.6; color: #475569;">
+          Informamos que uma sessão temporária de suporte técnico autorizado foi iniciada na sua oficina para atendimento ou diagnóstico de sistema.
+        </p>
+
+        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 14px; padding: 18px; margin: 20px 0; font-size: 13px; line-height: 1.6; color: #92400e;">
+          <p style="margin: 0 0 8px 0;"><strong>📋 Detalhes do Acesso:</strong></p>
+          <ul style="margin: 0; padding-left: 20px;">
+            <li><strong>Operador Responsável:</strong> ${data.adminEmail}</li>
+            <li><strong>Motivo / Finalidade:</strong> ${data.reason}</li>
+            <li><strong>Data & Horário:</strong> ${formattedDate} (Horário de Brasília)</li>
+            <li><strong>Endereço IP de Origem:</strong> ${data.ipAddress}</li>
+            <li><strong>Duração Máxima:</strong> 1 hora (expiração automática)</li>
+          </ul>
+        </div>
+
+        <p style="font-size: 13px; line-height: 1.6; color: #64748b;">
+          🔒 <strong>Proteção e Privacidade:</strong> O modo de suporte <u>não</u> tem acesso à sua senha pessoal nem permite alteração de credenciais. Todas as ações do operador são registradas e auditadas em nossa trilha de conformidade (LGPD).
+        </p>
+
+        <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 24px 0 16px 0;" />
+        <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">
+          Caso você não tenha solicitado suporte, contate nosso time de segurança imediatamente pelo suporte oficial.<br/>
+          <strong>Torque ERP</strong> • <a href="https://torquerp.com.br" style="color: #2563eb; text-decoration: none;">torquerp.com.br</a>
+        </p>
+      </div>
+    `,
+  });
+}
+
+
 

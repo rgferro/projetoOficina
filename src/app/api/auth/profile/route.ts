@@ -145,6 +145,32 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
     const { userId, name, phone, currentPassword, newPassword } = body;
 
+    // Proteção de Segurança: Bloqueio estrito de troca de senha no modo de personificação
+    const token =
+      req.cookies.get("torque_token")?.value ||
+      req.cookies.get("torque_session")?.value ||
+      req.headers.get("authorization")?.replace("Bearer ", "");
+    const session = token ? verifySessionToken(token) : null;
+
+    if (session?.isImpersonating && newPassword && newPassword.trim().length > 0) {
+      const { logAuditEvent } = await import("@/lib/audit");
+      await logAuditEvent({
+        action: "IMPERSONATION_BLOCKED_PASSWORD_CHANGE",
+        req,
+        tenantId: session.tenantId,
+        userEmail: session.email,
+        details: {
+          adminEmail: session.impersonatedBy,
+          message: "Tentativa de alteração de senha bloqueada durante sessão de suporte.",
+        },
+      });
+
+      return NextResponse.json(
+        { error: "A alteração de senhas e credenciais é estritamente bloqueada durante sessões de suporte/personificação." },
+        { status: 403 }
+      );
+    }
+
     if (!userId) {
       return NextResponse.json({ error: "ID do usuário obrigatório" }, { status: 400 });
     }

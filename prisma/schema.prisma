@@ -543,12 +543,37 @@ model ContactMessage {
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  action    String   // REGISTER_TENANT, LOGIN, CREATE_OS, CREATE_WASH, FRAUD_SUSPECT, etc.
-  ip        String   // Endereço IP do cliente
-  userAgent String?  // Browser / Dispositivo
-  tenantId  String?  // ID do Tenant (se autenticado/aplicável)
-  userEmail String?  // E-mail do usuário
-  details   String?  // Detalhes em JSON ou texto
-  createdAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  action         String   // REGISTER_TENANT, LOGIN, CREATE_OS, CREATE_WASH, IMPERSONATION_STARTED, etc.
+  ip             String   // Endereço IP do cliente
+  userAgent      String?  // Browser / Dispositivo
+  tenantId       String?  // ID do Tenant (se autenticado/aplicável)
+  userEmail      String?  // E-mail do usuário alvo
+  adminEmail     String?  // E-mail do Master Admin operador (quando em personificação)
+  isImpersonated Boolean  @default(false)
+  endpoint       String?  // Rota chamada
+  method         String?  // GET, POST, PUT, DELETE
+  details        String?  // Detalhes em JSON ou texto
+  createdAt      DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([adminEmail, createdAt])
 }
+
+model ImpersonationSession {
+  id             String    @id @default(cuid())
+  adminEmail     String
+  targetTenantId String
+  targetEmail    String
+  reason         String
+  tokenJti       String    @unique
+  startedAt      DateTime  @default(now())
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  ipAddress      String
+  createdAt      DateTime  @default(now())
+
+  @@index([targetTenantId, startedAt])
+  @@index([adminEmail, startedAt])
+}
+

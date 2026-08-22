@@ -36,10 +36,14 @@ export interface UserSessionPayload {
   workshopName: string;
   plan: string;
   isOwner?: boolean;
+  isImpersonating?: boolean;
+  impersonatedBy?: string; // E-mail do Master Admin operador
+  impersonationExpiresAt?: string; // ISO string de expiração
+  impersonationSessionId?: string; // ID da sessão de suporte
 }
 
 /**
- * Cria token de sessão assinado
+ * Cria token de sessão assinado padrão (1 ano)
  */
 export function createSessionToken(payload: UserSessionPayload): string {
   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
@@ -52,6 +56,37 @@ export function createSessionToken(payload: UserSessionPayload): string {
     .digest("base64url");
 
   return `${header}.${body}.${signature}`;
+}
+
+/**
+ * Cria token secundário de curta duração estrita para suporte/personificação (máximo 1 hora)
+ */
+export function createImpersonationToken(
+  payload: UserSessionPayload,
+  durationSeconds: number = 3600
+): { token: string; expiresAt: Date } {
+  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
+  const now = Date.now();
+  const expDate = new Date(now + durationSeconds * 1000);
+  const exp = Math.floor(expDate.getTime() / 1000);
+
+  const impersonationPayload: UserSessionPayload = {
+    ...payload,
+    isImpersonating: true,
+    impersonationExpiresAt: expDate.toISOString(),
+  };
+
+  const body = Buffer.from(JSON.stringify({ ...impersonationPayload, exp })).toString("base64url");
+
+  const signature = crypto
+    .createHmac("sha256", JWT_SECRET)
+    .update(`${header}.${body}`)
+    .digest("base64url");
+
+  return {
+    token: `${header}.${body}.${signature}`,
+    expiresAt: expDate,
+  };
 }
 
 /**

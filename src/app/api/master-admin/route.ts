@@ -228,13 +228,25 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 5. Impersonate (Acesso Temporário de Suporte)
+    // 5. Impersonate (Acesso Temporário de Suporte com Auditoria, Token de 1h e Notificação)
     if (action === "IMPERSONATE" && tenantId) {
       const tenant = await prisma.tenant.findUnique({
         where: { id: tenantId },
         include: { employees: true },
       });
       if (!tenant) return NextResponse.json({ success: false, error: "Oficina não encontrada" }, { status: 404 });
+
+      // Extrai operador admin a partir da sessão ou cabeçalho
+      const { verifySessionToken } = await import("@/lib/auth");
+      const authCookie = req.cookies.get("torque_token")?.value || req.cookies.get("torque_session")?.value;
+      const adminSession = authCookie ? verifySessionToken(authCookie) : null;
+      const adminEmail = adminSession?.email || "rafael.gielow@gmail.com";
+
+      // Obtém IP e User-Agent para conformidade
+      const { getClientIp, getUserAgent } = await import("@/lib/audit");
+      const ipAddress = getClientIp(req);
+      const userAgent = getUserAgent(req);
+      const reason = body.reason || "Atendimento e diagnóstico técnico solicitado pelo usuário ou suporte Master";
 
       let adminEmployee = tenant.employees.find((e) => e.accessLevel === "ADMIN") || tenant.employees[0];
       if (!adminEmployee) {
@@ -251,26 +263,82 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      const { createSessionToken } = await import("@/lib/auth");
-      const token = createSessionToken({
-        userId: adminEmployee.id,
-        tenantId: tenant.id,
-        name: `[Suporte] ${tenant.ownerName}`,
-        email: tenant.ownerEmail,
-        role: "Administrador da Oficina",
-        accessLevel: "ADMIN",
-        isMaster: true,
+      // 1. Gera token seguro de 1 hora (3600 segundos)
+      const { createImpersonationToken } = await import("@/lib/auth");
+      const sessionJti = `imp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      
+      const { token, expiresAt } = createImpersonationToken(
+        {
+          userId: adminEmployee.id,
+          tenantId: tenant.id,
+          name: tenant.ownerName,
+          email: tenant.ownerEmail,
+          role: "Administrador da Oficina (Suporte)",
+          accessLevel: "ADMIN",
+          isMaster: true,
+          workshopName: tenant.name,
+          plan: tenant.plan,
+          isOwner: true,
+          isImpersonating: true,
+          impersonatedBy: adminEmail,
+          impersonationSessionId: sessionJti,
+        },
+        3600 // 1 hora
+      );
+
+      // 2. Grava a sessão de suporte e o log de auditoria no banco
+      await prisma.$transaction([
+        prisma.impersonationSession.create({
+          data: {
+            adminEmail,
+            targetTenantId: tenant.id,
+            targetEmail: tenant.ownerEmail,
+            reason,
+            tokenJti: sessionJti,
+            expiresAt,
+            ipAddress,
+          },
+        }),
+        prisma.auditLog.create({
+          data: {
+            action: "IMPERSONATION_STARTED",
+            ip: ipAddress,
+            userAgent,
+            tenantId: tenant.id,
+            userEmail: tenant.ownerEmail,
+            adminEmail,
+            isImpersonated: true,
+            endpoint: "/api/master-admin",
+            method: "POST",
+            details: JSON.stringify({
+              reason,
+              sessionJti,
+              targetTenantName: tenant.name,
+              expiresAt: expiresAt.toISOString(),
+            }),
+          },
+        }),
+      ]);
+
+      // 3. Despacha e-mail de alerta ao cliente assincronamente
+      const { sendSupportAccessNotificationEmail } = await import("@/lib/email");
+      sendSupportAccessNotificationEmail({
+        ownerEmail: tenant.ownerEmail,
+        ownerName: tenant.ownerName,
         workshopName: tenant.name,
-        plan: tenant.plan,
-        isOwner: true,
-      });
+        adminEmail,
+        reason,
+        ipAddress,
+        timestamp: new Date(),
+      }).catch((err) => console.error("⚠️ [Email Impersonation Alert Error]", err));
 
       const response = NextResponse.json({
         success: true,
         token,
+        expiresAt: expiresAt.toISOString(),
         user: {
           id: adminEmployee.id,
-          name: `[Suporte] ${tenant.ownerName}`,
+          name: tenant.ownerName,
           email: tenant.ownerEmail,
           role: "Administrador da Oficina",
           accessLevel: "ADMIN",
@@ -278,13 +346,17 @@ export async function POST(req: NextRequest) {
           workshopName: tenant.name,
           plan: tenant.plan,
           isOwner: true,
+          isImpersonating: true,
+          impersonatedBy: adminEmail,
+          impersonationExpiresAt: expiresAt.toISOString(),
+          impersonationSessionId: sessionJti,
         },
       });
 
       response.cookies.set("torque_token", token, {
         path: "/",
         httpOnly: false,
-        maxAge: 60 * 60 * 24 * 365,
+        maxAge: 3600, // 1 hora
         sameSite: "lax",
       });
 

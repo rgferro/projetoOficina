@@ -193,20 +193,34 @@ export default function MasterAdminPage() {
 
   const handleImpersonate = async (tenantId: string) => {
     try {
+      const reason = window.prompt(
+        "Motivo do acesso de suporte técnico (será registrado na trilha de auditoria e informado ao cliente por e-mail):",
+        "Diagnóstico e suporte técnico solicitado"
+      );
+      if (reason === null) return; // Cancelou o prompt
+
       const res = await fetch("/api/master-admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "IMPERSONATE", tenantId }),
+        body: JSON.stringify({ action: "IMPERSONATE", tenantId, reason: reason.trim() || "Suporte técnico Master" }),
       });
       const json = await res.json();
       if (json.success && json.token && json.user) {
-        // Salva a sessão master para poder retornar
+        // Salva a sessão e o token master para poder retornar
         const currentSaved = localStorage.getItem("torque_user");
         if (currentSaved) {
           localStorage.setItem("torque_master_backup", currentSaved);
         }
+
+        // Tenta obter o token master atual dos cookies para backup
+        const cookies = document.cookie.split(";").map((c) => c.trim());
+        const masterCookie = cookies.find((c) => c.startsWith("torque_token="));
+        if (masterCookie) {
+          localStorage.setItem("torque_master_token_backup", masterCookie.split("=")[1]);
+        }
+
         localStorage.setItem("torque_user", JSON.stringify(json.user));
-        document.cookie = `torque_token=${json.token}; path=/; max-age=31536000; SameSite=Lax;`;
+        document.cookie = `torque_token=${json.token}; path=/; max-age=3600; SameSite=Lax;`;
         window.location.href = "/dashboard";
       } else {
         alert(json.error || "Erro ao gerar acesso de suporte");

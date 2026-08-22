@@ -11,6 +11,7 @@ import { ActivationGate } from "@/components/ActivationGate";
 import { PublicNavbar } from "@/components/PublicNavbar";
 import OnboardingTour from "@/components/OnboardingTour";
 import { CookieConsent } from "@/components/CookieConsent";
+import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -57,6 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <ActivationGate>
       <AuthProvider>
+        <ImpersonationBanner />
         <div className="min-h-screen bg-slate-50 flex font-sans">
           <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
