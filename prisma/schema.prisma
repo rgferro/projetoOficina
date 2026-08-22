@@ -451,17 +451,25 @@ model WorkshopSetting {
   whatsappWashReminderTemplate String  @default("Olá {nome}! Faz alguns dias que não vemos seu {veiculo} ({placa}) por aqui. Que tal deixá-lo brilhando hoje? Temos horários disponíveis! 🧼✨")
   whatsappBirthdayTemplate    String   @default("🎉 Parabéns {nome}! A equipe {oficina} deseja a você um feliz aniversário com muita saúde e sucesso! Como presente especial, ganhe 15% de desconto em qualquer serviço neste mês! 🎁🚗")
   
-  // Google Drive Backup (Opcional e Explícito)
-  gdriveEnabled               Boolean  @default(false)
+  // Google Drive Backup (OAuth 2.0 & Criptografia AES-256-GCM)
+  gdriveEnabled               Boolean   @default(false)
   gdriveEmail                 String?
   gdriveFolderId              String?
   gdriveWebhookUrl            String?
   gdriveLastBackup            DateTime?
+  gdriveAccessToken           String?
+  gdriveRefreshToken          String?
+  gdriveTokenExpiry           DateTime?
+  gdriveAccountEmail          String?
+  gdriveAccountName           String?
+  gdriveClientId              String?
+  gdriveClientSecret          String?
+  backupMasterSalt            String?
 
-  tenantId                    String?  @unique
-  tenant                      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId                    String?   @unique
+  tenant                      Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  updatedAt                   DateTime @updatedAt
+  updatedAt                   DateTime  @updatedAt
 }
 
 model Tenant {

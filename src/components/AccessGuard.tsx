@@ -12,6 +12,20 @@ export function AccessGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { currentEmployee, currentPlan, canAccess, isEnforced } = useAuth();
 
+  // 1. Rota de Super Admin (/master-admin) tem seu próprio controle estrito de acesso e nunca deve exibir paywall de plano SaaS
+  if (pathname.startsWith("/master-admin")) {
+    return <>{children}</>;
+  }
+
+  // 2. Se for o Super Administrador (Rafael), tem acesso irrestrito a todos os módulos
+  if (
+    currentEmployee?.email === "rafael.gielow@gmail.com" ||
+    currentEmployee?.role === "Super Administrador" ||
+    (currentEmployee as any)?.isMaster === true
+  ) {
+    return <>{children}</>;
+  }
+
   const isPlanAllowed = isRouteAllowedForPlan(currentPlan, pathname);
   const hasAccess = canAccess(pathname);
   const defaultAllowedRoute = getDefaultRouteForRole(currentEmployee?.accessLevel, false, currentPlan);

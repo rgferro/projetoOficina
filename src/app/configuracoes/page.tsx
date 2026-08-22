@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Settings,
   Download,
@@ -23,6 +23,15 @@ import {
   Info,
   ExternalLink,
   Trash2,
+  Upload,
+  Key,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  History,
+  FileCheck,
+  AlertTriangle,
+  HelpCircle,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/formatters";
 import { useAuth } from "@/lib/authContext";
@@ -51,17 +60,33 @@ export default function ConfiguracoesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Google Drive & Backup states
   const [gdriveStatus, setGdriveStatus] = useState<any>(null);
+  const [gdriveFiles, setGdriveFiles] = useState<any[]>([]);
+  const [loadingDriveFiles, setLoadingDriveFiles] = useState(false);
   const [isGdriveModalOpen, setIsGdriveModalOpen] = useState(false);
-  const [gdriveForm, setGdriveForm] = useState({
-    email: "",
-    folderId: "",
-    webhookUrl: "",
-  });
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(true);
+
+  // Backup & Restore processing states
   const [syncingGdrive, setSyncingGdrive] = useState(false);
-  const [savingGdrive, setSavingGdrive] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [backupPassphrase, setBackupPassphrase] = useState("");
+  const [restorePassphrase, setRestorePassphrase] = useState("");
+  const [selectedDriveFile, setSelectedDriveFile] = useState<any>(null);
+  const [restoreSummary, setRestoreSummary] = useState<any>(null);
+  const [localFileToRestore, setLocalFileToRestore] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Formulário de credenciais personalizadas do Google Drive
+  const [gdriveCredentialsForm, setGdriveCredentialsForm] = useState({
+    clientId: "",
+    clientSecret: "",
+  });
+  const [savingCredentials, setSavingCredentials] = useState(false);
 
   // WhatsApp states
   const [waStatus, setWaStatus] = useState<any>(null);
@@ -71,6 +96,21 @@ export default function ConfiguracoesPage() {
   const [sendingTest, setSendingTest] = useState(false);
   const [connectingWa, setConnectingWa] = useState(false);
   const [qrTimeLeft, setQrTimeLeft] = useState<number>(45);
+
+  const loadDriveFiles = async () => {
+    try {
+      setLoadingDriveFiles(true);
+      const res = await fetch("/api/backup/google/files");
+      if (res.ok) {
+        const data = await res.json();
+        setGdriveFiles(data.files || []);
+      }
+    } catch (e) {
+      console.error("Erro ao carregar arquivos do Drive:", e);
+    } finally {
+      setLoadingDriveFiles(false);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -89,14 +129,11 @@ export default function ConfiguracoesPage() {
 
       setSettings(settingsData);
       setGdriveStatus(backupStatusData);
-      if (backupStatusData) {
-        setGdriveForm({
-          email: backupStatusData.email || "",
-          folderId: backupStatusData.folderId || "",
-          webhookUrl: backupStatusData.webhookUrl || "",
-        });
-      }
       setWaStatus(waData);
+
+      if (backupStatusData?.connected) {
+        loadDriveFiles();
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -104,7 +141,24 @@ export default function ConfiguracoesPage() {
     }
   };
 
+  // Monitora retornos de OAuth do Google na URL
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const status = urlParams.get("gdrive_status");
+      const err = urlParams.get("gdrive_error");
+      const email = urlParams.get("email");
+
+      if (status === "connected") {
+        setSuccessMessage(`✓ Google Drive conectado com sucesso para ${email || "sua conta"}!`);
+        setTimeout(() => setSuccessMessage(""), 5000);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (err) {
+        setErrorMessage(`Falha na autorização do Google Drive: ${err}`);
+        setTimeout(() => setErrorMessage(""), 6000);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
     loadData();
   }, []);
 
@@ -127,7 +181,7 @@ export default function ConfiguracoesPage() {
     return () => clearInterval(timer);
   }, [isQrModalOpen, waStatus?.qrCodeUrl]);
 
-  // Polling automático para atualizar QR Code e detectar pareamento do celular continuamente
+  // Polling automático para atualizar QR Code
   useEffect(() => {
     const pollInterval = setInterval(async () => {
       try {
@@ -178,57 +232,50 @@ export default function ConfiguracoesPage() {
     }
   };
 
-  // Salvar configurações do Google Drive
-  const handleSaveGdriveConfig = async (e: React.FormEvent) => {
+  // Iniciar fluxo de conexão OAuth com Google Drive
+  const handleConnectGoogleDrive = () => {
+    window.location.href = "/api/backup/google/auth";
+  };
+
+  // Salvar credenciais OAuth personalizadas
+  const handleSaveGoogleCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSavingGdrive(true);
+    setSavingCredentials(true);
     try {
       const res = await fetch("/api/backup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "save_config",
-          enabled: true,
-          email: gdriveForm.email,
-          folderId: gdriveForm.folderId,
-          webhookUrl: gdriveForm.webhookUrl,
+          action: "save_credentials",
+          clientId: gdriveCredentialsForm.clientId,
+          clientSecret: gdriveCredentialsForm.clientSecret,
         }),
       });
       const data = await res.json();
       if (res.ok) {
         setGdriveStatus(data.status);
-        setIsGdriveModalOpen(false);
-        setSuccessMessage("✓ Integração do Google Drive cadastrada com sucesso!");
+        setSuccessMessage("✓ Credenciais do Google Drive salvas com sucesso!");
         setTimeout(() => setSuccessMessage(""), 4000);
+        handleConnectGoogleDrive();
       } else {
-        alert(data.error || "Erro ao salvar integração do Google Drive");
+        alert(data.error || "Erro ao salvar credenciais");
       }
     } catch (err: any) {
       alert("Erro ao salvar: " + err.message);
     } finally {
-      setSavingGdrive(false);
+      setSavingCredentials(false);
     }
   };
 
   // Desconectar Google Drive
   const handleDisconnectGdrive = async () => {
-    if (!confirm("Deseja desconectar a integração com o Google Drive?")) return;
+    if (!confirm("Deseja desconectar sua conta do Google Drive deste sistema?")) return;
     try {
-      const res = await fetch("/api/backup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "save_config",
-          enabled: false,
-          email: "",
-          folderId: "",
-          webhookUrl: "",
-        }),
-      });
+      const res = await fetch("/api/backup/google/disconnect", { method: "POST" });
       const data = await res.json();
       if (res.ok) {
         setGdriveStatus(data.status);
-        setGdriveForm({ email: "", folderId: "", webhookUrl: "" });
+        setGdriveFiles([]);
         setSuccessMessage("Google Drive desconectado com sucesso.");
         setTimeout(() => setSuccessMessage(""), 3500);
       }
@@ -237,22 +284,25 @@ export default function ConfiguracoesPage() {
     }
   };
 
-  // Sincronizar backup para o Google Drive
-  const handleSyncGdrive = async () => {
+  // Realizar Backup Imediato para Google Drive (AES-256-GCM)
+  const handleExecuteBackupNow = async () => {
     setSyncingGdrive(true);
     try {
       const res = await fetch("/api/backup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "sync" }),
+        body: JSON.stringify({ passphrase: backupPassphrase }),
       });
       const data = await res.json();
       if (res.ok) {
         setGdriveStatus(data.status);
-        setSuccessMessage("✓ Backup enviado com sucesso para o Google Drive!");
-        setTimeout(() => setSuccessMessage(""), 4000);
+        setIsBackupModalOpen(false);
+        setBackupPassphrase("");
+        setSuccessMessage(`✓ Backup criptografado (${data.result?.recordsCount || 0} registros) enviado com sucesso para o seu Google Drive!`);
+        setTimeout(() => setSuccessMessage(""), 5000);
+        loadDriveFiles();
       } else {
-        alert(data.error || "Erro ao enviar backup para o Google Drive");
+        alert(data.error || "Erro ao realizar backup para o Google Drive");
       }
     } catch (err: any) {
       alert("Erro ao sincronizar: " + err.message);
@@ -261,7 +311,93 @@ export default function ConfiguracoesPage() {
     }
   };
 
-  // Conectar WhatsApp (via Pareamento do QR Code ou Número)
+  // Iniciar Restauração a partir de um Arquivo do Google Drive
+  const handleStartDriveRestore = (file: any) => {
+    setSelectedDriveFile(file);
+    setLocalFileToRestore(null);
+    setRestoreSummary(null);
+    setRestorePassphrase("");
+    setIsRestoreModalOpen(true);
+  };
+
+  // Iniciar Restauração a partir de Arquivo Local
+  const handleLocalFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setLocalFileToRestore(file);
+      setSelectedDriveFile(null);
+      setRestoreSummary(null);
+      setRestorePassphrase("");
+      setIsRestoreModalOpen(true);
+    }
+  };
+
+  // Confirmar e Executar Restauração no Banco de Dados
+  const handleConfirmRestore = async () => {
+    if (!confirm("ATENÇÃO: A restauração atualizará os registros do banco de dados com os dados do backup. Deseja prosseguir?")) {
+      return;
+    }
+
+    setRestoring(true);
+    try {
+      let res;
+      if (localFileToRestore) {
+        const formData = new FormData();
+        formData.append("file", localFileToRestore);
+        formData.append("passphrase", restorePassphrase);
+        res = await fetch("/api/backup/restore", {
+          method: "POST",
+          body: formData,
+        });
+      } else if (selectedDriveFile) {
+        res = await fetch("/api/backup/restore", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            source: "google_drive",
+            fileId: selectedDriveFile.id,
+            passphrase: restorePassphrase,
+          }),
+        });
+      } else {
+        return;
+      }
+
+      const data = await res.json();
+      if (res.ok) {
+        setRestoreSummary(data.counts);
+        setSuccessMessage("✓ Restauração de dados concluída com sucesso!");
+        setTimeout(() => setSuccessMessage(""), 5000);
+      } else {
+        alert(data.error || "Falha na restauração do backup. Verifique a senha informada.");
+      }
+    } catch (err: any) {
+      alert("Erro durante a restauração: " + err.message);
+    } finally {
+      setRestoring(false);
+    }
+  };
+
+  // Excluir Backup do Google Drive
+  const handleDeleteDriveFile = async (fileId: string) => {
+    if (!confirm("Deseja realmente remover esta cópia de backup do Google Drive?")) return;
+    try {
+      const res = await fetch("/api/backup/google/files", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", fileId }),
+      });
+      if (res.ok) {
+        setSuccessMessage("Arquivo removido do Google Drive com sucesso.");
+        setTimeout(() => setSuccessMessage(""), 3500);
+        loadDriveFiles();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Conectar WhatsApp
   const handleConnectWhatsApp = async (phoneToPair?: string) => {
     setConnectingWa(true);
     try {
@@ -285,494 +421,647 @@ export default function ConfiguracoesPage() {
     }
   };
 
-  // Desconectar WhatsApp
-  const handleDisconnectWhatsApp = async () => {
-    if (!confirm("Deseja desconectar o WhatsApp da oficina?")) return;
-    try {
-      const res = await fetch("/api/whatsapp/disconnect", { method: "POST" });
-      const data = await res.json();
-      setWaStatus(data);
-      setIsQrModalOpen(true);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  // Testar envio silencioso de WhatsApp
-  const handleSendTestMessage = async () => {
-    if (!testPhone) {
-      alert("Digite um número com DDD (ex: 11987654321) para testar");
-      return;
-    }
-
-    setSendingTest(true);
-    try {
-      const res = await fetch("/api/whatsapp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: testPhone,
-          message: `✅ Teste de conexão AutoGestão ERP: Seu WhatsApp está conectado e pronto para enviar mensagens internamente sem abrir abas externas! 🚗✨`,
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        setSuccessMessage(`✓ Mensagem enviada com sucesso internamente para +${data.formattedPhone}!`);
-        setTestPhone("");
-        setTimeout(() => setSuccessMessage(""), 4000);
-      } else {
-        alert(data.error || "Erro no envio");
-      }
-    } catch (err: any) {
-      alert("Erro no envio: " + err.message);
-    } finally {
-      setSendingTest(false);
-    }
-  };
-
-  const isConnected = waStatus?.status === "CONNECTED";
-  const isGdriveConnected = Boolean(gdriveStatus?.enabled);
+  const isGdriveConnected = Boolean(gdriveStatus?.connected);
 
   return (
-    <div className="space-y-6">
-      {/* Top Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2.5">
-          <Settings className="w-7 h-7 text-blue-600" />
-          Configurações, Conexão WhatsApp & Backup
-        </h1>
-        <p className="text-sm text-slate-500">
-          Gerencie os dados da empresa, conexão do WhatsApp, downloads manuais e integração com Google Drive.
-        </p>
-      </div>
-
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      {/* Toast de Sucesso */}
       {successMessage && (
-        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+        <div className="fixed top-5 right-5 z-50 bg-emerald-600 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top duration-300 font-bold text-sm">
+          <CheckCircle2 className="w-5 h-5 text-emerald-200" />
           <span>{successMessage}</span>
         </div>
       )}
 
-      {/* Seção 0: Conexão do WhatsApp com QR Code */}
-      <div id="config-whatsapp-card" className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                isConnected
-                  ? "bg-emerald-100 text-emerald-700"
-                  : "bg-amber-100 text-amber-700"
-              }`}
-            >
-              <Smartphone className="w-6 h-6" />
+      {/* Toast de Erro */}
+      {errorMessage && (
+        <div className="fixed top-5 right-5 z-50 bg-rose-600 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top duration-300 font-bold text-sm">
+          <AlertTriangle className="w-5 h-5 text-rose-200" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
+      {/* Header da Página */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 flex items-center gap-2">
+            <Settings className="w-8 h-8 text-blue-600" />
+            Configurações & Backup em Nuvem
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Gerenciamento do sistema, integração com Google Drive, backups criptografados e WhatsApp.
+          </p>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* SEÇÃO PRINCIPAL: CENTRAL DE BACKUP E GOOGLE DRIVE                          */}
+      {/* ========================================================================= */}
+      <div id="config-backup-card" className="bg-gradient-to-tr from-slate-900 via-slate-850 to-blue-950 rounded-3xl p-6 sm:p-8 text-white shadow-2xl space-y-8 border border-slate-800">
+        {/* Cabeçalho do Card */}
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6 border-b border-slate-800/80">
+          <div className="flex items-center gap-4">
+            <div className="p-3.5 rounded-2xl bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-inner">
+              <Database className="w-8 h-8" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-slate-900">
-                  Conexão WhatsApp da Oficina (QR Code)
-                </h2>
-                {isConnected ? (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    CONECTADO
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                    AGUARDANDO QR CODE
-                  </span>
-                )}
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h2 className="text-xl font-black text-white">Central de Backup & Restauração</h2>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                  AES-256-GCM
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  Google Drive OAuth 2.0
+                </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                {isConnected ? (
-                  <>
-                    Número Pareado: <strong className="text-slate-800">{waStatus?.connectedNumber}</strong> • Envia mensagens internamente em 1 clique sem abrir abas.
-                  </>
-                ) : (
-                  "Escaneie o QR Code com o WhatsApp do seu celular para ativar o envio automático."
-                )}
+              <p className="text-xs text-slate-300 mt-1">
+                Guarde cópias dos seus clientes, veículos, finanças e ordens de serviço no seu próprio Google Drive ou no computador.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {!isAdminUser ? (
-              <div className="px-3.5 py-2 bg-slate-100 text-slate-500 font-bold text-xs rounded-xl flex items-center gap-1.5 border border-slate-200">
-                <Lock className="w-3.5 h-3.5 text-slate-400" />
-                <span>Restrito ao Administrador</span>
-              </div>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQrTimeLeft(45);
-                    setIsQrModalOpen(true);
-                  }}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all"
-                >
-                  <QrCode className="w-4 h-4" />
-                  <span>{isConnected ? "Ver / Trocar QR Code" : "Escanear QR Code"}</span>
-                </button>
-
-                {isConnected && (
-                  <button
-                    type="button"
-                    onClick={handleDisconnectWhatsApp}
-                    className="px-3 py-2 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 font-bold rounded-xl text-xs flex items-center gap-1 border border-slate-200 transition-all"
-                    title="Desconectar este aparelho"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Desconectar</span>
-                  </button>
-                )}
-              </>
-            )}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => setShowInstructions(!showInstructions)}
+              className="px-3.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-750 text-slate-300 text-xs font-bold border border-slate-700 flex items-center gap-2 transition-colors"
+            >
+              <HelpCircle className="w-4 h-4 text-blue-400" />
+              <span>{showInstructions ? "Ocultar Guia Rápido" : "Como Funciona (Guia)"}</span>
+              {showInstructions ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
           </div>
         </div>
 
-        {/* QR Code Inline se não estiver conectado e for Admin */}
-        {!isConnected && isAdminUser && waStatus?.qrCodeUrl && (
-          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row items-center gap-6">
-            <div className="p-3 bg-white rounded-2xl border-2 border-slate-200 shadow-md">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={waStatus.qrCodeUrl}
-                alt="QR Code WhatsApp"
-                className="w-48 h-48 rounded-lg"
-              />
-              <div className="mt-2 flex items-center justify-center gap-1.5 text-[11px] font-black text-amber-700 bg-amber-50 border border-amber-200 py-1 px-2.5 rounded-lg">
-                <RefreshCw className={`w-3.5 h-3.5 ${qrTimeLeft <= 10 ? "text-red-500 animate-spin" : "text-amber-500"}`} />
-                <span>Expira em: <strong className="font-mono">{qrTimeLeft}s</strong></span>
+        {/* ========================================================================= */}
+        {/* GUIA PASSO A PASSO EM LINGUAGEM SIMPLES (UX PARA LEIGOS)                   */}
+        {/* ========================================================================= */}
+        {showInstructions && (
+          <div className="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-5 space-y-4 animate-in fade-in duration-300">
+            <div className="flex items-center gap-2 text-blue-300 font-black text-xs uppercase tracking-wider">
+              <Sparkles className="w-4 h-4 text-blue-400" />
+              <span>Guia Passo a Passo Simplificado (Para qualquer pessoa usar)</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Passo 1 */}
+              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-700/50 space-y-2">
+                <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
+                  <span className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-[11px] font-black border border-emerald-500/40">
+                    1
+                  </span>
+                  <span>Conectar ao Google Drive</span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Clique no botão <strong>Conectar Google Drive</strong>. Você autoriza pelo Google com <strong>Privacidade Total</strong>: o sistema acessa apenas seus próprios arquivos de backup e não lê nada pessoal.
+                </p>
+              </div>
+
+              {/* Passo 2 */}
+              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-700/50 space-y-2">
+                <div className="flex items-center gap-2 text-blue-400 font-bold text-xs">
+                  <span className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-[11px] font-black border border-blue-500/40">
+                    2
+                  </span>
+                  <span>Criar Cópia de Segurança</span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Basta clicar em <strong>Fazer Backup Agora</strong>. O sistema empacota todos os clientes, veículos, serviços e caixa, criptografa e envia direto para sua nuvem.
+                </p>
+              </div>
+
+              {/* Passo 3 */}
+              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-700/50 space-y-2">
+                <div className="flex items-center gap-2 text-purple-400 font-bold text-xs">
+                  <span className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-[11px] font-black border border-purple-500/40">
+                    3
+                  </span>
+                  <span>Restaurar ou Baixar</span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Se formatar o computador ou trocar de máquina, clique em <strong>Restaurar</strong> ao lado da cópia desejada. Você também pode clicar em <strong>Baixar</strong> para salvar no seu PC ou pen-drive.
+                </p>
               </div>
             </div>
 
-            <div className="space-y-3 flex-1 text-xs text-slate-600">
-              <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                <QrCode className="w-4 h-4 text-emerald-600" />
-                Como conectar seu celular em 3 passos:
-              </h3>
-              <ol className="list-decimal list-inside space-y-1.5 text-slate-700 font-medium">
-                <li>Abra o <strong>WhatsApp</strong> no seu celular</li>
-                <li>Toque em <strong>Mais opções</strong> (3 pontinhos) ou <strong>Ajustes</strong> &gt; <strong>Aparelhos Conectados</strong></li>
-                <li>Toque em <strong>Conectar um aparelho</strong> e aponte a câmera para o QR Code ao lado</li>
-              </ol>
-
-              <div className="pt-2 flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={connectingWa}
-                  onClick={() => handleConnectWhatsApp()}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm shadow-emerald-600/20"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  <span>{connectingWa ? "Conectando..." : "Confirmar Conexão do Celular"}</span>
-                </button>
+            {/* Dica de Segurança */}
+            <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 flex items-start gap-3 text-xs">
+              <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <div className="text-slate-300 text-[11px] leading-relaxed">
+                <strong className="text-emerald-300 font-bold">Dica de Segurança Blindada:</strong> Todos os seus dados são criptografados com o algoritmo militar <strong>AES-256-GCM</strong> localmente antes de serem enviados. Mesmo que alguém invada sua conta do Google Drive, encontrará apenas um arquivo ilegível.
               </div>
             </div>
           </div>
         )}
 
-        {/* Teste de Disparo Rápido */}
-        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
-          <div className="flex-1 space-y-0.5">
-            <span className="font-bold text-slate-700 block">Testar Envio Interno Imediato:</span>
-            <p className="text-slate-500">Digite seu WhatsApp com DDD para receber uma mensagem de teste agora:</p>
+        {/* ========================================================================= */}
+        {/* BLOCO 1: STATUS DO GOOGLE DRIVE E AÇÕES RÁPIDAS                           */}
+        {/* ========================================================================= */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Card Status do Drive */}
+          <div className="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-4 flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-white font-bold text-sm">
+                  <Cloud className="w-5 h-5 text-blue-400" />
+                  <span>Google Drive Pessoal</span>
+                </div>
+                {isGdriveConnected ? (
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-black px-3 py-1 rounded-full bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20">
+                    <Check className="w-3 h-3 stroke-[3]" />
+                    CONECTADO
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-full bg-slate-700 text-slate-300">
+                    DESCONECTADO
+                  </span>
+                )}
+              </div>
+
+              <div className="text-xs text-slate-300 space-y-1.5 pt-1">
+                {isGdriveConnected ? (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-slate-400">Conta:</span>
+                      <strong className="text-blue-300 truncate max-w-[200px]">{gdriveStatus?.email || "Google Drive Ativo"}</strong>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-slate-400">Último Backup:</span>
+                      <span className="text-emerald-400 font-mono font-bold">
+                        {gdriveStatus?.lastBackupDate ? formatDateTime(gdriveStatus.lastBackupDate) : "Nunca enviado"}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="leading-relaxed">
+                    Conecte seu Google Drive para sincronizar suas cópias de segurança automaticamente na nuvem de forma protegida.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-3 space-y-2">
+              {isGdriveConnected ? (
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsBackupModalOpen(true)}
+                    disabled={syncingGdrive}
+                    className="flex-1 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${syncingGdrive ? "animate-spin" : ""}`} />
+                    <span>{syncingGdrive ? "Fazendo Backup..." : "Fazer Backup Agora"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDisconnectGdrive}
+                    className="px-3 py-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold border border-rose-500/30 transition-colors flex items-center justify-center gap-1.5"
+                    title="Desconectar Conta"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Desconectar</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (gdriveStatus?.hasCustomCredentials) {
+                        handleConnectGoogleDrive();
+                      } else {
+                        setIsGdriveModalOpen(true);
+                      }
+                    }}
+                    className="w-full px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition-all"
+                  >
+                    <Cloud className="w-4 h-4" />
+                    <span>Conectar Conta Google Drive</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsGdriveModalOpen(true)}
+                    className="w-full text-center text-[11px] text-blue-400 hover:underline py-1"
+                  >
+                    Configurar Credenciais OAuth Customizadas
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="Ex: 11987654321"
-              value={testPhone}
-              onChange={(e) => setTestPhone(e.target.value)}
-              className="p-2 border border-slate-200 rounded-xl text-xs font-mono bg-white w-40"
-            />
-            <button
-              type="button"
-              disabled={sendingTest}
-              onClick={handleSendTestMessage}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm shadow-emerald-600/20 disabled:opacity-50"
-            >
-              <Send className="w-3.5 h-3.5" />
-              {sendingTest ? "Enviando..." : "Testar Agora"}
-            </button>
+
+          {/* Card Downloads Manuais no PC */}
+          <div className="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-4 flex flex-col justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-white font-bold text-sm">
+                <HardDrive className="w-5 h-5 text-emerald-400" />
+                <span>Download Direto no Computador</span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Baixe o arquivo de segurança para guardar localmente no seu computador ou enviar por e-mail/pen-drive.
+              </p>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <a
+                href="/api/backup?format=enc"
+                download
+                className="w-full px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all"
+              >
+                <Lock className="w-4 h-4 text-emerald-200" />
+                <span>Baixar Backup Criptografado (.enc)</span>
+              </a>
+
+              <div className="flex gap-2">
+                <a
+                  href="/api/backup?format=json"
+                  download
+                  className="flex-1 px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-650 text-slate-200 text-[11px] font-bold border border-slate-600 flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5 text-blue-400" />
+                  <span>JSON Completo</span>
+                </a>
+                <a
+                  href="/api/backup?format=db"
+                  download
+                  className="flex-1 px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-650 text-slate-200 text-[11px] font-bold border border-slate-600 flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <Database className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Banco .db SQLite</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Card Restaurar Arquivo do Computador */}
+          <div className="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-4 flex flex-col justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-white font-bold text-sm">
+                <Upload className="w-5 h-5 text-purple-400" />
+                <span>Restaurar de Arquivo Local</span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Envie um arquivo <strong>.enc</strong> ou <strong>.json</strong> salvo no seu computador para restaurar os dados no sistema.
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept=".enc,.json"
+                onChange={handleLocalFileSelected}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full px-4 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 transition-all"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Selecionar Arquivo do Computador</span>
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* ========================================================================= */}
+        {/* BLOCO 2: TABELA DE BACKUPS DISPONÍVEIS NO GOOGLE DRIVE                     */}
+        {/* ========================================================================= */}
+        {isGdriveConnected && (
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <History className="w-5 h-5 text-blue-400" />
+                <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                  Cópias de Segurança Salvas no seu Google Drive ({gdriveFiles.length})
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                onClick={loadDriveFiles}
+                disabled={loadingDriveFiles}
+                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingDriveFiles ? "animate-spin" : ""}`} />
+                <span>Atualizar Lista</span>
+              </button>
+            </div>
+
+            {loadingDriveFiles ? (
+              <div className="p-8 text-center bg-slate-850/60 rounded-2xl border border-slate-800 space-y-2">
+                <RefreshCw className="w-6 h-6 text-blue-400 animate-spin mx-auto" />
+                <p className="text-xs text-slate-400">Buscando backups no seu Google Drive...</p>
+              </div>
+            ) : gdriveFiles.length === 0 ? (
+              <div className="p-8 text-center bg-slate-850/60 rounded-2xl border border-slate-800 space-y-2">
+                <Cloud className="w-8 h-8 text-slate-600 mx-auto" />
+                <p className="text-xs font-bold text-slate-300">Nenhum backup encontrado no seu Google Drive ainda.</p>
+                <p className="text-[11px] text-slate-500">
+                  Clique no botão <strong>Fazer Backup Agora</strong> acima para criar sua primeira cópia de segurança na nuvem.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-800/80 text-slate-400 font-bold border-b border-slate-700/80">
+                    <tr>
+                      <th className="py-3 px-4">Nome do Arquivo</th>
+                      <th className="py-3 px-4">Data e Hora</th>
+                      <th className="py-3 px-4">Tamanho</th>
+                      <th className="py-3 px-4">Segurança</th>
+                      <th className="py-3 px-4 text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/80 text-slate-300">
+                    {gdriveFiles.map((file) => (
+                      <tr key={file.id} className="hover:bg-slate-800/40 transition-colors">
+                        <td className="py-3 px-4 font-mono font-bold text-white flex items-center gap-2">
+                          <FileCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span className="truncate max-w-xs">{file.name}</span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-300">
+                          {formatDateTime(file.createdTime)}
+                        </td>
+                        <td className="py-3 px-4 font-mono text-slate-400">
+                          {file.size ? `${(file.size / 1024).toFixed(1)} KB` : "N/D"}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            <Lock className="w-2.5 h-2.5" />
+                            AES-256-GCM
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleStartDriveRestore(file)}
+                              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shadow-sm flex items-center gap-1 transition-all"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              <span>Restaurar</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  const res = await fetch("/api/backup/google/files", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ action: "download_raw", fileId: file.id }),
+                                  });
+                                  if (res.ok) {
+                                    const blob = await res.blob();
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement("a");
+                                    a.href = url;
+                                    a.download = file.name;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                  }
+                                } catch (e) {
+                                  alert("Erro ao baixar arquivo: " + e);
+                                }
+                              }}
+                              className="px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-650 text-slate-200 text-[11px] font-bold border border-slate-600 transition-colors"
+                              title="Baixar para este computador"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteDriveFile(file.id)}
+                              className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-colors"
+                              title="Excluir do Google Drive"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Modal QR Code */}
-      {isQrModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-700">
-                  <QrCode className="w-5 h-5" />
+      {/* ========================================================================= */}
+      {/* MODAL: CRIAR BACKUP COM SENHA (OPCIONAL)                                   */}
+      {/* ========================================================================= */}
+      {isBackupModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-100 space-y-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-2xl bg-blue-100 text-blue-700">
+                  <ShieldCheck className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="font-black text-slate-900 text-base">Escanear QR Code do WhatsApp</h3>
-                  <p className="text-xs text-slate-500">Acesso restrito ao Administrador</p>
+                  <h3 className="font-black text-slate-900 text-base">Fazer Backup Agora</h3>
+                  <p className="text-xs text-slate-500">Criptografia Militar AES-256-GCM</p>
                 </div>
               </div>
               <button
-                onClick={() => setIsQrModalOpen(false)}
+                onClick={() => setIsBackupModalOpen(false)}
                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center"
               >
                 ✕
               </button>
             </div>
 
-            <div className="flex flex-col items-center justify-center space-y-4 py-2">
-              {waStatus?.status === "QR_EXPIRED" ? (
-                <div className="w-56 h-56 rounded-2xl border-2 border-dashed border-red-300 bg-red-50/50 flex flex-col items-center justify-center p-4 text-center space-y-3">
-                  <Lock className="w-8 h-8 text-red-500" />
-                  <p className="text-xs font-bold text-red-700">
-                    QR Code Expirado (45s)
-                  </p>
-                  <p className="text-[10px] text-slate-500 leading-tight">
-                    Por motivos de segurança, o código expira automaticamente.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setWaStatus((prev: any) => ({ ...prev, qrCodeUrl: null, status: "CONNECTING" }));
-                      setQrTimeLeft(45);
-                      await fetch("/api/whatsapp/disconnect", { method: "POST" });
-                      setTimeout(async () => {
-                        const res = await fetch("/api/whatsapp/status");
-                        if (res.ok) setWaStatus(await res.json());
-                      }, 1000);
-                    }}
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm flex items-center gap-1.5 transition-all"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    Gerar Novo Código
-                  </button>
-                </div>
-              ) : waStatus?.qrCodeUrl ? (
-                <div className="p-4 bg-white rounded-2xl border-2 border-slate-200 shadow-md relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={waStatus.qrCodeUrl}
-                    alt="QR Code WhatsApp"
-                    className="w-56 h-56 rounded-lg shadow-inner"
-                  />
-                  <div className="mt-2 flex items-center justify-center gap-1.5 text-[11px] font-black text-amber-700 bg-amber-50 border border-amber-200 py-1 px-2.5 rounded-lg">
-                    <RefreshCw className={`w-3.5 h-3.5 ${qrTimeLeft <= 10 ? "text-red-500 animate-spin" : "text-amber-500"}`} />
-                    <span>Expira em: <strong className="font-mono">{qrTimeLeft}s</strong></span>
-                  </div>
-                </div>
-              ) : (
-                <div className="w-56 h-56 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center p-4 text-center space-y-3">
-                  <RefreshCw className="w-8 h-8 text-emerald-600 animate-spin" />
-                  <p className="text-xs font-bold text-slate-700">
-                    Gerando QR Code Oficial...
-                  </p>
-                  <p className="text-[10px] text-slate-500 leading-tight">
-                    Conectando aos servidores do WhatsApp em tempo real.
-                  </p>
-                </div>
-              )}
-
-              <div className="text-xs text-slate-600 space-y-1.5 text-left w-full bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <div className="flex items-center justify-between">
-                  <p className="font-bold text-slate-800">Passos no seu celular:</p>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setWaStatus((prev: any) => ({ ...prev, qrCodeUrl: null, status: "CONNECTING" }));
-                      setQrTimeLeft(45);
-                      await fetch("/api/whatsapp/disconnect", { method: "POST" });
-                      setTimeout(async () => {
-                        const res = await fetch("/api/whatsapp/status");
-                        if (res.ok) setWaStatus(await res.json());
-                      }, 1000);
-                    }}
-                    className="text-[10px] text-emerald-700 font-bold hover:underline flex items-center gap-1"
-                  >
-                    <RefreshCw className="w-2.5 h-2.5" />
-                    Gerar Novo QR Code
-                  </button>
-                </div>
-                <p>1. Abra o WhatsApp &gt; Menu (3 pontinhos ou Ajustes)</p>
-                <p>2. Toque em <strong>Aparelhos Conectados</strong> &gt; <strong>Conectar um aparelho</strong></p>
-                <p>3. Aponte a câmera para o QR Code acima</p>
+            <div className="space-y-4 text-xs">
+              <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-blue-900 space-y-1">
+                <p className="font-bold flex items-center gap-1.5">
+                  <Lock className="w-4 h-4 text-blue-600" />
+                  Proteção Automática Ativa:
+                </p>
+                <p className="text-[11px] leading-relaxed text-blue-800">
+                  Seus dados serão empacotados e protegidos com criptografia. Você pode definir uma senha pessoal ou deixar em branco para usar a chave segura automática da sua oficina.
+                </p>
               </div>
 
-              {/* Número manual opcional */}
-              <div className="w-full space-y-1.5 pt-2">
-                <label className="text-[11px] font-bold text-slate-700 block">
-                  Ou defina o WhatsApp da Oficina com DDD:
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Senha / Frase Secreta de Criptografia (Opcional)
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Ex: 11987654321"
-                    value={manualPhone}
-                    onChange={(e) => setManualPhone(e.target.value)}
-                    className="flex-1 p-2 border border-slate-200 rounded-xl text-xs font-mono"
-                  />
-                  <button
-                    type="button"
-                    disabled={connectingWa}
-                    onClick={() => handleConnectWhatsApp(manualPhone)}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm"
-                  >
-                    {connectingWa ? "Pareando..." : "Conectar"}
-                  </button>
-                </div>
+                <input
+                  type="password"
+                  placeholder="Deixe em branco para usar a chave padrão"
+                  value={backupPassphrase}
+                  onChange={(e) => setBackupPassphrase(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs"
+                />
+                <span className="text-[10px] text-slate-400 block mt-1">
+                  Se você definir uma senha, precisará digitá-la para restaurar esta cópia no futuro.
+                </span>
               </div>
+            </div>
+
+            <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsBackupModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={syncingGdrive}
+                onClick={handleExecuteBackupNow}
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 flex items-center gap-2 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${syncingGdrive ? "animate-spin" : ""}`} />
+                <span>{syncingGdrive ? "Criptografando & Enviando..." : "Confirmar e Enviar"}</span>
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Seção 1: Central de Backup dos Dados */}
-      <div id="config-backup-card" className="bg-gradient-to-tr from-slate-900 via-slate-850 to-blue-950 rounded-2xl p-6 text-white shadow-xl space-y-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-          <div className="flex items-center gap-3.5">
-            <div className="p-3 rounded-2xl bg-blue-500/20 text-blue-400 border border-blue-500/30">
-              <Database className="w-7 h-7" />
-            </div>
-            <div>
-              <h2 className="text-lg font-black text-white flex items-center gap-2">
-                Central de Backup e Segurança dos Dados
-              </h2>
-              <p className="text-xs text-slate-300 mt-0.5">
-                Exporte cópias manuais para o seu computador ou conecte sua conta do Google Drive para sincronização.
-              </p>
-            </div>
-          </div>
-
-          {/* Garantia de Privacidade */}
-          <div className="px-3 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700 text-[11px] text-slate-300 flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Controle 100% Manual • Sem leitura de pastas sem permissão</span>
-          </div>
-        </div>
-
-        {/* 2 Blocos: Downloads Manuais e Integração Google Drive */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Bloco 1: Downloads Manuais Imediatos */}
-          <div className="p-5 rounded-2xl bg-slate-800/60 border border-slate-700/80 space-y-3 flex flex-col justify-between">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2 text-white font-bold text-sm">
-                <HardDrive className="w-4 h-4 text-emerald-400" />
-                <span>1. Download Manual Direto no Navegador</span>
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Baixe uma cópia instantânea de todas as Ordens de Serviço, clientes, vendas, produtos e caixa para guardar no seu computador ou pen-drive.
-              </p>
-            </div>
-
-            <div className="pt-2 flex flex-col sm:flex-row gap-2">
-              <a
-                href="/api/backup?format=json"
-                download
-                className="flex-1 px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all"
-              >
-                <Download className="w-4 h-4" />
-                <span>Exportar JSON Completo</span>
-              </a>
-              <a
-                href="/api/backup?format=db"
-                download
-                className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-650 text-slate-200 font-bold text-xs border border-slate-600 flex items-center justify-center gap-2 transition-all"
-              >
-                <Download className="w-4 h-4 text-blue-400" />
-                <span>Baixar Banco SQLite (.db)</span>
-              </a>
-            </div>
-          </div>
-
-          {/* Bloco 2: Google Drive (Opcional) */}
-          <div className="p-5 rounded-2xl bg-slate-800/60 border border-slate-700/80 space-y-3 flex flex-col justify-between">
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-white font-bold text-sm">
-                  <Cloud className="w-4 h-4 text-blue-400" />
-                  <span>2. Google Drive (Opcional)</span>
+      {/* ========================================================================= */}
+      {/* MODAL: RESTAURAÇÃO DE BACKUP COM SENHA E CONFIRMAÇÃO                       */}
+      {/* ========================================================================= */}
+      {isRestoreModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-100 space-y-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-2xl bg-emerald-100 text-emerald-700">
+                  <RefreshCw className="w-6 h-6" />
                 </div>
-                {isGdriveConnected ? (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950">
-                    CONECTADO
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-slate-700 text-slate-300">
-                    DESCONECTADO
-                  </span>
-                )}
+                <div>
+                  <h3 className="font-black text-slate-900 text-base">Restaurar Cópia de Segurança</h3>
+                  <p className="text-xs text-slate-500">
+                    {selectedDriveFile ? `Arquivo: ${selectedDriveFile.name}` : `Arquivo Local: ${localFileToRestore?.name}`}
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                {isGdriveConnected ? (
-                  <>
-                    Conta vinculada: <strong className="text-blue-300">{gdriveStatus?.email || "Google Drive Ativo"}</strong>
-                    <br />
-                    Último envio: <span className="text-emerald-400">{gdriveStatus?.lastBackupDate ? formatDateTime(gdriveStatus.lastBackupDate) : "Nunca enviado"}</span>
-                  </>
-                ) : (
-                  "Cadastre seu Google Drive ou Webhook de armazenamento caso queira salvar cópias na sua nuvem pessoal."
-                )}
-              </p>
+              <button
+                onClick={() => setIsRestoreModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center"
+              >
+                ✕
+              </button>
             </div>
 
-            <div className="pt-2 flex items-center gap-2">
-              {isGdriveConnected ? (
-                <>
+            {restoreSummary ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 space-y-2 text-center">
+                  <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
+                  <h4 className="font-black text-sm">Dados Restaurados com Sucesso!</h4>
+                  <p className="text-xs text-emerald-800">
+                    O banco de dados foi atualizado com as informações da cópia de segurança.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-slate-500">Clientes:</span> <strong className="text-slate-800">{restoreSummary.customers || 0}</strong>
+                  </div>
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-slate-500">Veículos:</span> <strong className="text-slate-800">{restoreSummary.vehicles || 0}</strong>
+                  </div>
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-slate-500">Ordens de Serviço:</span> <strong className="text-slate-800">{restoreSummary.serviceOrders || 0}</strong>
+                  </div>
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-slate-500">Vendas:</span> <strong className="text-slate-800">{restoreSummary.sales || 0}</strong>
+                  </div>
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-slate-500">Produtos:</span> <strong className="text-slate-800">{restoreSummary.products || 0}</strong>
+                  </div>
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-slate-500">Transações Caixa:</span> <strong className="text-slate-800">{restoreSummary.transactions || 0}</strong>
+                  </div>
+                </div>
+
+                <div className="pt-3 flex justify-end">
                   <button
                     type="button"
-                    disabled={syncingGdrive}
-                    onClick={handleSyncGdrive}
-                    className="flex-1 px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                    onClick={() => {
+                      setIsRestoreModalOpen(false);
+                      window.location.reload();
+                    }}
+                    className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs"
                   >
-                    <RefreshCw className={`w-4 h-4 ${syncingGdrive ? "animate-spin" : ""}`} />
-                    <span>{syncingGdrive ? "Sincronizando..." : "Sincronizar Agora"}</span>
+                    Fechar e Recarregar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 text-xs">
+                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <AlertTriangle className="w-4 h-4 text-amber-600" />
+                    <span>Aviso de Restauração:</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-amber-800">
+                    Ao restaurar, os dados contidos nesta cópia serão importados de volta para o sistema de forma atômica e segura.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Senha de Descriptografia (Se você definiu uma ao criar o backup)
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Deixe em branco se usou a chave automática"
+                    value={restorePassphrase}
+                    onChange={(e) => setRestorePassphrase(e.target.value)}
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs"
+                  />
+                </div>
+
+                <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsRestoreModalOpen(false)}
+                    className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold"
+                  >
+                    Cancelar
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsGdriveModalOpen(true)}
-                    className="px-3 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-650 text-slate-200 text-xs font-bold transition-colors"
-                    title="Editar Configurações"
+                    disabled={restoring}
+                    onClick={handleConfirmRestore}
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md shadow-emerald-600/20 flex items-center gap-2 disabled:opacity-50"
                   >
-                    Editar
+                    <RefreshCw className={`w-4 h-4 ${restoring ? "animate-spin" : ""}`} />
+                    <span>{restoring ? "Descriptografando & Restaurando..." : "Restaurar Agora"}</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleDisconnectGdrive}
-                    className="px-3 py-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold border border-rose-500/30 transition-colors"
-                    title="Desconectar Google Drive"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setIsGdriveModalOpen(true)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 transition-all"
-                >
-                  <Cloud className="w-4 h-4" />
-                  <span>Cadastrar / Conectar Google Drive</span>
-                </button>
-              )}
-            </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Modal de Configuração do Google Drive */}
+      {/* ========================================================================= */}
+      {/* MODAL: CREDENCIAIS OAUTH DO GOOGLE DRIVE                                   */}
+      {/* ========================================================================= */}
       {isGdriveModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-100 space-y-5">
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
                 <div className="p-2.5 rounded-xl bg-blue-100 text-blue-700">
                   <Cloud className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-black text-slate-900 text-base">Configurar Google Drive</h3>
-                  <p className="text-xs text-slate-500">Cadastre suas credenciais para sincronização</p>
+                  <h3 className="font-black text-slate-900 text-base">Conectar Google Drive (OAuth 2.0)</h3>
+                  <p className="text-xs text-slate-500">Princípio do Menor Privilégio & Escopo Restrito</p>
                 </div>
               </div>
               <button
@@ -783,93 +1072,87 @@ export default function ConfiguracoesPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveGdriveConfig} className="space-y-4 text-xs">
-              <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-blue-900 space-y-1">
+            <div className="space-y-4 text-xs">
+              <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-blue-900 space-y-1.5">
                 <p className="font-bold flex items-center gap-1.5">
-                  <Info className="w-4 h-4 text-blue-600" />
-                  Como funciona a integração:
+                  <ShieldCheck className="w-4 h-4 text-blue-600" />
+                  Como o sistema protege sua conta:
                 </p>
                 <p className="text-[11px] leading-relaxed text-blue-800">
-                  Você pode informar seu e-mail do Google e a URL de um Webhook / Google Apps Script ou pasta compartilhada para receber os arquivos de backup automaticamente.
+                  O sistema usa a autorização oficial OAuth 2.0 com escopo restrito <code>drive.file</code> e <code>drive.appdata</code>. O ERP <strong>nunca</strong> terá permissão para ler seus e-mails, fotos, documentos ou qualquer outra pasta do seu Drive.
                 </p>
               </div>
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Seu E-mail do Google (Google Drive) *
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="exemplo@gmail.com"
-                  value={gdriveForm.email}
-                  onChange={(e) => setGdriveForm({ ...gdriveForm, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  ID da Pasta do Google Drive (Opcional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ex: 1a2B3c4D5e6F7g8H9..."
-                  value={gdriveForm.folderId}
-                  onChange={(e) => setGdriveForm({ ...gdriveForm, folderId: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono"
-                />
-                <span className="text-[10px] text-slate-400">
-                  O código que aparece no final da URL da pasta no seu Google Drive.
-                </span>
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  URL do Webhook / Google Apps Script (Opcional)
-                </label>
-                <input
-                  type="url"
-                  placeholder="https://script.google.com/macros/s/.../exec"
-                  value={gdriveForm.webhookUrl}
-                  onChange={(e) => setGdriveForm({ ...gdriveForm, webhookUrl: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono"
-                />
-                <span className="text-[10px] text-slate-400">
-                  Caso utilize um script automatizado ou Zapier/Make para receber o backup em JSON.
-                </span>
-              </div>
-
-              <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
+              <div className="space-y-3 pt-1">
                 <button
                   type="button"
-                  onClick={() => setIsGdriveModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold"
+                  onClick={handleConnectGoogleDrive}
+                  className="w-full py-3.5 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2.5 transition-all"
                 >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingGdrive}
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-600/20 disabled:opacity-50"
-                >
-                  {savingGdrive ? "Salvando..." : "Salvar Configurações"}
+                  <Cloud className="w-5 h-5" />
+                  <span>Autorizar com Conta Google</span>
                 </button>
               </div>
-            </form>
+
+              <div className="pt-2 border-t border-slate-100 space-y-3">
+                <p className="font-bold text-slate-700">Configuração Avançada (Para instâncias com credenciais próprias do Google Cloud Console):</p>
+                <form onSubmit={handleSaveGoogleCredentials} className="space-y-3">
+                  <div>
+                    <label className="font-bold text-slate-600 block mb-1">Google Client ID</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 123456789-abc.apps.googleusercontent.com"
+                      value={gdriveCredentialsForm.clientId}
+                      onChange={(e) => setGdriveCredentialsForm({ ...gdriveCredentialsForm, clientId: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-600 block mb-1">Google Client Secret</label>
+                    <input
+                      type="password"
+                      placeholder="GOCSPX-..."
+                      value={gdriveCredentialsForm.clientSecret}
+                      onChange={(e) => setGdriveCredentialsForm({ ...gdriveCredentialsForm, clientSecret: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsGdriveModalOpen(false)}
+                      className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold"
+                    >
+                      Fechar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={savingCredentials}
+                      className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold shadow-sm disabled:opacity-50"
+                    >
+                      {savingCredentials ? "Salvando..." : "Salvar & Conectar"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Seção 2: Dados da Oficina */}
+      {/* ========================================================================= */}
+      {/* SEÇÃO 2: DADOS DA OFICINA & EMPRESA                                        */}
+      {/* ========================================================================= */}
       {loading ? (
         <div className="text-center py-8 text-slate-400">Carregando configurações...</div>
       ) : (
         <form onSubmit={handleSaveSettings} className="space-y-6">
-          <div id="config-company-card" className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <div id="config-company-card" className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
             <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
               <Building className="w-4 h-4 text-blue-600" />
-              Dados da Empresa (Aparecem nas OSs impressas)
+              Dados da Empresa (Aparecem nas Ordens de Serviço & Comprovantes)
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
@@ -885,7 +1168,7 @@ export default function ConfiguracoesPage() {
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">CNPJ</label>
+                <label className="font-bold text-slate-700 block mb-1">CNPJ / CPF</label>
                 <input
                   type="text"
                   value={settings.cnpj || ""}
@@ -926,14 +1209,16 @@ export default function ConfiguracoesPage() {
             </div>
           </div>
 
-          {/* Seção 3: Modelos de Mensagens do WhatsApp */}
-          <div id="config-templates-card" className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+          {/* ========================================================================= */}
+          {/* SEÇÃO 3: MODELOS DE MENSAGENS DO WHATSAPP                                  */}
+          {/* ========================================================================= */}
+          <div id="config-templates-card" className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
             <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-emerald-600" />
               Modelos de Mensagem do WhatsApp (Variáveis: &#123;nome&#125;, &#123;veiculo&#125;, &#123;placa&#125;, &#123;oficina&#125;, &#123;valor&#125;)
             </h2>
 
-            <div className="space-y-3 text-xs">
+            <div className="space-y-4 text-xs">
               <div>
                 <label className="font-bold text-slate-700 block mb-1">
                   1. Lava-Jato: Aviso de Carro Limpo e Pronto para Retirada
@@ -989,7 +1274,7 @@ export default function ConfiguracoesPage() {
               id="config-save-btn"
               type="submit"
               disabled={saving}
-              className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 flex items-center gap-2 disabled:opacity-50"
+              className="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 flex items-center gap-2 disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
               {saving ? "Salvando..." : "Salvar Todas as Configurações"}

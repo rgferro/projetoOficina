@@ -66,8 +66,32 @@ export function ImpersonationBanner() {
     return () => clearInterval(interval);
   }, [impersonationData?.expiresAt]);
 
-  const handleExitImpersonation = () => {
+  const [isExiting, setIsExiting] = useState(false);
+
+  const handleExitImpersonation = async () => {
     try {
+      setIsExiting(true);
+      // 1. Chama endpoint server-side para gerar token master fresco e atualizar cookie
+      const res = await fetch("/api/master-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "EXIT_IMPERSONATION" }),
+      });
+      const json = await res.json();
+
+      if (json.success && json.user) {
+        localStorage.setItem("torque_user", JSON.stringify(json.user));
+        if (json.token) {
+          document.cookie = `torque_token=${json.token}; path=/; max-age=31536000; SameSite=Lax;`;
+        }
+        localStorage.removeItem("torque_master_backup");
+        localStorage.removeItem("torque_master_token_backup");
+        window.dispatchEvent(new CustomEvent("torque:user-updated", { detail: json.user }));
+        window.location.href = "/master-admin";
+        return;
+      }
+
+      // Fallback: Backup do localStorage
       const masterBackup = localStorage.getItem("torque_master_backup");
       const masterTokenBackup = localStorage.getItem("torque_master_token_backup");
 
@@ -84,6 +108,8 @@ export function ImpersonationBanner() {
       window.location.href = "/master-admin";
     } catch (e) {
       window.location.href = "/master-admin";
+    } finally {
+      setIsExiting(false);
     }
   };
 
@@ -127,11 +153,12 @@ export function ImpersonationBanner() {
 
           <button
             onClick={handleExitImpersonation}
-            className="flex items-center gap-1.5 bg-slate-950 hover:bg-slate-900 text-amber-400 px-3.5 py-1.5 rounded-lg font-bold text-xs transition-all shadow-sm hover:scale-[1.02] active:scale-[0.98]"
+            disabled={isExiting}
+            className="flex items-center gap-1.5 bg-slate-950 hover:bg-slate-900 text-amber-400 px-3.5 py-1.5 rounded-lg font-bold text-xs transition-all shadow-sm hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
             title="Encerrar personificação e voltar ao Painel Master"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Voltar ao Painel Master</span>
+            <ArrowLeft className={`w-3.5 h-3.5 ${isExiting ? "animate-spin" : ""}`} />
+            <span>{isExiting ? "Restaurando Master..." : "Voltar ao Painel Master"}</span>
           </button>
         </div>
 

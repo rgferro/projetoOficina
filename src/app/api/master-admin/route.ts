@@ -363,6 +363,130 @@ export async function POST(req: NextRequest) {
       return response;
     }
 
+    // 6. Encerrar Personificação e Restaurar Sessão Master Admin (100% no Servidor)
+    if (action === "EXIT_IMPERSONATION" || action === "STOP_IMPERSONATE") {
+      const { verifySessionToken, createSessionToken } = await import("@/lib/auth");
+      const authCookie = req.cookies.get("torque_token")?.value || req.cookies.get("torque_session")?.value;
+      const currentSession = authCookie ? verifySessionToken(authCookie) : null;
+      const targetMasterEmail = currentSession?.impersonatedBy || "rafael.gielow@gmail.com";
+
+      // Busca ou cria o Tenant e Employee do Master Admin
+      let masterTenant = await prisma.tenant.findFirst({
+        where: { ownerEmail: targetMasterEmail },
+      });
+
+      if (!masterTenant) {
+        masterTenant = await prisma.tenant.create({
+          data: {
+            name: "Torque Matriz & Demonstração Master",
+            ownerName: "Rafael Gielow (Master Admin)",
+            ownerEmail: targetMasterEmail,
+            plan: "ELITE",
+            maxUsers: 999,
+            subscriptionStatus: "active",
+            isMaster: true,
+          },
+        });
+      }
+
+      let masterEmployee = await prisma.employee.findFirst({
+        where: { email: targetMasterEmail },
+      });
+
+      if (!masterEmployee) {
+        masterEmployee = await prisma.employee.create({
+          data: {
+            tenantId: masterTenant.id,
+            name: "Rafael Gielow",
+            email: targetMasterEmail,
+            role: "Super Administrador",
+            accessLevel: "ADMIN",
+            pinCode: "1234",
+            active: true,
+          },
+        });
+      }
+
+      // Finaliza sessões ativas de impersonation no banco para este admin
+      try {
+        await prisma.impersonationSession.updateMany({
+          where: {
+            adminEmail: targetMasterEmail,
+            revokedAt: null,
+          },
+          data: {
+            revokedAt: new Date(),
+          },
+        });
+      } catch (e) {}
+
+      // Registra log de auditoria do encerramento
+      try {
+        const { getClientIp, getUserAgent } = await import("@/lib/audit");
+        const ipAddress = getClientIp(req);
+        const userAgent = getUserAgent(req);
+        await prisma.auditLog.create({
+          data: {
+            action: "IMPERSONATION_ENDED",
+            ip: ipAddress,
+            userAgent,
+            tenantId: masterTenant.id,
+            userEmail: targetMasterEmail,
+            adminEmail: targetMasterEmail,
+            isImpersonated: false,
+            endpoint: "/api/master-admin",
+            method: "POST",
+            details: JSON.stringify({
+              message: "Sessão de suporte encerrada com sucesso. Retornando ao Master Admin.",
+              closedAt: new Date().toISOString(),
+            }),
+          },
+        });
+      } catch (e) {}
+
+      // Gera token seguro e renovado de 365 dias para o Master Admin
+      const token = createSessionToken({
+        userId: masterEmployee.id,
+        tenantId: masterTenant.id,
+        name: masterEmployee.name,
+        email: targetMasterEmail,
+        role: "Super Administrador",
+        accessLevel: "ADMIN",
+        isMaster: true,
+        workshopName: masterTenant.name,
+        plan: "ELITE",
+        isOwner: true,
+      });
+
+      const masterUserData = {
+        id: masterEmployee.id,
+        name: masterEmployee.name,
+        email: targetMasterEmail,
+        role: "Super Administrador",
+        accessLevel: "ADMIN",
+        isMaster: true,
+        workshopName: masterTenant.name,
+        plan: "ELITE",
+        isOwner: true,
+      };
+
+      const response = NextResponse.json({
+        success: true,
+        message: "Sessão Master Admin restaurada com sucesso!",
+        token,
+        user: masterUserData,
+      });
+
+      response.cookies.set("torque_token", token, {
+        path: "/",
+        httpOnly: false,
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: "lax",
+      });
+
+      return response;
+    }
+
     return NextResponse.json({ success: false, error: "Ação inválida" }, { status: 400 });
   } catch (error: any) {
     console.error("Erro na ação do Master Admin:", error);

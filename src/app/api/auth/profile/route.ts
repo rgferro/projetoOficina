@@ -38,7 +38,11 @@ export async function GET(req: NextRequest) {
     }
 
     if (employee) {
+      const isMasterUser = session?.isMaster || employee.email === "rafael.gielow@gmail.com" || employee.tenant?.isMaster || false;
+      const isImpersonating = !!session?.isImpersonating;
       const isOwner = false;
+      const effectivePlan = isMasterUser ? "ELITE" : (employee.tenant?.plan || "STARTER");
+
       const newToken = createSessionToken({
         userId: employee.id,
         tenantId: employee.tenantId || "default",
@@ -46,10 +50,14 @@ export async function GET(req: NextRequest) {
         email: employee.email || `${employee.id}@torquerp.com.br`,
         role: employee.role,
         accessLevel: employee.accessLevel as any,
-        isMaster: session?.isMaster || false,
+        isMaster: isMasterUser,
         workshopName: employee.tenant?.name || "Minha Oficina",
-        plan: employee.tenant?.plan || "STARTER",
+        plan: effectivePlan,
         isOwner,
+        isImpersonating,
+        impersonatedBy: session?.impersonatedBy,
+        impersonationExpiresAt: session?.impersonationExpiresAt,
+        impersonationSessionId: session?.impersonationSessionId,
       });
 
       const response = NextResponse.json({
@@ -63,8 +71,13 @@ export async function GET(req: NextRequest) {
           accessLevel: employee.accessLevel,
           workshopName: employee.tenant?.name || "Minha Oficina",
           isOwner,
-          plan: employee.tenant?.plan || "STARTER",
+          plan: effectivePlan,
           active: employee.active,
+          isMaster: isMasterUser,
+          isImpersonating,
+          impersonatedBy: session?.impersonatedBy,
+          impersonationExpiresAt: session?.impersonationExpiresAt,
+          impersonationSessionId: session?.impersonationSessionId,
         },
         token: newToken,
       });
@@ -72,7 +85,7 @@ export async function GET(req: NextRequest) {
       response.cookies.set("torque_token", newToken, {
         path: "/",
         httpOnly: false,
-        maxAge: 60 * 60 * 24 * 365,
+        maxAge: isImpersonating ? 3600 : 60 * 60 * 24 * 365,
         sameSite: "lax",
       });
 
@@ -93,17 +106,25 @@ export async function GET(req: NextRequest) {
     }
 
     if (tenant) {
+      const isMasterUser = session?.isMaster || tenant.ownerEmail === "rafael.gielow@gmail.com" || tenant.isMaster || false;
+      const isImpersonating = !!session?.isImpersonating;
+      const effectivePlan = isMasterUser ? "ELITE" : (tenant.plan || "STARTER");
+
       const newToken = createSessionToken({
         userId: tenant.id,
         tenantId: tenant.id,
         name: tenant.ownerName,
         email: tenant.ownerEmail,
-        role: "Proprietário",
+        role: isMasterUser ? "Super Administrador" : "Proprietário",
         accessLevel: "ADMIN",
-        isMaster: tenant.isMaster || false,
+        isMaster: isMasterUser,
         workshopName: tenant.name,
-        plan: tenant.plan,
+        plan: effectivePlan,
         isOwner: true,
+        isImpersonating,
+        impersonatedBy: session?.impersonatedBy,
+        impersonationExpiresAt: session?.impersonationExpiresAt,
+        impersonationSessionId: session?.impersonationSessionId,
       });
 
       const response = NextResponse.json({
@@ -113,12 +134,16 @@ export async function GET(req: NextRequest) {
           name: tenant.ownerName,
           email: tenant.ownerEmail,
           phone: tenant.ownerPhone || "",
-          role: "Proprietário",
+          role: isMasterUser ? "Super Administrador" : "Proprietário",
           accessLevel: "ADMIN",
           workshopName: tenant.name,
           isOwner: true,
-          plan: tenant.plan,
-          isMaster: tenant.isMaster,
+          plan: effectivePlan,
+          isMaster: isMasterUser,
+          isImpersonating,
+          impersonatedBy: session?.impersonatedBy,
+          impersonationExpiresAt: session?.impersonationExpiresAt,
+          impersonationSessionId: session?.impersonationSessionId,
         },
         token: newToken,
       });
@@ -126,7 +151,7 @@ export async function GET(req: NextRequest) {
       response.cookies.set("torque_token", newToken, {
         path: "/",
         httpOnly: false,
-        maxAge: 60 * 60 * 24 * 365,
+        maxAge: isImpersonating ? 3600 : 60 * 60 * 24 * 365,
         sameSite: "lax",
       });
 

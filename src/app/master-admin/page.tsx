@@ -238,6 +238,35 @@ export default function MasterAdminPage() {
     );
   }
 
+  const handleRestoreMasterSession = async () => {
+    try {
+      setActionLoading(true);
+      const res = await fetch("/api/master-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "EXIT_IMPERSONATION" }),
+      });
+      const json = await res.json();
+      if (json.success && json.user) {
+        localStorage.setItem("torque_user", JSON.stringify(json.user));
+        if (json.token) {
+          document.cookie = `torque_token=${json.token}; path=/; max-age=31536000; SameSite=Lax;`;
+        }
+        localStorage.removeItem("torque_master_backup");
+        localStorage.removeItem("torque_master_token_backup");
+        window.dispatchEvent(new CustomEvent("torque:user-updated", { detail: json.user }));
+        setIsMaster(true);
+        fetchData();
+      } else {
+        alert(json.error || "Não foi possível restaurar a sessão Master.");
+      }
+    } catch (err: any) {
+      alert(err.message || "Erro ao conectar com o servidor.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // 🔒 BLOQUEIO: Se não for rafael.gielow@gmail.com, exibe tela de acesso restrito
   if (isMaster === false) {
     return (
@@ -251,13 +280,23 @@ export default function MasterAdminPage() {
             Esta área é de uso exclusivo do desenvolvedor e administrador geral da plataforma (rafael.gielow@gmail.com).
           </p>
         </div>
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-bold shadow-md transition-all active:scale-95"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Voltar ao Painel da Minha Oficina
-        </Link>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <button
+            onClick={handleRestoreMasterSession}
+            disabled={actionLoading}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl text-xs font-black shadow-lg shadow-purple-500/20 transition-all active:scale-95 disabled:opacity-50"
+          >
+            <Crown className="w-4 h-4 text-amber-300" />
+            <span>{actionLoading ? "Restaurando..." : "Restaurar Sessão Master (Rafael)"}</span>
+          </button>
+          <Link
+            href="/dashboard"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-bold transition-all"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar ao Início
+          </Link>
+        </div>
       </div>
     );
   }

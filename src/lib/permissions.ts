@@ -260,6 +260,7 @@ export const MODULE_PLAN_REQUIREMENTS: Record<string, PlanFeatureInfo> = {
 };
 
 export function isRouteAllowedForPlan(plan: string | null | undefined, route: string): boolean {
+  if (route.startsWith("/master-admin")) return true;
   const effectivePlan = (plan?.toUpperCase() as SaaSPlan) || "STARTER";
   const allowedList = PLAN_PERMISSIONS_MAP[effectivePlan] || PLAN_PERMISSIONS_MAP.STARTER;
   return allowedList.some((p) => (p === "/dashboard" || p === "/" ? route === "/" || route === "/dashboard" : route.startsWith(p)));
